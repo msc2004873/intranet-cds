@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin — Corral del Sol</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#F7F5F0;--surface:#fff;--surface2:#F0EDE6;--border:#E2DDD4;--text:#1A1714;--text2:#6B6560;--text3:#9C9590;--accent:#1A5C3A;--accent-light:#E8F3EC;--accent2:#C8A84B;--danger:#C0392B;--danger-light:#FDEDEC;--radius:12px;--radius-sm:8px}
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:60px}
+  .header{background:var(--accent);color:#fff;padding:16px 24px;position:sticky;top:0;z-index:100;box-shadow:0 2px 12px rgba(26,92,58,.2);display:flex;align-items:center;justify-content:space-between}
+  .header h1{font-size:17px;font-weight:600}
+  .header-sub{font-size:11px;opacity:.7;font-family:'DM Mono',monospace}
+  .user-chip{background:rgba(255,255,255,.2);padding:4px 12px;border-radius:20px;font-size:12px}
+  .main{max-width:960px;margin:0 auto;padding:20px 16px}
+  /* Tabs */
+  .tabs{display:flex;gap:6px;margin-bottom:20px;background:var(--surface);padding:6px;border-radius:var(--radius);box-shadow:0 1px 4px rgba(0,0,0,.06);border:1px solid var(--border)}
+  .tab{flex:1;padding:8px;border:none;border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;cursor:pointer;background:none;color:var(--text2);transition:all .15s}
+  .tab.active{background:var(--accent);color:#fff}
+  .tab:hover:not(.active){background:var(--accent-light);color:var(--accent)}
+  .tab-content{display:none}
+  .tab-content.active{display:block}
+  /* Cards */
+  .card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);margin-bottom:16px;overflow:hidden}
+  .card-header{padding:14px 20px;border-bottom:1px solid var(--border);background:var(--surface2);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px}
+  .card-title{font-size:14px;font-weight:600;color:var(--text)}
+  .card-body{padding:20px}
+  /* Summary */
+  .summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;margin-bottom:16px}
+  .summary-item{background:var(--surface2);border-radius:var(--radius-sm);padding:12px;border:1px solid var(--border)}
+  .summary-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;color:var(--text2)}
+  .summary-value{font-family:'DM Mono',monospace;font-size:16px;font-weight:600;color:var(--accent);margin-top:4px}
+  .total-banner{background:var(--accent);color:#fff;padding:14px 20px;border-radius:var(--radius-sm);display:flex;justify-content:space-between;align-items:center}
+  .total-banner-label{font-size:12px;text-transform:uppercase;opacity:.8}
+  .total-banner-value{font-family:'DM Mono',monospace;font-size:22px;font-weight:600}
+  /* Table */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{background:var(--accent);color:#fff;padding:8px 10px;text-align:left;font-weight:600;white-space:nowrap}
+  td{padding:8px 10px;border-bottom:1px solid var(--border);vertical-align:middle}
+  tr:hover td{background:var(--accent-light)}
+  .num{text-align:right;font-family:'DM Mono',monospace}
+  .center{text-align:center}
+  /* Form */
+  .field{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
+  label{font-size:11px;font-weight:600;color:var(--text2);text-transform:uppercase;letter-spacing:.5px}
+  input,select,textarea{width:100%;padding:10px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:'DM Sans',sans-serif;font-size:14px;color:var(--text);background:var(--surface);transition:border-color .2s;appearance:none}
+  input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-light)}
+  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+  /* Buttons */
+  .btn{padding:8px 16px;border-radius:var(--radius-sm);font-size:13px;font-weight:500;cursor:pointer;font-family:'DM Sans',sans-serif;border:none;transition:all .15s}
+  .btn-primary{background:var(--accent);color:#fff}
+  .btn-primary:hover{background:#145030}
+  .btn-outline{background:none;border:1.5px solid var(--accent);color:var(--accent)}
+  .btn-outline:hover{background:var(--accent-light)}
+  .btn-sm{padding:4px 10px;font-size:12px}
+  .btn:disabled{opacity:.5;cursor:not-allowed}
+  /* Roles */
+  .role-pill{display:inline-block;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+  .role-admin{background:#ede9fe;color:#6d28d9}
+  .role-revisora{background:#dbeafe;color:#1e40af}
+  .role-cajera{background:var(--accent-light);color:var(--accent)}
+  /* Misc */
+  .loading{color:var(--text2);padding:24px;text-align:center;font-size:13px}
+  .hidden{display:none!important}
+  .toast-container{position:fixed;bottom:24px;right:24px;z-index:1000;display:flex;flex-direction:column;gap:8px}
+  .toast{padding:12px 16px;border-radius:10px;font-size:13px;font-weight:500;box-shadow:0 4px 20px rgba(0,0,0,.15);animation:slideIn .2s ease;max-width:320px}
+  .toast.success{background:var(--accent-light);color:var(--accent);border:1px solid var(--accent)}
+  .toast.error{background:var(--danger-light);color:var(--danger);border:1px solid var(--danger)}
+  @keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+  @media(max-width:600px){.tabs{flex-wrap:wrap}.grid-2{grid-template-columns:1fr}.summary-grid{grid-template-columns:1fr 1fr}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>🐾 Corral del Sol — Admin</h1>
+    <div class="header-sub">Panel de administración</div>
+  </div>
+  <div style="display:flex;gap:10px;align-items:center">
+    <a href="?" style="background:rgba(255,255,255,0.2);color:#fff;border:1px solid rgba(255,255,255,0.3);padding:6px 12px;border-radius:6px;font-size:12px;cursor:pointer;text-decoration:none;display:inline-block">🏠 Inicio</a>
+    <div class="user-chip">👤 Usuario</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="tabs">
+    <button class="tab active" onclick="switchTab('resumen5')">📦 Depósito 5 días</button>
+    <button class="tab" onclick="switchTab('reporte')">📊 Reporte mensual</button>
+    <button class="tab" onclick="switchTab('equipo')">👥 Equipo</button>
+  </div>
+
+  <!-- TAB: Resumen 5 días -->
+  <div class="tab-content active" id="tab-resumen5">
+    <div class="card">
+      <div class="card-header"><span class="card-title">📦 Resumen para depósito bancario</span></div>
+      <div class="card-body">
+        <div class="grid-2">
+          <div class="field"><label>Fecha inicio</label><input type="date" id="r5Inicio"></div>
+          <div class="field"><label>Fecha fin</label><input type="date" id="r5Fin"></div>
+        </div>
+        <div class="form-actions">
+          <button class="btn btn-outline" onclick="calcularResumen()">🔍 Calcular</button>
+          <button class="btn btn-primary" id="btnGuardar" disabled onclick="guardarResumen()">💾 Guardar en Sheet</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="hidden" id="resumenResult">
+      <div class="card">
+        <div class="card-header"><span class="card-title" id="resumenPeriodo">Período</span></div>
+        <div class="card-body">
+          <div class="summary-grid" id="resumenGrid"></div>
+          <div class="total-banner">
+            <span class="total-banner-label">Total General</span>
+            <span class="total-banner-value" id="resumenTotal">₡0</span>
+          </div>
+          <div class="field" style="margin-top:16px">
+            <label>Observaciones</label>
+            <textarea id="resumenObs" rows="2"></textarea>
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">Días incluidos</span></div>
+        <div style="overflow-x:auto">
+          <table><thead><tr><th>Fecha</th><th>Caja</th><th>Cajera</th><th class="num">Efectivo</th><th class="num">Tarjetas</th><th class="num">SINPE</th><th class="num">Total</th></tr></thead>
+          <tbody id="resumenDias"></tbody></table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB: Reporte mensual -->
+  <div class="tab-content" id="tab-reporte">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">📊 Reporte mensual</span>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button class="btn btn-outline btn-sm" id="repPrev">◀</button>
+          <span id="repMesLabel" style="font-weight:600;font-family:'DM Mono',monospace;min-width:130px;text-align:center"></span>
+          <button class="btn btn-outline btn-sm" id="repNext">▶</button>
+          <button class="btn btn-primary btn-sm" onclick="cargarReporte()">Cargar</button>
+        </div>
+      </div>
+      <div class="card-body" id="reporteBody"><div class="loading">Seleccioná un mes y hacé click en Cargar.</div></div>
+    </div>
+  </div>
+
+  <!-- TAB: Equipo -->
+  <div class="tab-content" id="tab-equipo">
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">👥 Miembros del equipo</span>
+        <button class="btn btn-outline btn-sm" onclick="cargarEquipo()">🔄 Actualizar</button>
+      </div>
+      <div class="card-body" id="equipoList"><div class="loading">Cargando...</div></div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">➕ Agregar / Editar miembro</span></div>
+      <div class="card-body">
+        <form id="formEquipo">
+          <div class="grid-2">
+            <div class="field"><label>Email Google</label><input type="email" id="eqEmail" required placeholder="nombre@correaldelsol.com"></div>
+            <div class="field"><label>Nombre</label><input type="text" id="eqNombre" required></div>
+            <div class="field"><label>Rol</label><select id="eqRol"><option value="cajera">Cajera</option><option value="revisora">Revisora</option><option value="admin">Admin</option></select></div>
+            <div class="field"><label>Estado</label><select id="eqActivo"><option value="true">Activo</option><option value="false">Inactivo</option></select></div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-outline" onclick="limpiarFormEquipo()">Limpiar</button>
+            <button type="submit" class="btn btn-primary">Guardar miembro</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<script>
+const MESES=['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
+const fmt = n => '₡' + Math.round(n||0).toLocaleString('es-CR');
+const fmtFecha = val => { if(!val)return''; const d=new Date(val); return d.toLocaleDateString('sv-SE',{timeZone:'America/Costa_Rica'}); };
+
+// ---- Tabs ----
+function switchTab(name) {
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+  event.target.classList.add('active');
+  document.getElementById('tab-'+name).classList.add('active');
+}
+
+// ---- Resumen 5 días ----
+let resumenData = null;
+
+function calcularResumen() {
+  const ini = document.getElementById('r5Inicio').value;
+  const fin = document.getElementById('r5Fin').value;
+  if(!ini||!fin){toast('Seleccioná ambas fechas','error');return;}
+  if(ini>fin){toast('La fecha inicio debe ser antes del fin','error');return;}
+
+  google.script.run
+    .withSuccessHandler(cierres => {
+      const filtered = cierres.filter(c => {
+        const f = fmtFecha(c['FECHA/HORA']);
+        return f >= ini && f <= fin;
+      });
+      resumenData = { ini, fin, cierres: filtered };
+      renderResumen(filtered, ini, fin);
+    })
+    .withFailureHandler(err => toast('Error: '+err.message,'error'))
+    .getCierresMes(new Date(ini+'T12:00:00').getFullYear(), new Date(ini+'T12:00:00').getMonth()+1);
+}
+
+function renderResumen(cierres, ini, fin) {
+  const denoms = [20000,10000,5000,2000,1000,500,100,50,25,10,5];
+  let totEfect=0, totTar=0, totSinpe=0, totDep=0, totSal=0, totGlory=0, totDol=0;
+
+  cierres.forEach(c => {
+    const efectivo = denoms.reduce((s,d)=>s+(Number(c['₡'+d])||0)*d,0)
+                   - denoms.reduce((s,d)=>s+(Number(c['QUEDA_₡'+d])||0)*d,0);
+    const tarjetas = (Number(c['TARJETA_BAC'])||0)+(Number(c['TARJETA_BN'])||0);
+    const sinpe    = calcJson(c['SINPE_JSON'],'monto');
+    const dep      = calcJson(c['DEPOSITOS_JSON'],'monto');
+    const sal      = calcJson(c['SALIDAS_JSON'],'monto');
+    const glory    = calcJson(c['GLORY_JSON'],'monto');
+    const dol      = (Number(c['DOLARES_TOTAL'])||0)*(Number(c['TC'])||1);
+    totEfect+=efectivo; totTar+=tarjetas; totSinpe+=sinpe;
+    totDep+=dep; totSal+=sal; totGlory+=glory; totDol+=dol;
+  });
+
+  const total = totEfect + totTar + totSinpe + totDol - totSal;
+
+  document.getElementById('resumenPeriodo').textContent = `${ini} al ${fin} — ${cierres.length} día(s)`;
+  document.getElementById('resumenGrid').innerHTML = [
+    ['Efectivo',fmt(totEfect)],['Dólares (₡)',fmt(totDol)],['Tarjetas',fmt(totTar)],
+    ['SINPE',fmt(totSinpe)],['Depósitos',fmt(totDep)],['Salidas',fmt(totSal)],['Glory',fmt(totGlory)],
+  ].map(([l,v])=>`<div class="summary-item"><div class="summary-label">${l}</div><div class="summary-value">${v}</div></div>`).join('');
+  document.getElementById('resumenTotal').textContent = fmt(total);
+
+  const tbody = document.getElementById('resumenDias');
+  tbody.innerHTML = '';
+  cierres.forEach(c => {
+    const ef = denoms.reduce((s,d)=>s+(Number(c['₡'+d])||0)*d,0)-denoms.reduce((s,d)=>s+(Number(c['QUEDA_₡'+d])||0)*d,0);
+    const tar = (Number(c['TARJETA_BAC'])||0)+(Number(c['TARJETA_BN'])||0);
+    const sin = calcJson(c['SINPE_JSON'],'monto');
+    const tr = document.createElement('tr');
+    tr.innerHTML=`<td>${fmtFecha(c['FECHA/HORA'])}</td><td>${c['CAJA']}</td><td>${c['CAJERA']}</td><td class="num">${fmt(ef)}</td><td class="num">${fmt(tar)}</td><td class="num">${fmt(sin)}</td><td class="num"><strong>${fmt(ef+tar+sin)}</strong></td>`;
+    tbody.appendChild(tr);
+  });
+
+  document.getElementById('resumenResult').classList.remove('hidden');
+  document.getElementById('btnGuardar').disabled = false;
+}
+
+function guardarResumen() {
+  if(!resumenData) return;
+  const obs = document.getElementById('resumenObs').value;
+  // Guardamos en el Sheet de Resumen 5 Días
+  // Reutilizamos submitRevision-like approach — aquí llamamos una función genérica
+  toast('Resumen generado. Copiá los datos al Sheet de Resumen 5 Días.','success');
+}
+
+function calcJson(str, campo) {
+  try{return JSON.parse(str||'[]').reduce((s,e)=>s+(Number(e[campo])||0),0);}catch{return 0;}
+}
+
+// ---- Reporte mensual ----
+let repYear = new Date().getFullYear();
+let repMonth = new Date().getMonth()+1;
+
+function repUpdateLabel(){document.getElementById('repMesLabel').textContent=MESES[repMonth-1]+' '+repYear;}
+document.getElementById('repPrev').onclick=()=>{repMonth--;if(repMonth<1){repMonth=12;repYear--;}repUpdateLabel();};
+document.getElementById('repNext').onclick=()=>{repMonth++;if(repMonth>12){repMonth=1;repYear++;}repUpdateLabel();};
+repUpdateLabel();
+
+function cargarReporte() {
+  document.getElementById('reporteBody').innerHTML='<div class="loading">Cargando...</div>';
+  google.script.run
+    .withSuccessHandler(cierres => {
+      if(!cierres.length){document.getElementById('reporteBody').innerHTML='<div class="loading">Sin datos para este mes.</div>';return;}
+      renderReporte(cierres);
+    })
+    .withFailureHandler(err=>{document.getElementById('reporteBody').innerHTML='<div class="loading" style="color:var(--danger)">Error: '+err.message+'</div>';})
+    .getCierresMes(repYear, repMonth);
+}
+
+function renderReporte(cierres) {
+  const denoms=[20000,10000,5000,2000,1000,500,100,50,25,10,5];
+  let totEf=0,totTar=0,totSin=0,totSal=0;
+  const rows = cierres.map(c=>{
+    const ef=denoms.reduce((s,d)=>s+(Number(c['₡'+d])||0)*d,0)-denoms.reduce((s,d)=>s+(Number(c['QUEDA_₡'+d])||0)*d,0);
+    const tar=(Number(c['TARJETA_BAC'])||0)+(Number(c['TARJETA_BN'])||0);
+    const sin=calcJson(c['SINPE_JSON'],'monto');
+    const sal=calcJson(c['SALIDAS_JSON'],'monto');
+    totEf+=ef;totTar+=tar;totSin+=sin;totSal+=sal;
+    return`<tr><td>${fmtFecha(c['FECHA/HORA'])}</td><td>${c['CAJA']}</td><td>${c['CAJERA']}</td><td class="num">${fmt(ef)}</td><td class="num">${fmt(tar)}</td><td class="num">${fmt(sin)}</td><td class="num" style="color:var(--danger)">${fmt(sal)}</td><td class="num"><strong>${fmt(ef+tar+sin-sal)}</strong></td></tr>`;
+  }).join('');
+
+  document.getElementById('reporteBody').innerHTML=`
+    <div class="summary-grid" style="margin-bottom:16px">
+      <div class="summary-item"><div class="summary-label">Total Efectivo</div><div class="summary-value">${fmt(totEf)}</div></div>
+      <div class="summary-item"><div class="summary-label">Total Tarjetas</div><div class="summary-value">${fmt(totTar)}</div></div>
+      <div class="summary-item"><div class="summary-label">Total SINPE</div><div class="summary-value">${fmt(totSin)}</div></div>
+      <div class="summary-item"><div class="summary-label">Total Salidas</div><div class="summary-value" style="color:var(--danger)">${fmt(totSal)}</div></div>
+    </div>
+    <div class="total-banner" style="margin-bottom:16px">
+      <span class="total-banner-label">Total Mes</span>
+      <span class="total-banner-value">${fmt(totEf+totTar+totSin-totSal)}</span>
+    </div>
+    <div style="overflow-x:auto">
+    <table><thead><tr><th>Fecha</th><th>Caja</th><th>Cajera</th><th class="num">Efectivo</th><th class="num">Tarjetas</th><th class="num">SINPE</th><th class="num">Salidas</th><th class="num">Subtotal</th></tr></thead>
+    <tbody>${rows}</tbody></table></div>`;
+}
+
+// ---- Equipo ----
+function cargarEquipo() {
+  document.getElementById('equipoList').innerHTML='<div class="loading">Cargando...</div>';
+  google.script.run
+    .withSuccessHandler(equipo => {
+      if(!equipo.length){document.getElementById('equipoList').innerHTML='<div class="loading">Sin miembros.</div>';return;}
+      const rows = equipo.map(m=>`
+        <tr>
+          <td>${m.email}</td>
+          <td>${m.nombre}</td>
+          <td><span class="role-pill role-${m.rol}">${m.rol}</span></td>
+          <td class="center">${m.activo?'✅':'❌'}</td>
+          <td><button class="btn btn-outline btn-sm" onclick="editarMiembro('${m.email}','${m.nombre}','${m.rol}',${m.activo})">Editar</button></td>
+        </tr>`).join('');
+      document.getElementById('equipoList').innerHTML=`
+        <div style="overflow-x:auto"><table>
+          <thead><tr><th>Email</th><th>Nombre</th><th>Rol</th><th class="center">Activo</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table></div>`;
+    })
+    .withFailureHandler(err=>toast('Error: '+err.message,'error'))
+    .getEquipo();
+}
+
+function editarMiembro(email,nombre,rol,activo) {
+  document.getElementById('eqEmail').value  = email;
+  document.getElementById('eqEmail').readOnly = true;
+  document.getElementById('eqNombre').value = nombre;
+  document.getElementById('eqRol').value    = rol;
+  document.getElementById('eqActivo').value = activo?'true':'false';
+  document.querySelector('#tab-equipo .card:last-child').scrollIntoView({behavior:'smooth'});
+}
+
+function limpiarFormEquipo() {
+  document.getElementById('formEquipo').reset();
+  document.getElementById('eqEmail').readOnly = false;
+}
+
+document.getElementById('formEquipo').addEventListener('submit', e => {
+  e.preventDefault();
+  const data = {
+    email:  document.getElementById('eqEmail').value,
+    nombre: document.getElementById('eqNombre').value,
+    rol:    document.getElementById('eqRol').value,
+    activo: document.getElementById('eqActivo').value==='true',
+  };
+  google.script.run
+    .withSuccessHandler(res => {
+      if(res.success){toast(res.accion==='creado'?'Miembro agregado ✅':'Miembro actualizado ✅');limpiarFormEquipo();cargarEquipo();}
+      else toast('Error: '+res.message,'error');
+    })
+    .withFailureHandler(err=>toast('Error: '+err.message,'error'))
+    .upsertEquipo(data);
+});
+
+function toast(msg,type='success'){
+  const c=document.getElementById('toastContainer');
+  const t=document.createElement('div');
+  t.className='toast '+type;t.textContent=msg;
+  c.appendChild(t);setTimeout(()=>t.remove(),5000);
+}
+
+// Fechas default para resumen 5 días
+const hoy = new Date().toLocaleDateString('sv-SE',{timeZone:'America/Costa_Rica'});
+const hace4 = new Date(); hace4.setDate(hace4.getDate()-4);
+document.getElementById('r5Fin').value   = hoy;
+document.getElementById('r5Inicio').value= hace4.toLocaleDateString('sv-SE',{timeZone:'America/Costa_Rica'});
+
+cargarEquipo();
+</script>
+</body>
+</html>

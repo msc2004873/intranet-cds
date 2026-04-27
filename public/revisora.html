@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Revisión de Caja — Corral del Sol</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --surface2: #F0EDE6;
+    --border: #E2DDD4;
+    --text: #1A1714;
+    --text2: #6B6560;
+    --text3: #9C9590;
+    --accent: #1A5C3A;
+    --accent-light: #E8F3EC;
+    --accent2: #C8A84B;
+    --accent2-light: #FBF6E9;
+    --danger: #C0392B;
+    --danger-light: #FDEDEC;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 60px;
+  }
+
+  .header {
+    background: var(--accent);
+    color: white;
+    padding: 20px 24px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(26,92,58,0.2);
+  }
+  .header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+  .header-sub {
+    font-size: 12px;
+    opacity: 0.7;
+    font-family: 'DM Mono', monospace;
+  }
+
+  .main { max-width: 720px; margin: 0 auto; padding: 24px 16px; }
+
+  .section {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .section-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface2);
+  }
+  .section-num {
+    width: 26px;
+    height: 26px;
+    background: var(--accent);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.2px;
+  }
+  .section-body { padding: 20px; }
+
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field.full { grid-column: 1 / -1; }
+
+  label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  input, select, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--surface);
+    transition: border-color 0.2s;
+    appearance: none;
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-light);
+  }
+
+  button {
+    width: 100%;
+    padding: 12px 16px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    margin-top: 20px;
+  }
+  button:hover { background: #0d4d2e; }
+  button:disabled { background: #ccc; cursor: not-allowed; }
+
+  .message {
+    margin-top: 20px;
+    padding: 14px 16px;
+    border-radius: var(--radius-sm);
+    text-align: center;
+    font-weight: 600;
+    display: none;
+  }
+  .message.success { background: var(--accent-light); color: var(--accent); }
+  .message.error { background: var(--danger-light); color: var(--danger); }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🔍 Revisión de Caja</h1>
+  <div class="header-sub">Verificá los cierres y conteos</div>
+</div>
+
+<div class="main">
+
+  <form id="revisora-form">
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">1</div>
+        <div class="section-title">Identificación</div>
+      </div>
+      <div class="section-body">
+        <div class="field-grid">
+          <div class="field">
+            <label for="revisora">Revisora</label>
+            <input type="text" id="revisora" required placeholder="Tu nombre">
+          </div>
+          <div class="field">
+            <label for="caja">Caja</label>
+            <select id="caja" required>
+              <option value="">Seleccionar...</option>
+              <option value="Caja 1">Caja 1</option>
+              <option value="Caja 2">Caja 2</option>
+            </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">2</div>
+        <div class="section-title">Fechas</div>
+      </div>
+      <div class="section-body">
+        <div class="field-grid">
+          <div class="field">
+            <label for="fechaCierre">Fecha del Cierre</label>
+            <input type="date" id="fechaCierre" required>
+          </div>
+          <div class="field">
+            <label for="fechaRevision">Fecha de Revisión</label>
+            <input type="date" id="fechaRevision" required>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">3</div>
+        <div class="section-title">Conteos Verificados</div>
+      </div>
+      <div class="section-body">
+        <div class="field-grid">
+          <div class="field">
+            <label for="efectivo">Efectivo Contado</label>
+            <input type="number" id="efectivo" min="0" value="0">
+          </div>
+          <div class="field">
+            <label for="tarjetaBac">Tarjeta BAC</label>
+            <input type="number" id="tarjetaBac" min="0" value="0">
+          </div>
+        </div>
+        <div class="field-grid">
+          <div class="field">
+            <label for="tarjetaBn">Tarjeta BN</label>
+            <input type="number" id="tarjetaBn" min="0" value="0">
+          </div>
+          <div class="field">
+            <label for="sinpe">SINPE</label>
+            <input type="number" id="sinpe" min="0" value="0">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <div class="section-num">4</div>
+        <div class="section-title">Observaciones</div>
+      </div>
+      <div class="section-body">
+        <div class="field full">
+          <label for="observaciones">Notas adicionales</label>
+          <textarea id="observaciones" rows="4" placeholder="Escribí cualquier observación..."></textarea>
+        </div>
+      </div>
+    </div>
+
+    <button type="submit" id="btn-submit">Guardar Revisión</button>
+  </form>
+
+  <div id="message" class="message"></div>
+
+</div>
+
+<script>
+  document.getElementById('fechaRevision').valueAsDate = new Date();
+
+  document.getElementById('revisora-form').addEventListener('submit', function(e) {
+    e.preventDefault();
+
+    const data = {
+      revisora: document.getElementById('revisora').value,
+      caja: document.getElementById('caja').value,
+      fechaCierre: document.getElementById('fechaCierre').value,
+      efectivoContado: parseFloat(document.getElementById('efectivo').value) || 0,
+      tarjetaVerificada: parseFloat(document.getElementById('tarjetaBac').value) || 0,
+      sinpeVerificado: parseFloat(document.getElementById('sinpe').value) || 0,
+      observaciones: document.getElementById('observaciones').value
+    };
+
+    document.getElementById('btn-submit').disabled = true;
+
+    google.script.run
+      .withSuccessHandler(function(result) {
+        const msg = document.getElementById('message');
+        msg.className = 'message success';
+        msg.textContent = result.message;
+        msg.style.display = 'block';
+        document.getElementById('btn-submit').disabled = false;
+      })
+      .withFailureHandler(function(error) {
+        const msg = document.getElementById('message');
+        msg.className = 'message error';
+        msg.textContent = '❌ Error: ' + error.message;
+        msg.style.display = 'block';
+        document.getElementById('btn-submit').disabled = false;
+      })
+      .submitRevision(data);
+  });
+</script>
+
+</body>
+</html>

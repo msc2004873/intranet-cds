@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cierre de Caja — Corral del Sol</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --surface2: #F0EDE6;
+    --border: #E2DDD4;
+    --text: #1A1714;
+    --text2: #6B6560;
+    --text3: #9C9590;
+    --accent: #1A5C3A;
+    --accent-light: #E8F3EC;
+    --accent2: #C8A84B;
+    --accent2-light: #FBF6E9;
+    --danger: #C0392B;
+    --danger-light: #FDEDEC;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 60px;
+  }
+
+  /* Header */
+  .header {
+    background: var(--accent);
+    color: white;
+    padding: 20px 24px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(26,92,58,0.2);
+  }
+  .header-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 4px;
+  }
+  .header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+  }
+  .header-sub {
+    font-size: 12px;
+    opacity: 0.7;
+    font-family: 'DM Mono', monospace;
+  }
+  .sobre-badge {
+    background: var(--accent2);
+    color: #1A1714;
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    font-family: 'DM Mono', monospace;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+  }
+
+  /* Progress */
+  .progress-bar {
+    height: 3px;
+    background: rgba(255,255,255,0.2);
+    margin-top: 12px;
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent2);
+    border-radius: 2px;
+    transition: width 0.4s ease;
+    width: 0%;
+  }
+
+  /* Main */
+  .main { max-width: 720px; margin: 0 auto; padding: 24px 16px; }
+
+  /* Section */
+  .section {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .section-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface2);
+  }
+  .section-num {
+    width: 26px;
+    height: 26px;
+    background: var(--accent);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+  .section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.2px;
+  }
+  .section-body { padding: 20px; }
+
+  /* Fields */
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .field-grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field.full { grid-column: 1 / -1; }
+
+  label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  input, select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--surface);
+    transition: border-color 0.2s;
+    appearance: none;
+  }
+  input:focus, select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-light);
+  }
+  input[type="number"] { font-family: 'DM Mono', monospace; }
+
+  /* Denominaciones */
+  .denom-table { width: 100%; }
+  .denom-row {
+    display: grid;
+    grid-template-columns: 100px 1fr 110px;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .denom-row:last-child { border-bottom: none; }
+  .denom-label {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--text2);
+    font-weight: 500;
+  }
+  .denom-input {
+    padding: 8px 10px;
+    text-align: center;
+    font-size: 15px;
+    font-weight: 500;
+  }
+  .denom-total {
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 600;
+    text-align: right;
+  }
+
+  /* Total box */
+  .total-box {
+    margin-top: 14px;
+    padding: 14px 16px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .total-box.green { background: var(--accent-light); }
+  .total-box.yellow { background: var(--accent2-light); }
+  .total-box.red { background: var(--danger-light); }
+  .total-label { font-size: 12px; font-weight: 600; color: var(--text2); text-transform: uppercase; letter-spacing: 0.4px; }
+  .total-value { font-family: 'DM Mono', monospace; font-size: 18px; font-weight: 600; color: var(--text); }
+  .total-value.accent { color: var(--accent); }
+  .total-value.accent2 { color: var(--accent2); }
+  .total-value.danger { color: var(--danger); }
+
+  /* SOBRE highlight */
+  .sobre-box {
+    background: var(--accent);
+    color: white;
+    padding: 16px 20px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 8px;
+  }
+  .sobre-box .total-label { color: rgba(255,255,255,0.7); }
+  .sobre-box .total-value { color: white; font-size: 22px; }
+
+  /* Tarjetas */
+  .tarjeta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .tarjeta-card {
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 14px;
+  }
+  .tarjeta-name {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text2);
+    margin-bottom: 8px;
+  }
+  .tarjeta-card input { border: none; padding: 0; font-size: 20px; font-weight: 600; font-family: 'DM Mono', monospace; color: var(--text); }
+  .tarjeta-card input:focus { box-shadow: none; border: none; }
+  .tarjeta-prefix { font-size: 12px; color: var(--text3); margin-top: 2px; }
+
+  /* Repeatable rows */
+  .repeat-list { display: flex; flex-direction: column; gap: 10px; }
+  .repeat-row {
+    display: grid;
+    gap: 8px;
+    align-items: start;
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    position: relative;
+  }
+  .repeat-row .btn-remove {
+    align-self: flex-start;
+    margin-top: 26px;
+  }
+  .repeat-row-sinpe { grid-template-columns: 1fr 1fr auto; }
+  .repeat-row-deposito { grid-template-columns: 1fr 1fr 1fr auto; }
+  .repeat-row-salida { grid-template-columns: 2fr 1fr auto; }
+  .repeat-row-glory { grid-template-columns: 1fr 1fr auto; }
+
+  .btn-remove {
+    width: 28px; height: 28px;
+    background: var(--danger-light);
+    border: none;
+    border-radius: 6px;
+    color: var(--danger);
+    cursor: pointer;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s;
+    align-self: flex-end;
+    margin-bottom: 2px;
+  }
+  .btn-remove:hover { background: #f5c6c2; }
+
+  .btn-add {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 9px 14px;
+    background: var(--surface2);
+    border: 1.5px dashed var(--border);
+    border-radius: var(--radius-sm);
+    color: var(--text2);
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    width: 100%;
+    margin-top: 8px;
+    transition: all 0.15s;
+    font-family: 'DM Sans', sans-serif;
+  }
+  .btn-add:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+
+  /* File upload */
+  .upload-area {
+    border: 2px dashed var(--border);
+    border-radius: var(--radius-sm);
+    padding: 20px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: var(--surface2);
+  }
+  .upload-area:hover { border-color: var(--accent); background: var(--accent-light); }
+  .upload-area input[type="file"] { display: none; }
+  .upload-icon { font-size: 28px; margin-bottom: 6px; }
+  .upload-text { font-size: 13px; color: var(--text2); font-weight: 500; }
+  .upload-sub { font-size: 11px; color: var(--text3); margin-top: 2px; }
+  .file-list { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+  .file-item {
+    display: flex; align-items: center; gap: 8px;
+    padding: 8px 10px;
+    background: var(--accent-light);
+    border-radius: 6px;
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  /* Submit */
+  .submit-section { padding: 8px 0 24px; }
+  .btn-submit {
+    width: 100%;
+    padding: 16px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    letter-spacing: -0.2px;
+  }
+  .btn-submit:hover { background: #145030; transform: translateY(-1px); box-shadow: 0 4px 16px rgba(26,92,58,0.3); }
+  .btn-submit:active { transform: translateY(0); }
+  .btn-submit:disabled { background: var(--text3); cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .submit-note { text-align: center; font-size: 12px; color: var(--text3); margin-top: 10px; }
+
+  /* Divider */
+  .divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+  /* Dólares */
+  .dolares-row {
+    display: grid;
+    grid-template-columns: 1fr 80px 1fr;
+    gap: 12px;
+    align-items: end;
+  }
+  .tc-result {
+    padding: 10px 12px;
+    background: var(--accent-light);
+    border-radius: var(--radius-sm);
+    font-family: 'DM Mono', monospace;
+    font-size: 13px;
+    color: var(--accent);
+    font-weight: 600;
+  }
+
+  /* Edit Cajera Button */
+  .btn-edit-cajera {
+    align-self: flex-end;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    background: var(--accent-light);
+    border: 1.5px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s;
+    margin-bottom: 6px;
+  }
+  .btn-edit-cajera:hover { background: var(--accent); color: white; border-color: var(--accent); }
+
+  /* Modal */
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal.active { display: flex; }
+  .modal-content {
+    background: white;
+    border-radius: var(--radius);
+    padding: 28px 24px;
+    max-width: 450px;
+    width: 90%;
+    max-height: 70vh;
+    overflow-y: auto;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  }
+  .modal h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: var(--text);
+  }
+  .modal-input-group {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .modal-input-group input {
+    flex: 1;
+  }
+  .modal-btn-group {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 20px;
+  }
+  .modal-btn { padding: 10px 16px; border-radius: 6px; border: none; cursor: pointer; font-size: 14px; font-weight: 600; }
+  .modal-btn-primary { background: var(--accent); color: white; }
+  .modal-btn-secondary { background: var(--surface2); color: var(--text); border: 1.5px solid var(--border); }
+  .cajera-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border-radius: 6px;
+    margin-bottom: 8px;
+    font-size: 14px;
+  }
+  .cajera-item .btn-delete { padding: 4px 8px; background: var(--danger-light); color: var(--danger); border: none; border-radius: 4px; cursor: pointer; font-size: 12px; }
+
+  /* File Preview */
+  .file-preview {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+  .file-preview img {
+    height: 80px;
+    border-radius: var(--radius-sm);
+    object-fit: cover;
+    border: 1px solid var(--border);
+  }
+  .file-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: var(--surface2);
+    border-radius: 16px;
+    font-size: 12px;
+    color: var(--text2);
+  }
+
+  /* Toast Notifications */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    padding: 12px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+    opacity: 0;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+  #toast.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  #toast.success {
+    background: var(--accent);
+    color: white;
+  }
+  #toast.error {
+    background: var(--danger);
+    color: white;
+  }
+  #toast.warning {
+    background: var(--accent2);
+    color: #1A1714;
+  }
+  #toast.info {
+    background: #2C3E50;
+    color: white;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-top">
+    <div>
+      <h1>🐾 Corral del Sol</h1>
+      <div class="header-sub">Cierre de Caja</div>
+    </div>
+    <div class="sobre-badge" id="sobre-badge">Sobre: ₡0</div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progress"></div></div>
+</div>
+
+<!-- Modal: Editar Cajeras -->
+<div class="modal" id="modal-cajeras">
+  <div class="modal-content">
+    <h3>Editar Cajeras</h3>
+    <div id="cajeras-list" style="max-height:300px; overflow-y:auto; margin-bottom:16px;"></div>
+    <div class="modal-input-group">
+      <input type="text" id="new-cajera" placeholder="Nombre de la cajera" onkeypress="if(event.key==='Enter') addCajera()">
+      <button class="modal-btn modal-btn-primary" onclick="addCajera()">Agregar</button>
+    </div>
+    <div class="modal-btn-group">
+      <button class="modal-btn modal-btn-secondary" onclick="closeEditCajeras()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="main">
+
+  <!-- SECCIÓN 1: Info general -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <div class="section-title">Información general</div>
+    </div>
+    <div class="section-body">
+      <div class="field-grid">
+        <div class="field" style="grid-column:1/2; display:flex; flex-direction:column;">
+          <label>Cajera</label>
+          <div style="display:flex; gap:8px;">
+            <select id="cajera" onchange="updateProgress()" style="flex:1;">
+              <option value="">Seleccionar...</option>
+            </select>
+            <button class="btn-edit-cajera" onclick="openEditCajeras()" title="Editar cajeras">✏️</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Caja</label>
+          <select id="caja" onchange="updateProgress()">
+            <option value="">Seleccionar...</option>
+            <option>Caja 1 (clínica)</option>
+            <option>Caja 2</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Fecha</label>
+          <input type="date" id="fecha" onchange="updateProgress()">
+        </div>
+        <div class="field">
+          <label>Tipo de cambio (TC)</label>
+          <input type="number" id="tc" value="475" placeholder="475" oninput="calcDolares()">
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 2: Cierre de caja -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <div class="section-title">Cierre de caja — denominaciones</div>
+    </div>
+    <div class="section-body">
+      <div class="denom-table" id="cierre-table"></div>
+      <div class="total-box green">
+        <span class="total-label">Total en caja</span>
+        <span class="total-value accent" id="total-cierre">₡0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 3: Queda en caja -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <div class="section-title">Queda en caja — denominaciones</div>
+    </div>
+    <div class="section-body">
+      <div class="denom-table" id="queda-table"></div>
+      <div class="total-box yellow">
+        <span class="total-label">Total queda en caja</span>
+        <span class="total-value accent2" id="total-queda">₡0</span>
+      </div>
+      <div class="sobre-box">
+        <span class="total-label">💰 Colones al sobre</span>
+        <span class="total-value" id="total-sobre">₡0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 4: Dólares -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">4</div>
+      <div class="section-title">Dólares</div>
+    </div>
+    <div class="section-body">
+      <div class="dolares-row">
+        <div class="field">
+          <label>Total dólares ($)</label>
+          <input type="number" id="dolares" placeholder="0.00" step="0.01" oninput="calcDolares()">
+        </div>
+        <div class="field">
+          <label>TC</label>
+          <div class="tc-result" id="tc-display">×475</div>
+        </div>
+        <div class="field">
+          <label>Equivalente en colones</label>
+          <div class="tc-result" id="dolares-colones">₡0</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 5: Tarjetas -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">5</div>
+      <div class="section-title">Tarjetas</div>
+    </div>
+    <div class="section-body">
+      <div class="tarjeta-grid">
+        <div class="tarjeta-card">
+          <div class="tarjeta-name">BAC</div>
+          <input type="number" id="tarjeta-bac" placeholder="0" oninput="calcTarjetas()">
+          <div class="tarjeta-prefix">colones</div>
+        </div>
+        <div class="tarjeta-card">
+          <div class="tarjeta-name">BN</div>
+          <input type="number" id="tarjeta-bn" placeholder="0" oninput="calcTarjetas()">
+          <div class="tarjeta-prefix">colones</div>
+        </div>
+      </div>
+      <div class="total-box green" style="margin-top:12px">
+        <span class="total-label">Total tarjetas</span>
+        <span class="total-value accent" id="total-tarjetas">₡0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 6: SINPE -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">6</div>
+      <div class="section-title">SINPE Móvil</div>
+    </div>
+    <div class="section-body">
+      <div class="repeat-list" id="sinpe-list"></div>
+      <button class="btn-add" onclick="addSinpe()">+ Agregar SINPE</button>
+      <div class="total-box green" style="margin-top:12px">
+        <span class="total-label">Total SINPE</span>
+        <span class="total-value accent" id="total-sinpe">₡0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 7: Depósitos -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">7</div>
+      <div class="section-title">Depósitos</div>
+    </div>
+    <div class="section-body">
+      <div class="repeat-list" id="deposito-list"></div>
+      <button class="btn-add" onclick="addDeposito()">+ Agregar depósito</button>
+      <div class="total-box green" style="margin-top:12px">
+        <span class="total-label">Total depósitos</span>
+        <span class="total-value accent" id="total-depositos">₡0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 8: Salidas -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">8</div>
+      <div class="section-title">Salidas de caja</div>
+    </div>
+    <div class="section-body">
+      <div class="repeat-list" id="salida-list"></div>
+      <button class="btn-add" onclick="addSalida()">+ Agregar salida</button>
+      <div class="total-box red" style="margin-top:12px">
+        <span class="total-label">Total salidas</span>
+        <span class="total-value danger" id="total-salidas">₡0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 9: Glory -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">9</div>
+      <div class="section-title">Glory — Groomer</div>
+    </div>
+    <div class="section-body">
+      <div class="repeat-list" id="glory-list"></div>
+      <button class="btn-add" onclick="addGlory()">+ Agregar transacción Glory</button>
+      <div class="total-box green" style="margin-top:12px">
+        <span class="total-label">Total Glory</span>
+        <span class="total-value accent" id="total-glory">₡0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 10: Comentarios -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">10</div>
+      <div class="section-title">Comentarios / Observaciones</div>
+    </div>
+    <div class="section-body">
+      <div class="field">
+        <label>Anotaciones generales</label>
+        <textarea id="comentarios" rows="4" placeholder="Escribí cualquier observación o nota importante..." style="width:100%; padding:10px 12px; border:1.5px solid var(--border); border-radius:var(--radius-sm); font-family:'DM Sans',sans-serif; font-size:14px; resize:vertical;"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- SUBMIT -->
+  <div class="submit-section">
+    <button class="btn-submit" id="btn-submit" onclick="submitForm()">
+      Enviar cierre de caja
+    </button>
+    <div class="submit-note">Una vez enviado no se puede modificar</div>
+  </div>
+
+</div>
+
+
+<!-- Toast Notifications -->
+<div id="toast"></div>
+
+<script>
+const DENOMS = [20000,10000,5000,2000,1000,500,100,50,25,10,5];
+const fmt = n => '₡' + Math.round(n).toLocaleString('es-CR');
+
+// Build denom tables
+function buildDenomTable(containerId, prefix) {
+  const container = document.getElementById(containerId);
+  DENOMS.forEach(d => {
+    const row = document.createElement('div');
+    row.className = 'denom-row';
+    const isQueda = prefix === 'q';
+    row.innerHTML = `
+      <div class="denom-label">${fmt(d)}</div>
+      <input type="number" class="denom-input" id="${prefix}-${d}" placeholder="0" min="0" ${isQueda ? 'readonly' : ''} oninput="calcDenoms()">
+      <div class="denom-total" id="${prefix}-total-${d}">₡0</div>
+    `;
+    container.appendChild(row);
+  });
+}
+
+buildDenomTable('cierre-table', 'c');
+buildDenomTable('queda-table', 'q');
+
+function calcDenoms() {
+  let totalC = 0, totalQ = 0;
+  DENOMS.forEach(d => {
+    const vc = parseInt(document.getElementById(`c-${d}`).value) || 0;
+    const vq = parseInt(document.getElementById(`q-${d}`).value) || 0;
+    const tc = vc * d, tq = vq * d;
+    document.getElementById(`c-total-${d}`).textContent = tc > 0 ? fmt(tc) : '—';
+    document.getElementById(`q-total-${d}`).textContent = tq > 0 ? fmt(tq) : '—';
+    totalC += tc; totalQ += tq;
+  });
+  document.getElementById('total-cierre').textContent = fmt(totalC);
+  document.getElementById('total-queda').textContent = fmt(totalQ);
+  const sobre = totalC - totalQ;
+  document.getElementById('total-sobre').textContent = fmt(sobre);
+  document.getElementById('sobre-badge').textContent = 'Sobre: ' + fmt(sobre);
+  updateProgress();
+}
+
+function calcDolares() {
+  const tc = parseFloat(document.getElementById('tc').value) || 475;
+  const dol = parseFloat(document.getElementById('dolares').value) || 0;
+  document.getElementById('tc-display').textContent = '×' + tc;
+  document.getElementById('dolares-colones').textContent = fmt(dol * tc);
+}
+
+function calcTarjetas() {
+  const bac = parseFloat(document.getElementById('tarjeta-bac').value) || 0;
+  const bn = parseFloat(document.getElementById('tarjeta-bn').value) || 0;
+  document.getElementById('total-tarjetas').textContent = fmt(bac + bn);
+}
+
+// SINPE
+let sinpeCount = 0;
+function addSinpe() {
+  sinpeCount++;
+  const id = sinpeCount;
+  const row = document.createElement('div');
+  row.className = 'repeat-row repeat-row-sinpe';
+  row.id = `sinpe-row-${id}`;
+  row.innerHTML = `
+    <div class="field"><label>Monto (₡)</label><input type="number" placeholder="0" oninput="calcSinpeTotal()"></div>
+    <div class="field"><label>Foto captura</label><input type="file" accept="image/*" onchange="showFilePreview(this, 'sinpe-preview-${id}')"><div id="sinpe-preview-${id}" class="file-preview"></div></div>
+    <button class="btn-remove" onclick="removeRow('sinpe-row-${id}',calcSinpeTotal)">×</button>
+  `;
+  document.getElementById('sinpe-list').appendChild(row);
+}
+
+function calcSinpeTotal() {
+  let total = 0;
+  document.querySelectorAll('#sinpe-list input[type="number"]').forEach(i => total += parseFloat(i.value)||0);
+  document.getElementById('total-sinpe').textContent = fmt(total);
+}
+
+// Depósitos
+let depCount = 0;
+function addDeposito() {
+  depCount++;
+  const id = depCount;
+  const row = document.createElement('div');
+  row.className = 'repeat-row repeat-row-deposito';
+  row.id = `dep-row-${id}`;
+  row.innerHTML = `
+    <div class="field"><label>Nombre / origen</label><input type="text" placeholder="Ej: Mariam Corrales"></div>
+    <div class="field"><label>Monto (₡)</label><input type="number" placeholder="0" oninput="calcDepositos()"></div>
+    <div class="field"><label>Foto comprobante</label><input type="file" accept="image/*,.pdf" onchange="showFilePreview(this, 'dep-preview-${id}')"><div id="dep-preview-${id}" class="file-preview"></div></div>
+    <button class="btn-remove" onclick="removeRow('dep-row-${id}',calcDepositos)">×</button>
+  `;
+  document.getElementById('deposito-list').appendChild(row);
+}
+
+// Salidas
+let salidaCount = 0;
+function addSalida() {
+  salidaCount++;
+  const id = salidaCount;
+  const row = document.createElement('div');
+  row.className = 'repeat-row repeat-row-salida';
+  row.id = `sal-row-${id}`;
+  row.innerHTML = `
+    <div class="field"><label>Descripción</label><input type="text" placeholder="Ej: Compra de suministros"></div>
+    <div class="field"><label>Monto (₡)</label><input type="number" placeholder="0" oninput="calcSalidas()"></div>
+    <button class="btn-remove" onclick="removeRow('sal-row-${id}',calcSalidas)">×</button>
+  `;
+  document.getElementById('salida-list').appendChild(row);
+}
+
+function calcSalidas() {
+  let total = 0;
+  document.querySelectorAll('#salida-list input[type="number"]').forEach(i => total += parseFloat(i.value)||0);
+  document.getElementById('total-salidas').textContent = fmt(total);
+}
+
+// Glory
+let gloryCount = 0;
+function addGlory() {
+  gloryCount++;
+  const id = gloryCount;
+  const row = document.createElement('div');
+  row.className = 'repeat-row repeat-row-glory';
+  row.id = `glory-row-${id}`;
+  row.innerHTML = `
+    <div class="field">
+      <label>Método de pago</label>
+      <select>
+        <option value="">Seleccionar...</option>
+        <option>Efectivo</option>
+        <option>Tarjeta BAC</option>
+        <option>Tarjeta BN</option>
+        <option>SINPE</option>
+        <option>Transferencia</option>
+      </select>
+    </div>
+    <div class="field"><label>Monto (₡)</label><input type="number" placeholder="0" oninput="calcGlory()"></div>
+    <button class="btn-remove" onclick="removeRow('glory-row-${id}',calcGlory)">×</button>
+  `;
+  document.getElementById('glory-list').appendChild(row);
+}
+
+function calcGlory() {
+  let total = 0;
+  document.querySelectorAll('#glory-list input[type="number"]').forEach(i => total += parseFloat(i.value)||0);
+  document.getElementById('total-glory').textContent = fmt(total);
+}
+
+function removeRow(id, recalc) {
+  document.getElementById(id).remove();
+  recalc();
+}
+
+function showFiles(input, listId) {
+  const list = document.getElementById(listId);
+  list.innerHTML = '';
+  Array.from(input.files).forEach(f => {
+    const item = document.createElement('div');
+    item.className = 'file-item';
+    item.innerHTML = `📎 ${f.name}`;
+    list.appendChild(item);
+  });
+}
+
+// Progress
+function updateProgress() {
+  let filled = 0, total = 4;
+  if (document.getElementById('cajera').value) filled++;
+  if (document.getElementById('caja').value) filled++;
+  if (document.getElementById('fecha').value) filled++;
+  const cierre = DENOMS.reduce((s,d) => s + (parseInt(document.getElementById(`c-${d}`).value)||0)*d, 0);
+  if (cierre > 0) filled++;
+  document.getElementById('progress').style.width = (filled/total*100) + '%';
+}
+
+// Set today's date
+document.getElementById('fecha').valueAsDate = new Date();
+// Add initial rows
+addSinpe(); addDeposito(); addSalida(); addGlory();
+
+async function uploadFilesToDrive(cajera, caja, tipo, files) {
+  const links = [];
+  for (const file of files) {
+    if (!file) continue;
+    try {
+      const reader = new FileReader();
+      const result = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result.split(',')[1]);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      const uploadRes = await fetch('/api/upload-comprobante', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cajera,
+          caja,
+          tipo,
+          filename: file.name,
+          data: result,
+        }),
+      });
+
+      const uploadData = await uploadRes.json();
+      if (uploadData.success && uploadData.link) {
+        links.push(uploadData.link);
+      }
+    } catch (err) {
+      console.error('Error uploading file:', err);
+    }
+  }
+  return links;
+}
+
+function submitForm() {
+  const btn = document.getElementById('btn-submit');
+
+  try {
+    const cajera = document.getElementById('cajera')?.value;
+    const caja = document.getElementById('caja')?.value;
+    const fecha = document.getElementById('fecha')?.value;
+
+    if (!cajera || !caja || !fecha) {
+      showToast('❌ Completá información general', 'error');
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Subiendo archivos...';
+    showToast('Subiendo archivos a Drive...', 'info');
+
+    // Recolectar archivos de SINPE y Depósitos
+    const sinpeFiles = [];
+    const depositoFiles = [];
+
+    const sinpeList = document.getElementById('sinpe-list');
+    if (sinpeList) {
+      const sinpeRows = sinpeList.querySelectorAll('.repeat-row');
+      sinpeRows.forEach(row => {
+        const fileInput = row.querySelector('input[type="file"]');
+        if (fileInput?.files?.length) {
+          sinpeFiles.push(fileInput.files[0]);
+        }
+      });
+    }
+
+    const depositoList = document.getElementById('deposito-list');
+    if (depositoList) {
+      const depositoRows = depositoList.querySelectorAll('.repeat-row');
+      depositoRows.forEach(row => {
+        const fileInput = row.querySelector('input[type="file"]');
+        if (fileInput?.files?.length) {
+          depositoFiles.push(fileInput.files[0]);
+        }
+      });
+    }
+
+    // Subir archivos en paralelo
+    Promise.all([
+      uploadFilesToDrive(cajera, caja, 'SINPE', sinpeFiles),
+      uploadFilesToDrive(cajera, caja, 'DEPOSITO', depositoFiles),
+    ])
+      .then(([sinpeLinks, depositoLinks]) => {
+        btn.textContent = 'Guardando datos...';
+        showToast('Guardando datos en Sheets...', 'info');
+
+        // Build data object with safe property access
+        const getTotalFromText = (elementId) => {
+          const elem = document.getElementById(elementId);
+          if (!elem) return 0;
+          const text = elem.textContent.replace(/[^\d]/g, '');
+          return parseInt(text) || 0;
+        };
+
+        // Build Glory desglose from rows
+        const gloryDesglose = [];
+        const gloryList = document.getElementById('glory-list');
+        if (gloryList) {
+          const gloryRows = gloryList.querySelectorAll('.repeat-row');
+          gloryRows.forEach(row => {
+            const select = row.querySelector('select');
+            const input = row.querySelector('input[type="number"]');
+            if (select && input) {
+              const metodo = select.value;
+              const monto = parseFloat(input.value) || 0;
+              if (metodo && monto > 0) {
+                gloryDesglose.push({ metodo, monto });
+              }
+            }
+          });
+        }
+
+        const data = {
+          cajera,
+          caja,
+          tc: parseFloat(document.getElementById('tc')?.value) || 0,
+          denom20k: parseInt(document.getElementById('c-20000')?.value) || 0,
+          denom10k: parseInt(document.getElementById('c-10000')?.value) || 0,
+          denom5k: parseInt(document.getElementById('c-5000')?.value) || 0,
+          denom2k: parseInt(document.getElementById('c-2000')?.value) || 0,
+          denom1k: parseInt(document.getElementById('c-1000')?.value) || 0,
+          denom500: parseInt(document.getElementById('c-500')?.value) || 0,
+          denom100: parseInt(document.getElementById('c-100')?.value) || 0,
+          denom50: parseInt(document.getElementById('c-50')?.value) || 0,
+          denom25: parseInt(document.getElementById('c-25')?.value) || 0,
+          denom10: parseInt(document.getElementById('c-10')?.value) || 0,
+          denom5: parseInt(document.getElementById('c-5')?.value) || 0,
+          dolares: parseFloat(document.getElementById('dolares')?.value) || 0,
+          tarjetaBac: getTotalFromText('total-tarjetas'),
+          tarjetaBn: 0,
+          sinpe: getTotalFromText('total-sinpe'),
+          depositos: getTotalFromText('total-depositos'),
+          salidas: getTotalFromText('total-salidas'),
+          glory: getTotalFromText('total-glory'),
+          comentarios: document.getElementById('comentarios')?.value || '',
+          gloryDesglose: gloryDesglose,
+          sinpeLinks: sinpeLinks.join('\n'),
+          depositoLinks: depositoLinks.join('\n'),
+        };
+
+        console.log('Enviando datos:', data);
+
+        return fetch('/api/guardar-cajera', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+        })
+          .then(res => res.json())
+          .then(result => {
+            console.log('Respuesta:', result);
+            if (result.success) {
+              btn.textContent = '✅ Cierre enviado';
+              btn.style.background = '#375623';
+              const badge = document.getElementById('sobre-badge');
+              if (badge) badge.textContent = '✅ Enviado';
+              showToast('✅ Guardado en Sheets + Drive', 'success');
+            } else {
+              throw new Error(result.message);
+            }
+          });
+      })
+      .catch(err => {
+        console.error('Error:', err.message);
+        btn.textContent = 'Reintentar';
+        btn.disabled = false;
+        btn.style.background = '#C8A84B';
+        showToast('⚠️ Error al enviar', 'warning');
+      });
+  } catch (err) {
+    console.error('Error en submitForm:', err.message);
+    btn.disabled = false;
+    btn.textContent = 'Enviar cierre de caja';
+    showToast('❌ Error: ' + err.message, 'error');
+  }
+}
+
+// ===== DEPOSITOS TOTAL =====
+function calcDepositos() {
+  let total = 0;
+  document.querySelectorAll('#deposito-list input[type="number"]').forEach(i => total += parseFloat(i.value)||0);
+  document.getElementById('total-depositos').textContent = fmt(total);
+}
+
+// ===== FILE PREVIEW =====
+function showFilePreview(input, containerId) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+  Array.from(input.files).forEach(file => {
+    if (file.type.startsWith('image/')) {
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(file);
+      container.appendChild(img);
+    } else {
+      const chip = document.createElement('div');
+      chip.className = 'file-chip';
+      chip.textContent = '📄 ' + file.name.substring(0, 20);
+      container.appendChild(chip);
+    }
+  });
+}
+
+// ===== EDITAR CAJERAS =====
+function openEditCajeras() {
+  document.getElementById('modal-cajeras').classList.add('active');
+  refreshCajerasList();
+}
+
+function closeEditCajeras() {
+  document.getElementById('modal-cajeras').classList.remove('active');
+}
+
+function addCajera() {
+  const input = document.getElementById('new-cajera');
+  const name = input.value.trim();
+  if (!name) return alert('Escribí un nombre');
+
+  let cajeras = JSON.parse(localStorage.getItem('cajeras-lista') || '[]');
+  if (cajeras.includes(name)) return alert('Ya existe esa cajera');
+
+  cajeras.push(name);
+  localStorage.setItem('cajeras-lista', JSON.stringify(cajeras));
+  input.value = '';
+  loadCajeras();
+  refreshCajerasList();
+}
+
+function removeCajera(name) {
+  let cajeras = JSON.parse(localStorage.getItem('cajeras-lista') || '[]');
+  cajeras = cajeras.filter(c => c !== name);
+  localStorage.setItem('cajeras-lista', JSON.stringify(cajeras));
+  loadCajeras();
+  refreshCajerasList();
+}
+
+function refreshCajerasList() {
+  const list = document.getElementById('cajeras-list');
+  list.innerHTML = '';
+  const cajeras = JSON.parse(localStorage.getItem('cajeras-lista') || '[]');
+  cajeras.forEach(name => {
+    const item = document.createElement('div');
+    item.className = 'cajera-item';
+    item.innerHTML = `<span>${name}</span><button class="btn-delete" onclick="removeCajera('${name.replace(/'/g, "\\'")}')">Quitar</button>`;
+    list.appendChild(item);
+  });
+}
+
+function loadCajeras() {
+  const select = document.getElementById('cajera');
+  const currentValue = select.value;
+  select.innerHTML = '<option value="">Seleccionar...</option>';
+
+  const customCajeras = JSON.parse(localStorage.getItem('cajeras-lista') || '[]');
+
+  customCajeras.forEach(name => {
+    const opt = document.createElement('option');
+    opt.value = name;
+    opt.textContent = name;
+    select.appendChild(opt);
+  });
+
+  select.value = currentValue;
+}
+
+// ===== ALGORITMO AUTOMÁTICO QUEDA EN CAJA =====
+function distributeQueda() {
+  const DENOMS_DESC = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 25, 10, 5];
+  const totalC = parseInt(document.getElementById('total-cierre').textContent.replace(/[^\d]/g, '')) || 0;
+  const fondo = 50000;
+
+  // Copiar cantidades del cierre
+  const queda = {};
+  DENOMS_DESC.forEach(d => {
+    queda[d] = parseInt(document.getElementById(`c-${d}`).value) || 0;
+  });
+
+  // Calcular cuánto hay que quitar (si total > 50000)
+  let totalQueda = Object.entries(queda).reduce((sum, [d, qty]) => sum + (parseInt(d) * qty), 0);
+  let toRemove = Math.max(0, totalQueda - fondo);
+
+  // Quitar de mayor a menor hasta completar
+  DENOMS_DESC.forEach(d => {
+    if (toRemove <= 0) return;
+    const canRemove = Math.min(queda[d], Math.ceil(toRemove / d));
+    queda[d] -= canRemove;
+    toRemove -= canRemove * d;
+  });
+
+  // Actualizar los inputs de queda con los valores calculados
+  DENOMS_DESC.forEach(d => {
+    document.getElementById(`q-${d}`).value = queda[d];
+    const total = queda[d] * d;
+    document.getElementById(`q-total-${d}`).textContent = total > 0 ? fmt(total) : '—';
+  });
+
+  // Actualizar totales
+  const totalQ = Object.entries(queda).reduce((sum, [d, qty]) => sum + (parseInt(d) * qty), 0);
+  document.getElementById('total-queda').textContent = fmt(totalQ);
+  const sobre = totalC - totalQ;
+  document.getElementById('total-sobre').textContent = fmt(sobre);
+  document.getElementById('sobre-badge').textContent = 'Sobre: ' + fmt(sobre);
+}
+
+// ===== OVERRIDE calcDenoms para incluir algoritmo automático =====
+const originalCalcDenoms = window.calcDenoms;
+window.calcDenoms = function() {
+  // Calcular total cierre
+  let totalC = 0;
+  DENOMS.forEach(d => {
+    const vc = parseInt(document.getElementById(`c-${d}`).value) || 0;
+    const tc = vc * d;
+    document.getElementById(`c-total-${d}`).textContent = tc > 0 ? fmt(tc) : '—';
+    totalC += tc;
+  });
+  document.getElementById('total-cierre').textContent = fmt(totalC);
+
+  // Ejecutar algoritmo automático de distribución
+  if (totalC > 0) {
+    distributeQueda();
+  }
+
+  updateProgress();
+};
+
+// ===== TOAST NOTIFICATIONS =====
+function showToast(msg, type = 'info') {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'show ' + type;
+  setTimeout(() => toast.classList.remove('show'), 4000);
+}
+
+// ===== SYNC PENDING CIERRES =====
+async function syncPending() {
+  const pendientes = JSON.parse(localStorage.getItem('cierres-pendientes') || '[]');
+  if (pendientes.length === 0) return;
+
+  showToast(`Sincronizando ${pendientes.length} cierre(s) pendiente(s)...`, 'warning');
+
+  let synced = 0;
+  for (let i = pendientes.length - 1; i >= 0; i--) {
+    const item = pendientes[i];
+    try {
+      const res = await fetch('/api/guardar-cajera', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(item.data),
+      });
+      const result = await res.json();
+      if (result.success) {
+        pendientes.splice(i, 1);
+        synced++;
+      }
+    } catch (e) {}
+  }
+
+  localStorage.setItem('cierres-pendientes', JSON.stringify(pendientes));
+  if (synced > 0) {
+    showToast(`✅ ${synced} cierre(s) sincronizado(s)`, 'success');
+  }
+}
+
+// ===== INIT =====
+// Cargar cajeras al inicio
+loadCajeras();
+// Sincronizar cierres pendientes
+syncPending();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Corral del Sol — Intranet</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --surface2: #F0EDE6;
+    --border: #E2DDD4;
+    --text: #1A1714;
+    --text2: #6B6560;
+    --text3: #9C9590;
+    --accent: #1A5C3A;
+    --accent-light: #E8F3EC;
+    --accent2: #C8A84B;
+    --accent2-light: #FBF6E9;
+    --danger: #C0392B;
+    --danger-light: #FDEDEC;
+    --radius: 16px;
+    --radius-sm: 10px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--accent);
+    color: white;
+    padding: 20px 24px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    box-shadow: 0 2px 12px rgba(26,92,58,0.2);
+  }
+  .header-logo { font-size: 28px; }
+  .header-brand { font-size: 20px; font-weight: 600; letter-spacing: -0.3px; }
+  .header-tagline { font-size: 12px; opacity: 0.65; font-family: 'DM Mono', monospace; margin-top: 1px; }
+
+  /* MAIN */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 16px;
+    gap: 32px;
+  }
+
+  .welcome {
+    text-align: center;
+  }
+  .welcome h2 {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.4px;
+  }
+  .welcome p {
+    font-size: 14px;
+    color: var(--text2);
+    margin-top: 6px;
+  }
+
+  /* CARDS */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+    max-width: 720px;
+    width: 100%;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 28px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    transition: all 0.2s ease;
+    text-align: center;
+  }
+  .card:hover {
+    border-color: var(--accent);
+    box-shadow: 0 4px 20px rgba(26,92,58,0.12);
+    transform: translateY(-2px);
+  }
+  .card:hover .card-icon-wrap {
+    background: var(--accent);
+  }
+  .card:hover .card-icon {
+    filter: brightness(10);
+  }
+  .card-icon-wrap {
+    width: 56px;
+    height: 56px;
+    background: var(--accent-light);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+  }
+  .card-icon { font-size: 26px; }
+  .card-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.2px;
+  }
+  .card-desc {
+    font-size: 12px;
+    color: var(--text2);
+    line-height: 1.5;
+  }
+  .card-badge {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    margin-top: 2px;
+  }
+  .badge-cajera  { background: var(--accent-light);  color: var(--accent); }
+  .badge-revisora { background: var(--accent2-light); color: #8B6914; }
+  .badge-admin   { background: #EDE9F6; color: #5B35B5; }
+
+  /* FOOTER */
+  .footer {
+    text-align: center;
+    padding: 20px;
+    font-size: 11px;
+    color: var(--text3);
+    font-family: 'DM Mono', monospace;
+  }
+
+  @media (max-width: 600px) {
+    .cards { grid-template-columns: 1fr; max-width: 340px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-logo">🐾</div>
+  <div>
+    <div class="header-brand">Corral del Sol</div>
+    <div class="header-tagline">Sistema interno</div>
+  </div>
+</div>
+
+<div class="main">
+
+  <div class="welcome">
+    <h2>¿Qué querés hacer hoy?</h2>
+    <p>Seleccioná tu área de trabajo</p>
+  </div>
+
+  <div class="cards">
+
+    <a class="card" href="/cajera">
+      <div class="card-icon-wrap">
+        <span class="card-icon">💰</span>
+      </div>
+      <div class="card-title">Cierre de Caja</div>
+      <div class="card-desc">Registrá las denominaciones, SINPE, tarjetas y subí el cierre QVet</div>
+      <span class="card-badge badge-cajera">Cajera</span>
+    </a>
+
+    <a class="card" href="/revisora">
+      <div class="card-icon-wrap">
+        <span class="card-icon">🔍</span>
+      </div>
+      <div class="card-title">Revisión de Caja</div>
+      <div class="card-desc">Revisá los cierres enviados y verificá los montos con el conteo físico</div>
+      <span class="card-badge badge-revisora">Revisora</span>
+    </a>
+
+    <a class="card" href="#">
+      <div class="card-icon-wrap">
+        <span class="card-icon">⚙️</span>
+      </div>
+      <div class="card-title">Administración</div>
+      <div class="card-desc">Reportes, resumen de depósitos y gestión del equipo</div>
+      <span class="card-badge badge-admin">Admin</span>
+    </a>
+
+  </div>
+
+</div>
+
+<div class="footer">Corral del Sol © 2025 — Solo para uso interno</div>
+
+</body>
+</html>
