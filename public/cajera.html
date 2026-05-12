@@ -14,7 +14,7 @@
     --text: #1A1714;
     --text2: #6B6560;
     --text3: #9C9590;
-    --accent: #1A5C3A;
+    --accent: #2a78a5;
     --accent-light: #E8F3EC;
     --accent2: #C8A84B;
     --accent2-light: #FBF6E9;
@@ -42,7 +42,7 @@
     position: sticky;
     top: 0;
     z-index: 100;
-    box-shadow: 0 2px 12px rgba(26,92,58,0.2);
+    box-shadow: 0 2px 12px rgba(42,120,165,0.2);
   }
   .header-top {
     display: flex;
@@ -499,6 +499,7 @@
     color: white;
   }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -514,19 +515,6 @@
 </div>
 
 <!-- Modal: Editar Cajeras -->
-<div class="modal" id="modal-cajeras">
-  <div class="modal-content">
-    <h3>Editar Cajeras</h3>
-    <div id="cajeras-list" style="max-height:300px; overflow-y:auto; margin-bottom:16px;"></div>
-    <div class="modal-input-group">
-      <input type="text" id="new-cajera" placeholder="Nombre de la cajera" onkeypress="if(event.key==='Enter') addCajera()">
-      <button class="modal-btn modal-btn-primary" onclick="addCajera()">Agregar</button>
-    </div>
-    <div class="modal-btn-group">
-      <button class="modal-btn modal-btn-secondary" onclick="closeEditCajeras()">Cerrar</button>
-    </div>
-  </div>
-</div>
 
 <div class="main">
 
@@ -540,12 +528,9 @@
       <div class="field-grid">
         <div class="field" style="grid-column:1/2; display:flex; flex-direction:column;">
           <label>Cajera</label>
-          <div style="display:flex; gap:8px;">
-            <select id="cajera" onchange="updateProgress()" style="flex:1;">
-              <option value="">Seleccionar...</option>
-            </select>
-            <button class="btn-edit-cajera" onclick="openEditCajeras()" title="Editar cajeras">✏️</button>
-          </div>
+          <select id="cajera" onchange="updateProgress()" style="flex:1;">
+            <option value="">Seleccionar...</option>
+          </select>
         </div>
         <div class="field">
           <label>Caja</label>
@@ -557,7 +542,7 @@
         </div>
         <div class="field">
           <label>Fecha</label>
-          <input type="date" id="fecha" onchange="updateProgress()">
+          <input type="date" id="fecha" style="background: var(--surface2); cursor: not-allowed;" onchange="return false;">
         </div>
         <div class="field">
           <label>Tipo de cambio (TC)</label>
@@ -869,19 +854,30 @@ function addGlory() {
   row.innerHTML = `
     <div class="field">
       <label>Método de pago</label>
-      <select>
+      <select onchange="toggleGloryComprobante(${id})">
         <option value="">Seleccionar...</option>
-        <option>Efectivo</option>
-        <option>Tarjeta BAC</option>
-        <option>Tarjeta BN</option>
-        <option>SINPE</option>
-        <option>Transferencia</option>
+        <option value="Efectivo">Efectivo</option>
+        <option value="Tarjeta BAC">Tarjeta BAC</option>
+        <option value="Tarjeta BN">Tarjeta BN</option>
+        <option value="SINPE">SINPE</option>
+        <option value="Transferencia">Transferencia</option>
       </select>
     </div>
     <div class="field"><label>Monto (₡)</label><input type="number" placeholder="0" oninput="calcGlory()"></div>
+    <div class="field" id="glory-comprobante-${id}" style="display:none;">
+      <label>Comprobante</label>
+      <input type="text" placeholder="Número de comprobante...">
+    </div>
     <button class="btn-remove" onclick="removeRow('glory-row-${id}',calcGlory)">×</button>
   `;
   document.getElementById('glory-list').appendChild(row);
+}
+
+function toggleGloryComprobante(id) {
+  const select = document.querySelector(`#glory-row-${id} select`);
+  const comprobanteDiv = document.getElementById(`glory-comprobante-${id}`);
+  const requiresComprobante = ['Tarjeta BAC', 'Tarjeta BN', 'SINPE', 'Transferencia'].includes(select.value);
+  comprobanteDiv.style.display = requiresComprobante ? 'block' : 'none';
 }
 
 function calcGlory() {
@@ -908,189 +904,152 @@ function showFiles(input, listId) {
 
 // Progress
 function updateProgress() {
-  let filled = 0, total = 4;
+  let filled = 0, total = 3;
   if (document.getElementById('cajera').value) filled++;
   if (document.getElementById('caja').value) filled++;
-  if (document.getElementById('fecha').value) filled++;
   const cierre = DENOMS.reduce((s,d) => s + (parseInt(document.getElementById(`c-${d}`).value)||0)*d, 0);
   if (cierre > 0) filled++;
   document.getElementById('progress').style.width = (filled/total*100) + '%';
 }
 
 // Set today's date
-document.getElementById('fecha').valueAsDate = new Date();
+document.getElementById('fecha').value = new Date().toISOString().split('T')[0];
+
 // Add initial rows
 addSinpe(); addDeposito(); addSalida(); addGlory();
 
-async function uploadFilesToDrive(cajera, caja, tipo, files) {
-  const links = [];
-  for (const file of files) {
-    if (!file) continue;
-    try {
-      const reader = new FileReader();
-      const result = await new Promise((resolve, reject) => {
-        reader.onload = () => resolve(reader.result.split(',')[1]);
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-      });
+// Initialize Supabase client
+const SUPABASE_URL = 'https://ccvhtcqeknbexmywzhiv.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_ZbOn9YmMlAtPkWnAdIZbEQ_muWS-plF';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-      const uploadRes = await fetch('/api/upload-comprobante', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cajera,
-          caja,
-          tipo,
-          filename: file.name,
-          data: result,
-        }),
-      });
-
-      const uploadData = await uploadRes.json();
-      if (uploadData.success && uploadData.link) {
-        links.push(uploadData.link);
-      }
-    } catch (err) {
-      console.error('Error uploading file:', err);
-    }
-  }
-  return links;
-}
-
-function submitForm() {
+async function submitForm() {
   const btn = document.getElementById('btn-submit');
 
   try {
     const cajera = document.getElementById('cajera')?.value;
     const caja = document.getElementById('caja')?.value;
-    const fecha = document.getElementById('fecha')?.value;
 
-    if (!cajera || !caja || !fecha) {
+    if (!cajera || !caja) {
       showToast('❌ Completá información general', 'error');
       return;
     }
 
     btn.disabled = true;
-    btn.textContent = 'Subiendo archivos...';
-    showToast('Subiendo archivos a Drive...', 'info');
+    btn.textContent = 'Guardando...';
 
-    // Recolectar archivos de SINPE y Depósitos
-    const sinpeFiles = [];
-    const depositoFiles = [];
+    // Helper to extract totals from text
+    const getTotalFromText = (elementId) => {
+      const elem = document.getElementById(elementId);
+      if (!elem) return 0;
+      const text = elem.textContent.replace(/[^\d]/g, '');
+      return parseInt(text) || 0;
+    };
 
+    // Build SINPE JSON array
+    const sinpeJson = [];
     const sinpeList = document.getElementById('sinpe-list');
     if (sinpeList) {
       const sinpeRows = sinpeList.querySelectorAll('.repeat-row');
       sinpeRows.forEach(row => {
-        const fileInput = row.querySelector('input[type="file"]');
-        if (fileInput?.files?.length) {
-          sinpeFiles.push(fileInput.files[0]);
+        const monto = parseFloat(row.querySelector('input[type="number"]')?.value) || 0;
+        if (monto > 0) {
+          sinpeJson.push({ monto });
         }
       });
     }
 
+    // Build Depósitos JSON array
+    const depositosJson = [];
     const depositoList = document.getElementById('deposito-list');
     if (depositoList) {
       const depositoRows = depositoList.querySelectorAll('.repeat-row');
       depositoRows.forEach(row => {
-        const fileInput = row.querySelector('input[type="file"]');
-        if (fileInput?.files?.length) {
-          depositoFiles.push(fileInput.files[0]);
+        const nombre = row.querySelector('input[type="text"]')?.value || '';
+        const monto = parseFloat(row.querySelector('input[type="number"]')?.value) || 0;
+        if (monto > 0) {
+          depositosJson.push({ nombre, monto });
         }
       });
     }
 
-    // Subir archivos en paralelo
-    Promise.all([
-      uploadFilesToDrive(cajera, caja, 'SINPE', sinpeFiles),
-      uploadFilesToDrive(cajera, caja, 'DEPOSITO', depositoFiles),
-    ])
-      .then(([sinpeLinks, depositoLinks]) => {
-        btn.textContent = 'Guardando datos...';
-        showToast('Guardando datos en Sheets...', 'info');
-
-        // Build data object with safe property access
-        const getTotalFromText = (elementId) => {
-          const elem = document.getElementById(elementId);
-          if (!elem) return 0;
-          const text = elem.textContent.replace(/[^\d]/g, '');
-          return parseInt(text) || 0;
-        };
-
-        // Build Glory desglose from rows
-        const gloryDesglose = [];
-        const gloryList = document.getElementById('glory-list');
-        if (gloryList) {
-          const gloryRows = gloryList.querySelectorAll('.repeat-row');
-          gloryRows.forEach(row => {
-            const select = row.querySelector('select');
-            const input = row.querySelector('input[type="number"]');
-            if (select && input) {
-              const metodo = select.value;
-              const monto = parseFloat(input.value) || 0;
-              if (metodo && monto > 0) {
-                gloryDesglose.push({ metodo, monto });
-              }
-            }
-          });
+    // Build Salidas JSON array
+    const salidasJson = [];
+    const salidaList = document.getElementById('salida-list');
+    if (salidaList) {
+      const salidaRows = salidaList.querySelectorAll('.repeat-row');
+      salidaRows.forEach(row => {
+        const concepto = row.querySelector('input[type="text"]')?.value || '';
+        const monto = parseFloat(row.querySelector('input[type="number"]')?.value) || 0;
+        if (monto > 0) {
+          salidasJson.push({ concepto, monto });
         }
-
-        const data = {
-          cajera,
-          caja,
-          tc: parseFloat(document.getElementById('tc')?.value) || 0,
-          denom20k: parseInt(document.getElementById('c-20000')?.value) || 0,
-          denom10k: parseInt(document.getElementById('c-10000')?.value) || 0,
-          denom5k: parseInt(document.getElementById('c-5000')?.value) || 0,
-          denom2k: parseInt(document.getElementById('c-2000')?.value) || 0,
-          denom1k: parseInt(document.getElementById('c-1000')?.value) || 0,
-          denom500: parseInt(document.getElementById('c-500')?.value) || 0,
-          denom100: parseInt(document.getElementById('c-100')?.value) || 0,
-          denom50: parseInt(document.getElementById('c-50')?.value) || 0,
-          denom25: parseInt(document.getElementById('c-25')?.value) || 0,
-          denom10: parseInt(document.getElementById('c-10')?.value) || 0,
-          denom5: parseInt(document.getElementById('c-5')?.value) || 0,
-          dolares: parseFloat(document.getElementById('dolares')?.value) || 0,
-          tarjetaBac: getTotalFromText('total-tarjetas'),
-          tarjetaBn: 0,
-          sinpe: getTotalFromText('total-sinpe'),
-          depositos: getTotalFromText('total-depositos'),
-          salidas: getTotalFromText('total-salidas'),
-          glory: getTotalFromText('total-glory'),
-          comentarios: document.getElementById('comentarios')?.value || '',
-          gloryDesglose: gloryDesglose,
-          sinpeLinks: sinpeLinks.join('\n'),
-          depositoLinks: depositoLinks.join('\n'),
-        };
-
-        console.log('Enviando datos:', data);
-
-        return fetch('/api/guardar-cajera', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-        })
-          .then(res => res.json())
-          .then(result => {
-            console.log('Respuesta:', result);
-            if (result.success) {
-              btn.textContent = '✅ Cierre enviado';
-              btn.style.background = '#375623';
-              const badge = document.getElementById('sobre-badge');
-              if (badge) badge.textContent = '✅ Enviado';
-              showToast('✅ Guardado en Sheets + Drive', 'success');
-            } else {
-              throw new Error(result.message);
-            }
-          });
-      })
-      .catch(err => {
-        console.error('Error:', err.message);
-        btn.textContent = 'Reintentar';
-        btn.disabled = false;
-        btn.style.background = '#C8A84B';
-        showToast('⚠️ Error al enviar', 'warning');
       });
+    }
+
+    // Build Glory JSON array
+    const gloryJson = [];
+    const gloryList = document.getElementById('glory-list');
+    if (gloryList) {
+      const gloryRows = gloryList.querySelectorAll('.repeat-row');
+      gloryRows.forEach(row => {
+        const metodo = row.querySelector('select')?.value || '';
+        const monto = parseFloat(row.querySelector('input[type="number"]')?.value) || 0;
+        if (metodo && monto > 0) {
+          gloryJson.push({ metodo, monto });
+        }
+      });
+    }
+
+    // Build the cierre data object for respuestas_cajeras table
+    const cierreData = {
+      cajera,
+      caja,
+      tc: parseFloat(document.getElementById('tc')?.value) || 475,
+      c_20000: parseInt(document.getElementById('c-20000')?.value) || 0,
+      c_10000: parseInt(document.getElementById('c-10000')?.value) || 0,
+      c_5000: parseInt(document.getElementById('c-5000')?.value) || 0,
+      c_2000: parseInt(document.getElementById('c-2000')?.value) || 0,
+      c_1000: parseInt(document.getElementById('c-1000')?.value) || 0,
+      c_500: parseInt(document.getElementById('c-500')?.value) || 0,
+      c_100: parseInt(document.getElementById('c-100')?.value) || 0,
+      c_50: parseInt(document.getElementById('c-50')?.value) || 0,
+      c_25: parseInt(document.getElementById('c-25')?.value) || 0,
+      c_10: parseInt(document.getElementById('c-10')?.value) || 0,
+      c_5: parseInt(document.getElementById('c-5')?.value) || 0,
+      q_20000: parseInt(document.getElementById('q-20000')?.value) || 0,
+      q_10000: parseInt(document.getElementById('q-10000')?.value) || 0,
+      q_5000: parseInt(document.getElementById('q-5000')?.value) || 0,
+      q_2000: parseInt(document.getElementById('q-2000')?.value) || 0,
+      q_1000: parseInt(document.getElementById('q-1000')?.value) || 0,
+      q_500: parseInt(document.getElementById('q-500')?.value) || 0,
+      q_100: parseInt(document.getElementById('q-100')?.value) || 0,
+      q_50: parseInt(document.getElementById('q-50')?.value) || 0,
+      q_25: parseInt(document.getElementById('q-25')?.value) || 0,
+      q_10: parseInt(document.getElementById('q-10')?.value) || 0,
+      q_5: parseInt(document.getElementById('q-5')?.value) || 0,
+      dolares_total: parseFloat(document.getElementById('dolares')?.value) || 0,
+      tarjeta_bac: getTotalFromText('total-tarjetas'),
+      tarjeta_bn: 0,
+      sinpe_json: sinpeJson,
+      depositos_json: depositosJson,
+      salidas_json: salidasJson,
+      glory_json: gloryJson,
+    };
+
+    // Insert into respuestas_cajeras table
+    const { error } = await supabase.from('respuestas_cajeras').insert(cierreData);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    btn.textContent = '✅ Cierre registrado';
+    btn.style.background = '#375623';
+    const badge = document.getElementById('sobre-badge');
+    if (badge) badge.textContent = '✅ Enviado';
+    showToast('✅ Cierre guardado en Supabase', 'success');
+
   } catch (err) {
     console.error('Error en submitForm:', err.message);
     btn.disabled = false;
@@ -1125,65 +1084,31 @@ function showFilePreview(input, containerId) {
 }
 
 // ===== EDITAR CAJERAS =====
-function openEditCajeras() {
-  document.getElementById('modal-cajeras').classList.add('active');
-  refreshCajerasList();
-}
-
-function closeEditCajeras() {
-  document.getElementById('modal-cajeras').classList.remove('active');
-}
-
-function addCajera() {
-  const input = document.getElementById('new-cajera');
-  const name = input.value.trim();
-  if (!name) return alert('Escribí un nombre');
-
-  let cajeras = JSON.parse(localStorage.getItem('cajeras-lista') || '[]');
-  if (cajeras.includes(name)) return alert('Ya existe esa cajera');
-
-  cajeras.push(name);
-  localStorage.setItem('cajeras-lista', JSON.stringify(cajeras));
-  input.value = '';
-  loadCajeras();
-  refreshCajerasList();
-}
-
-function removeCajera(name) {
-  let cajeras = JSON.parse(localStorage.getItem('cajeras-lista') || '[]');
-  cajeras = cajeras.filter(c => c !== name);
-  localStorage.setItem('cajeras-lista', JSON.stringify(cajeras));
-  loadCajeras();
-  refreshCajerasList();
-}
-
-function refreshCajerasList() {
-  const list = document.getElementById('cajeras-list');
-  list.innerHTML = '';
-  const cajeras = JSON.parse(localStorage.getItem('cajeras-lista') || '[]');
-  cajeras.forEach(name => {
-    const item = document.createElement('div');
-    item.className = 'cajera-item';
-    item.innerHTML = `<span>${name}</span><button class="btn-delete" onclick="removeCajera('${name.replace(/'/g, "\\'")}')">Quitar</button>`;
-    list.appendChild(item);
-  });
-}
-
-function loadCajeras() {
+async function loadCajeras() {
   const select = document.getElementById('cajera');
   const currentValue = select.value;
-  select.innerHTML = '<option value="">Seleccionar...</option>';
 
-  const customCajeras = JSON.parse(localStorage.getItem('cajeras-lista') || '[]');
+  try {
+    const { data: colaboradores, error } = await supabase
+      .from('colaboradores')
+      .select('nombre')
+      .order('nombre');
 
-  customCajeras.forEach(name => {
-    const opt = document.createElement('option');
-    opt.value = name;
-    opt.textContent = name;
-    select.appendChild(opt);
-  });
+    if (error) throw error;
 
-  select.value = currentValue;
+    select.innerHTML = '<option value="">Seleccionar...</option>';
+
+    colaboradores.forEach(col => {
+      const opt = document.createElement('option');
+      opt.value = col.nombre;
+      opt.textContent = col.nombre;
+      select.appendChild(opt);
+    });
+
+    select.value = currentValue;
+  } catch (err) {
+    console.error('Error cargando cajeras:', err);
+  }
 }
 
 // ===== ALGORITMO AUTOMÁTICO QUEDA EN CAJA =====
@@ -1254,41 +1179,9 @@ function showToast(msg, type = 'info') {
   setTimeout(() => toast.classList.remove('show'), 4000);
 }
 
-// ===== SYNC PENDING CIERRES =====
-async function syncPending() {
-  const pendientes = JSON.parse(localStorage.getItem('cierres-pendientes') || '[]');
-  if (pendientes.length === 0) return;
-
-  showToast(`Sincronizando ${pendientes.length} cierre(s) pendiente(s)...`, 'warning');
-
-  let synced = 0;
-  for (let i = pendientes.length - 1; i >= 0; i--) {
-    const item = pendientes[i];
-    try {
-      const res = await fetch('/api/guardar-cajera', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(item.data),
-      });
-      const result = await res.json();
-      if (result.success) {
-        pendientes.splice(i, 1);
-        synced++;
-      }
-    } catch (e) {}
-  }
-
-  localStorage.setItem('cierres-pendientes', JSON.stringify(pendientes));
-  if (synced > 0) {
-    showToast(`✅ ${synced} cierre(s) sincronizado(s)`, 'success');
-  }
-}
-
 // ===== INIT =====
 // Cargar cajeras al inicio
 loadCajeras();
-// Sincronizar cierres pendientes
-syncPending();
 </script>
 
 </body>

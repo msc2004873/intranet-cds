@@ -15,12 +15,6 @@ export async function GET(request) {
   try {
     let html = fs.readFileSync(htmlPath, 'utf-8');
 
-    // Inyectar el script DENTRO del HTML (antes de </body>)
-    html = html.replace(
-      '</body>',
-      '<script src="/supabase-bridge.js"><\/script>\n</body>'
-    );
-
     return new Response(html, {
       headers: {
         'Content-Type': 'text/html; charset=utf-8',

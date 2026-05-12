@@ -1,5 +1,494 @@
-import { redirect } from 'next/navigation';
+'use client';
+
+import { useState, useEffect } from 'react';
+
+const DENOMS = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 25, 10, 5];
+const fmt = n => '₡' + Math.round(n).toLocaleString('es-CR');
 
 export default function CajeraPage() {
-  redirect('/api/serve-html?file=cajera');
+  const [cajera, setCajera] = useState('');
+  const [caja, setCaja] = useState('');
+  const [fecha, setFecha] = useState('');
+  const [tc, setTc] = useState(475);
+  const [dolares, setDolares] = useState(0);
+  const [tarjetaBac, setTarjetaBac] = useState(0);
+  const [tarjetaBn, setTarjetaBn] = useState(0);
+  const [colaboradores, setColaboradores] = useState([]);
+  const [toast, setToast] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [comentarios, setComentarios] = useState('');
+
+  const [denominaciones, setDenominaciones] = useState({});
+  const [quedaDenominaciones, setQuedaDenominaciones] = useState({});
+  const [sinpeList, setSinpeList] = useState([{ id: 1, monto: 0 }]);
+  const [depositoList, setDepositoList] = useState([{ id: 1, nombre: '', monto: 0 }]);
+  const [salidaList, setSalidaList] = useState([{ id: 1, descripcion: '', monto: 0 }]);
+  const [gloryList, setGloryList] = useState([{ id: 1, metodo: '', monto: 0 }]);
+  let sinpeCount = 1, depCount = 1, salidaCount = 1, gloryCount = 1;
+
+  // Inicializar denominaciones
+  useEffect(() => {
+    const init = {};
+    DENOMS.forEach(d => {
+      init[d] = 0;
+    });
+    setDenominaciones(init);
+    setQuedaDenominaciones(init);
+
+    // Setear fecha actual
+    setFecha(new Date().toISOString().split('T')[0]);
+
+    // Cargar cajeras
+    loadCajeras();
+
+    // Cargar tipo de cambio actual
+    fetchTipoCambio();
+
+    // Cargar todas las transacciones del día
+    loadSinpeDelDia();
+    loadDepositosDelDia();
+    loadSalidasDelDia();
+    loadGloryDelDia();
+  }, []);
+
+  async function fetchTipoCambio() {
+    try {
+      const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+      const data = await res.json();
+      if (data.rates && data.rates.CRC) {
+        const tcInternet = Math.round(data.rates.CRC);
+        const tcAjustado = tcInternet - 10; // Restar 10 por riesgo cambiario
+        setTc(tcAjustado);
+        showToast(`✅ TC del día: ₡${tcAjustado} (internet: ₡${tcInternet} - 10)`);
+      }
+    } catch (err) {
+      console.log('No se pudo cargar TC automático');
+    }
+  }
+
+  async function loadSinpeDelDia() {
+    try {
+      const hoy = new Date().toISOString().split('T')[0];
+      const res = await fetch(`/api/movimientos?tipo=SINPE&fecha=${hoy}`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        const items = data.map((m, i) => ({
+          id: m.id || i,
+          monto: m.monto || 0
+        }));
+        if (items.length > 0) {
+          setSinpeList(items);
+        }
+      }
+    } catch (err) {
+      console.log('Error cargando SINPE:', err);
+    }
+  }
+
+  async function loadGloryDelDia() {
+    try {
+      const hoy = new Date().toISOString().split('T')[0];
+      const res = await fetch(`/api/cobros-glory?cobrado=true&fecha=${hoy}`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        const items = data.map((g, i) => ({
+          id: g.id || i,
+          metodo: g.metodo || '',
+          monto: g.monto || 0
+        }));
+        if (items.length > 0) {
+          setGloryList(items);
+        }
+      }
+    } catch (err) {
+      console.log('Error cargando Glory:', err);
+    }
+  }
+
+  async function loadDepositosDelDia() {
+    try {
+      const hoy = new Date().toISOString().split('T')[0];
+      const res = await fetch(`/api/movimientos?tipo=TRANSFERENCIA&fecha=${hoy}`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        const items = data.map((m, i) => ({
+          id: m.id || i,
+          nombre: m.referencia || '',
+          monto: m.monto || 0
+        }));
+        if (items.length > 0) {
+          setDepositoList(items);
+        }
+      }
+    } catch (err) {
+      console.log('Error cargando depósitos:', err);
+    }
+  }
+
+  async function loadSalidasDelDia() {
+    try {
+      const hoy = new Date().toISOString().split('T')[0];
+      const res = await fetch(`/api/movimientos?tipo=SALIDA&fecha=${hoy}`);
+      const data = await res.json();
+      if (Array.isArray(data)) {
+        const items = data.map((m, i) => ({
+          id: m.id || i,
+          descripcion: m.referencia || '',
+          monto: m.monto || 0
+        }));
+        if (items.length > 0) {
+          setSalidaList(items);
+        }
+      }
+    } catch (err) {
+      console.log('Error cargando salidas:', err);
+    }
+  }
+
+  // Calcular totales
+  const totalCierre = Object.entries(denominaciones).reduce((sum, [d, qty]) => sum + (parseInt(d) * qty), 0);
+  const totalQueda = Object.entries(quedaDenominaciones).reduce((sum, [d, qty]) => sum + (parseInt(d) * qty), 0);
+  const totalSobre = totalCierre - totalQueda;
+  const dolaresEnColones = dolares * tc;
+  const totalTarjetas = tarjetaBac + tarjetaBn;
+  const totalSinpe = sinpeList.reduce((sum, item) => sum + (item.monto || 0), 0);
+  const totalDepositos = depositoList.reduce((sum, item) => sum + (item.monto || 0), 0);
+  const totalSalidas = salidaList.reduce((sum, item) => sum + (item.monto || 0), 0);
+  const totalGlory = gloryList.reduce((sum, item) => sum + (item.monto || 0), 0);
+
+  const handleDenomChange = (denom, value) => {
+    const newVal = parseInt(value) || 0;
+    const newDenoms = { ...denominaciones, [denom]: newVal };
+    setDenominaciones(newDenoms);
+
+    // Auto calcular queda (algoritmo)
+    distributeQueda(newDenoms);
+  };
+
+  const distributeQueda = (denomsData) => {
+    const fondo = 50000;
+
+    const queda = {};
+    DENOMS.forEach(d => {
+      queda[d] = denomsData[d] || 0;
+    });
+
+    // Calcular total queda
+    let totalQuedaAmount = Object.entries(queda).reduce((sum, [d, qty]) => sum + (parseInt(d) * qty), 0);
+
+    // Si total > fondo, quitar de mayor a menor hasta quedar en fondo
+    let toRemove = Math.max(0, totalQuedaAmount - fondo);
+
+    // Quitar de mayor a menor denominación
+    for (let i = 0; i < DENOMS.length && toRemove > 0; i++) {
+      const d = DENOMS[i];
+      const canRemove = Math.min(queda[d], Math.floor(toRemove / d));
+      queda[d] -= canRemove;
+      toRemove -= canRemove * d;
+    }
+
+    setQuedaDenominaciones(queda);
+  };
+
+  async function loadCajeras() {
+    try {
+      const res = await fetch('/api/admin/colaboradores');
+      const data = await res.json();
+      setColaboradores(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error cargando cajeras:', err);
+    }
+  }
+
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(''), 3000);
+  };
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+
+    if (!cajera || !caja) {
+      showToast('❌ Completá información general');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/admin/colaboradores', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          cajera,
+          caja,
+          fecha,
+          tc,
+          totalCierre,
+          totalQueda,
+          totalSobre,
+          dolares,
+          dolaresEnColones,
+          tarjetaBac,
+          tarjetaBn,
+          totalTarjetas,
+        }),
+      });
+
+      if (res.ok) {
+        showToast('✅ Cierre guardado');
+      } else {
+        showToast('❌ Error al guardar');
+      }
+    } catch (err) {
+      showToast('❌ Error: ' + err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
+      {/* Header */}
+      <div style={{ background: '#2a78a5', color: 'white', padding: '20px 24px', boxShadow: '0 2px 12px rgba(42,120,165,0.2)' }}>
+        <div style={{ fontSize: '18px', fontWeight: '600' }}>🐾 Corral del Sol</div>
+        <div style={{ fontSize: '12px', opacity: 0.7, marginTop: '4px' }}>Cierre de Caja</div>
+      </div>
+
+      {/* Main */}
+      <div style={{ flex: 1, maxWidth: '720px', margin: '0 auto', padding: '24px 16px', width: '100%' }}>
+        <form onSubmit={handleSubmit}>
+          {/* SECCIÓN 1: Información general */}
+          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
+              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>1</div>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Información general</div>
+            </div>
+            <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Cajera</label>
+                <select value={cajera} onChange={(e) => setCajera(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px' }}>
+                  <option value="">Seleccionar...</option>
+                  {colaboradores.map((col) => (
+                    <option key={col.id} value={col.nombre}>{col.nombre}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Caja</label>
+                <select value={caja} onChange={(e) => setCaja(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px' }}>
+                  <option value="">Seleccionar...</option>
+                  <option>Caja 1 (clínica)</option>
+                  <option>Caja 2</option>
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Fecha</label>
+                <input type="text" value={fecha} readOnly style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', background: '#F0EDE6', color: '#6B6560' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Tipo de cambio (del día)</label>
+                <input type="number" value={tc} readOnly style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', background: '#F0EDE6', color: '#6B6560', fontSize: '14px', fontFamily: "'DM Mono', monospace", fontWeight: '600' }} />
+                <div style={{ fontSize: '10px', color: '#9C9590', marginTop: '4px' }}>Cargado automáticamente (internet - 10)</div>
+              </div>
+            </div>
+          </div>
+
+          {/* SECCIÓN 2: Cierre de caja */}
+          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
+              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>2</div>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Cierre de caja — denominaciones</div>
+            </div>
+            <div style={{ padding: '20px' }}>
+              {DENOMS.map(d => (
+                <div key={d} style={{ display: 'grid', gridTemplateColumns: '100px 1fr 110px', alignItems: 'center', gap: '10px', padding: '6px 0', borderBottom: '1px solid #E2DDD4' }}>
+                  <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#6B6560', fontWeight: '500' }}>{fmt(d)}</div>
+                  <input type="number" value={denominaciones[d] || 0} onChange={(e) => handleDenomChange(d, e.target.value)} min="0" placeholder="0" style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '15px', fontWeight: '500', textAlign: 'center', fontFamily: "'DM Mono', monospace" }} />
+                  <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#2a78a5', fontWeight: '600', textAlign: 'right' }}>{fmt((denominaciones[d] || 0) * d)}</div>
+                </div>
+              ))}
+              <div style={{ marginTop: '14px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#E8F3EC' }}>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total en caja</span>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#2a78a5' }}>{fmt(totalCierre)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* SECCIÓN 3: Queda en caja */}
+          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
+              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>3</div>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Queda en caja — denominaciones</div>
+            </div>
+            <div style={{ padding: '20px' }}>
+              {DENOMS.map(d => (
+                <div key={d} style={{ display: 'grid', gridTemplateColumns: '100px 1fr 110px', alignItems: 'center', gap: '10px', padding: '6px 0', borderBottom: '1px solid #E2DDD4' }}>
+                  <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#6B6560', fontWeight: '500' }}>{fmt(d)}</div>
+                  <input type="number" value={quedaDenominaciones[d] || 0} readOnly style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #E2DDD4', borderRadius: '8px', background: '#F0EDE6', color: '#6B6560', fontFamily: "'DM Mono', monospace" }} />
+                  <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#C8A84B', fontWeight: '600', textAlign: 'right' }}>{fmt((quedaDenominaciones[d] || 0) * d)}</div>
+                </div>
+              ))}
+              <div style={{ marginTop: '14px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#FBF6E9' }}>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total queda en caja</span>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#C8A84B' }}>{fmt(totalQueda)}</span>
+              </div>
+              <div style={{ marginTop: '8px', padding: '16px 20px', background: '#2a78a5', color: 'white', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', fontWeight: '600' }}>💰 Colones al sobre</span>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '22px', fontWeight: '600' }}>{fmt(totalSobre)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* SECCIÓN 4: Dólares */}
+          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
+              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>4</div>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Dólares</div>
+            </div>
+            <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: '1fr 80px 1fr', gap: '12px', alignItems: 'end' }}>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total dólares ($)</label>
+                <input type="number" value={dolares} onChange={(e) => setDolares(parseFloat(e.target.value))} placeholder="0.00" step="0.01" style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px', fontFamily: "'DM Mono', monospace" }} />
+              </div>
+              <div style={{ padding: '10px 12px', background: '#E8F3EC', borderRadius: '8px', fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#2a78a5', fontWeight: '600', textAlign: 'center' }}>×{tc}</div>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Equivalente en colones</label>
+                <div style={{ padding: '10px 12px', background: '#E8F3EC', borderRadius: '8px', fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#2a78a5', fontWeight: '600' }}>{fmt(dolaresEnColones)}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* SECCIÓN 5: Tarjetas */}
+          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
+              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>5</div>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Tarjetas</div>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                <div style={{ border: '1.5px solid #E2DDD4', borderRadius: '8px', padding: '14px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', color: '#6B6560', marginBottom: '8px' }}>BAC</div>
+                  <input type="number" value={tarjetaBac} onChange={(e) => setTarjetaBac(parseFloat(e.target.value) || 0)} placeholder="0" style={{ width: '100%', border: 'none', padding: '0', fontSize: '20px', fontWeight: '600', fontFamily: "'DM Mono', monospace", outline: 'none' }} />
+                  <div style={{ fontSize: '12px', color: '#9C9590', marginTop: '2px' }}>colones</div>
+                </div>
+                <div style={{ border: '1.5px solid #E2DDD4', borderRadius: '8px', padding: '14px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', color: '#6B6560', marginBottom: '8px' }}>BN</div>
+                  <input type="number" value={tarjetaBn} onChange={(e) => setTarjetaBn(parseFloat(e.target.value) || 0)} placeholder="0" style={{ width: '100%', border: 'none', padding: '0', fontSize: '20px', fontWeight: '600', fontFamily: "'DM Mono', monospace", outline: 'none' }} />
+                  <div style={{ fontSize: '12px', color: '#9C9590', marginTop: '2px' }}>colones</div>
+                </div>
+              </div>
+              <div style={{ padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#E8F3EC' }}>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total tarjetas</span>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#2a78a5' }}>{fmt(totalTarjetas)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* SECCIÓN 6: SINPE */}
+          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
+              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>6</div>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>SINPE Móvil</div>
+            </div>
+            <div style={{ padding: '20px' }}>
+              {sinpeList.map((item) => (
+                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: '#F7F5F0', borderRadius: '6px', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '13px', color: '#6B6560' }}>SINPE #{item.id}</span>
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '600', color: '#2a78a5' }}>{fmt(item.monto)}</span>
+                </div>
+              ))}
+              <div style={{ marginTop: '12px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#E8F3EC' }}>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total SINPE</span>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#2a78a5' }}>{fmt(totalSinpe)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* SECCIÓN 7: Depósitos */}
+          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
+              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>7</div>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Depósitos</div>
+            </div>
+            <div style={{ padding: '20px' }}>
+              {depositoList.map((item) => (
+                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: '#F7F5F0', borderRadius: '6px', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '13px', color: '#6B6560' }}>{item.nombre || 'Transferencia'}</span>
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '600', color: '#2a78a5' }}>{fmt(item.monto)}</span>
+                </div>
+              ))}
+              <div style={{ marginTop: '12px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#E8F3EC' }}>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total depósitos</span>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#2a78a5' }}>{fmt(totalDepositos)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* SECCIÓN 8: Salidas */}
+          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
+              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>8</div>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Salidas de caja</div>
+            </div>
+            <div style={{ padding: '20px' }}>
+              {salidaList.map((item) => (
+                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: '#FDEDEC', borderRadius: '6px', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '13px', color: '#6B6560' }}>{item.descripcion || 'Salida'}</span>
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '600', color: '#C0392B' }}>-{fmt(item.monto)}</span>
+                </div>
+              ))}
+              <div style={{ marginTop: '12px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#FDEDEC' }}>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total salidas</span>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#C0392B' }}>{fmt(totalSalidas)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* SECCIÓN 9: Glory */}
+          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
+              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>9</div>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Glory — Groomer</div>
+            </div>
+            <div style={{ padding: '20px' }}>
+              {gloryList.map((item) => (
+                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: '#F7F5F0', borderRadius: '6px', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '13px', color: '#6B6560' }}>{item.metodo || 'Pago'}</span>
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '600', color: '#2a78a5' }}>{fmt(item.monto)}</span>
+                </div>
+              ))}
+              <div style={{ marginTop: '12px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#E8F3EC' }}>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total Glory</span>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#2a78a5' }}>{fmt(totalGlory)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* SECCIÓN 10: Comentarios */}
+          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
+              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>10</div>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Comentarios / Observaciones</div>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <textarea value={comentarios} onChange={(e) => setComentarios(e.target.value)} rows="4" placeholder="Escribí cualquier observación o nota importante..." style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontFamily: "'DM Sans', sans-serif", fontSize: '14px', resize: 'vertical' }} />
+            </div>
+          </div>
+
+          {/* Submit Button */}
+          <button type="submit" disabled={loading} style={{ width: '100%', padding: '16px', background: '#2a78a5', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '600', cursor: 'pointer', transition: 'background 0.2s', marginBottom: '24px' }} onMouseEnter={(e) => e.target.style.background = '#1f5780'} onMouseLeave={(e) => e.target.style.background = '#2a78a5'}>
+            {loading ? 'Guardando...' : 'Enviar cierre de caja'}
+          </button>
+        </form>
+      </div>
+
+      {/* Toast */}
+      {toast && (
+        <div style={{ position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)', background: '#2a78a5', color: 'white', padding: '12px 20px', borderRadius: '20px', fontSize: '14px', fontWeight: '600', zIndex: 9999 }}>
+          {toast}
+        </div>
+      )}
+    </div>
+  );
 }

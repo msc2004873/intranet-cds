@@ -14,7 +14,7 @@
     --text: #1A1714;
     --text2: #6B6560;
     --text3: #9C9590;
-    --accent: #1A5C3A;
+    --accent: #2a78a5;
     --accent-light: #E8F3EC;
     --accent2: #C8A84B;
     --accent2-light: #FBF6E9;
@@ -41,7 +41,7 @@
     position: sticky;
     top: 0;
     z-index: 100;
-    box-shadow: 0 2px 12px rgba(26,92,58,0.2);
+    box-shadow: 0 2px 12px rgba(42,120,165,0.2);
   }
   .header h1 {
     font-size: 18px;
@@ -150,6 +150,7 @@
   .message.success { background: var(--accent-light); color: var(--accent); }
   .message.error { background: var(--danger-light); color: var(--danger); }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -254,39 +255,49 @@
 </div>
 
 <script>
+  const SUPABASE_URL = 'https://ccvhtcqeknbexmywzhiv.supabase.co';
+  const SUPABASE_ANON_KEY = 'sb_publishable_ZbOn9YmMlAtPkWnAdIZbEQ_muWS-plF';
+  const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
   document.getElementById('fechaRevision').valueAsDate = new Date();
 
-  document.getElementById('revisora-form').addEventListener('submit', function(e) {
+  document.getElementById('revisora-form').addEventListener('submit', async function(e) {
     e.preventDefault();
 
-    const data = {
-      revisora: document.getElementById('revisora').value,
-      caja: document.getElementById('caja').value,
-      fechaCierre: document.getElementById('fechaCierre').value,
-      efectivoContado: parseFloat(document.getElementById('efectivo').value) || 0,
-      tarjetaVerificada: parseFloat(document.getElementById('tarjetaBac').value) || 0,
-      sinpeVerificado: parseFloat(document.getElementById('sinpe').value) || 0,
-      observaciones: document.getElementById('observaciones').value
-    };
+    const btn = document.getElementById('btn-submit');
+    const msg = document.getElementById('message');
 
-    document.getElementById('btn-submit').disabled = true;
+    try {
+      btn.disabled = true;
 
-    google.script.run
-      .withSuccessHandler(function(result) {
-        const msg = document.getElementById('message');
-        msg.className = 'message success';
-        msg.textContent = result.message;
-        msg.style.display = 'block';
-        document.getElementById('btn-submit').disabled = false;
-      })
-      .withFailureHandler(function(error) {
-        const msg = document.getElementById('message');
-        msg.className = 'message error';
-        msg.textContent = '❌ Error: ' + error.message;
-        msg.style.display = 'block';
-        document.getElementById('btn-submit').disabled = false;
-      })
-      .submitRevision(data);
+      const data = {
+        revisora: document.getElementById('revisora').value,
+        caja: document.getElementById('caja').value,
+        fecha_cierre: document.getElementById('fechaCierre').value,
+        fecha_revision: document.getElementById('fechaRevision').value,
+        efectivo_contado: parseFloat(document.getElementById('efectivo').value) || 0,
+        tarjeta_bac_verificada: parseFloat(document.getElementById('tarjetaBac').value) || 0,
+        tarjeta_bn_verificada: parseFloat(document.getElementById('tarjetaBn').value) || 0,
+        sinpe_verificado: parseFloat(document.getElementById('sinpe').value) || 0,
+        observaciones: document.getElementById('observaciones').value
+      };
+
+      const { error } = await supabase.from('respuestas_revisora').insert(data);
+
+      if (error) throw error;
+
+      msg.className = 'message success';
+      msg.textContent = '✅ Revisión guardada correctamente';
+      msg.style.display = 'block';
+      document.getElementById('revisora-form').reset();
+      document.getElementById('fechaRevision').valueAsDate = new Date();
+    } catch (error) {
+      msg.className = 'message error';
+      msg.textContent = '❌ Error: ' + error.message;
+      msg.style.display = 'block';
+    } finally {
+      btn.disabled = false;
+    }
   });
 </script>
 

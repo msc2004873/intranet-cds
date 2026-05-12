@@ -1,0 +1,621 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cobros Glory — Corral del Sol</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F7F5F0;
+    --surface: #FFFFFF;
+    --surface2: #F0EDE6;
+    --border: #E2DDD4;
+    --text: #1A1714;
+    --text2: #6B6560;
+    --text3: #9C9590;
+    --accent: #2a78a5;
+    --accent-light: #E8F3EC;
+    --accent2: #C8A84B;
+    --accent2-light: #FBF6E9;
+    --danger: #C0392B;
+    --danger-light: #FDEDEC;
+    --radius: 12px;
+    --radius-sm: 8px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 60px;
+  }
+
+  .header {
+    background: var(--accent);
+    color: white;
+    padding: 20px 24px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 12px rgba(42,120,165,0.2);
+  }
+
+  .header h1 {
+    font-size: 18px;
+    font-weight: 600;
+    letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .header-sub {
+    font-size: 12px;
+    opacity: 0.7;
+    font-family: 'DM Mono', monospace;
+    margin-top: 4px;
+  }
+
+  .main { max-width: 720px; margin: 0 auto; padding: 24px 16px; }
+
+  .section {
+    background: var(--surface);
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+
+  .section-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: var(--surface2);
+  }
+
+  .section-num {
+    width: 26px;
+    height: 26px;
+    background: var(--accent);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 600;
+    flex-shrink: 0;
+  }
+
+  .section-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    letter-spacing: -0.2px;
+  }
+
+  .section-body { padding: 20px; }
+
+  .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+  .field:last-child { margin-bottom: 0; }
+
+  .field-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+  label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  input, select, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    color: var(--text);
+    background: var(--surface);
+    transition: border-color 0.2s;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-light);
+  }
+
+  button {
+    padding: 10px 16px;
+    background: var(--accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+
+  button:hover { background: #145030; }
+  button:disabled { background: var(--text3); cursor: not-allowed; }
+
+  .btn-add {
+    width: 100%;
+    margin-top: 8px;
+    background: var(--surface2);
+    border: 1.5px dashed var(--border);
+    color: var(--text2);
+  }
+
+  .btn-add:hover { background: var(--accent-light); border-color: var(--accent); color: var(--accent); }
+
+  .patients-grid { display: grid; grid-template-columns: 1fr; gap: 12px; }
+
+  .patient-card {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .patient-info { flex: 1; }
+  .patient-info-row { font-size: 14px; margin-bottom: 4px; }
+  .patient-info-label { font-size: 11px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; }
+  .patient-info-value { font-size: 14px; color: var(--text); }
+
+  .patient-card button {
+    padding: 8px 16px;
+    font-size: 13px;
+    white-space: nowrap;
+  }
+
+  .modal {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.4);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal.active { display: flex; }
+
+  .modal-content {
+    background: white;
+    border-radius: var(--radius);
+    padding: 28px 24px;
+    max-width: 450px;
+    width: 90%;
+    box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+  }
+
+  .modal-header {
+    margin-bottom: 20px;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 16px;
+  }
+
+  .modal-header h3 { font-size: 16px; font-weight: 600; color: var(--text); }
+  .modal-header p { font-size: 13px; color: var(--text2); margin-top: 4px; }
+
+  .modal-body { margin-bottom: 20px; }
+
+  .modal-footer {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+  }
+
+  .modal-footer button {
+    padding: 10px 16px;
+    font-size: 14px;
+  }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1.5px solid var(--border);
+  }
+
+  .btn-secondary:hover { background: var(--border); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+  }
+
+  thead {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+
+  th {
+    padding: 12px;
+    text-align: left;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text2);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  td {
+    padding: 12px;
+    border-bottom: 1px solid var(--border);
+    font-size: 14px;
+  }
+
+  tr:last-child td { border-bottom: none; }
+
+  .total-row {
+    background: var(--accent-light);
+    font-weight: 600;
+    color: var(--accent);
+  }
+
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    padding: 12px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    font-weight: 600;
+    white-space: nowrap;
+    transition: all 0.3s ease;
+    opacity: 0;
+    pointer-events: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  }
+
+  #toast.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  #toast.success {
+    background: var(--accent);
+    color: white;
+  }
+
+  #toast.error {
+    background: var(--danger);
+    color: white;
+  }
+
+  .empty-state {
+    text-align: center;
+    padding: 20px;
+    color: var(--text2);
+  }
+</style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+</head>
+<body>
+
+<div class="header">
+  <h1>🧴 Cobros Glory</h1>
+  <div class="header-sub">Registra servicios de grooming</div>
+</div>
+
+<div class="main">
+
+  <!-- SECCIÓN 1: Ingresar paciente -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">1</div>
+      <div class="section-title">Ingresar paciente</div>
+    </div>
+    <div class="section-body">
+      <div class="field">
+        <label>Nombre de la mascota</label>
+        <input type="text" id="nombre-mascota" placeholder="Ej: Firulais">
+      </div>
+      <div class="field-grid">
+        <div class="field">
+          <label>Nombre del dueño</label>
+          <input type="text" id="nombre-dueno" placeholder="Ej: Juan Pérez">
+        </div>
+        <div class="field">
+          <label>Teléfono</label>
+          <input type="tel" id="telefono-dueno" placeholder="Ej: 8765-4321">
+        </div>
+      </div>
+      <button class="btn-add" onclick="agregarPaciente()" style="margin-top: 16px; background: var(--accent); color: white; border: none;">+ Agregar paciente</button>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 2: Pacientes en espera -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">2</div>
+      <div class="section-title">Pacientes en espera (<span id="count-espera">0</span>)</div>
+    </div>
+    <div class="section-body">
+      <div id="pacientes-espera" class="patients-grid"></div>
+      <div id="empty-espera" class="empty-state">Sin pacientes en espera</div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 3: Registros del día -->
+  <div class="section">
+    <div class="section-header">
+      <div class="section-num">3</div>
+      <div class="section-title">Registros del día</div>
+    </div>
+    <div class="section-body">
+      <div class="field" style="margin-bottom: 16px;">
+        <label>Filtrar por fecha</label>
+        <input type="date" id="filter-fecha">
+      </div>
+      <table id="tabla-registros" style="display: none;">
+        <thead>
+          <tr>
+            <th>Hora</th>
+            <th>Mascota</th>
+            <th>Dueño</th>
+            <th>Método</th>
+            <th style="text-align: right;">Monto</th>
+            <th>Cajera</th>
+          </tr>
+        </thead>
+        <tbody id="tbody-registros"></tbody>
+      </table>
+      <div id="empty-registros" class="empty-state">Sin registros</div>
+      <div id="total-dia" style="margin-top: 16px; font-size: 16px; font-weight: 600; color: var(--accent); text-align: right; display: none;">
+        Total del día: <span id="total-valor">₡0</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Modal de cobro -->
+<div id="modal-cobro" class="modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 id="modal-mascota"></h3>
+      <p id="modal-dueno"></p>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Cajera</label>
+        <select id="select-cajera"></select>
+      </div>
+      <div class="field">
+        <label>Método de pago</label>
+        <select id="select-metodo">
+          <option value="">Seleccionar...</option>
+          <option value="Efectivo">Efectivo</option>
+          <option value="Tarjeta BAC">Tarjeta BAC</option>
+          <option value="Tarjeta BN">Tarjeta BN</option>
+          <option value="SINPE">SINPE</option>
+          <option value="Transferencia">Transferencia</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Monto (₡)</label>
+        <input type="number" id="input-monto" placeholder="0" min="0">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
+      <button onclick="confirmarCobro()">Cobrar</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://ccvhtcqeknbexmywzhiv.supabase.co';
+const SUPABASE_ANON_KEY = 'sb_publishable_ZbOn9YmMlAtPkWnAdIZbEQ_muWS-plF';
+const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+const fmt = n => '₡' + Math.round(n).toLocaleString('es-CR');
+
+let pacienteEnModal = null;
+
+function showToast(msg, type = 'info') {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = 'show ' + type;
+  setTimeout(() => toast.classList.remove('show'), 4000);
+}
+
+async function agregarPaciente() {
+  const mascota = document.getElementById('nombre-mascota').value.trim();
+  const dueno = document.getElementById('nombre-dueno').value.trim();
+  const telefono = document.getElementById('telefono-dueno').value.trim();
+
+  if (!mascota || !dueno) {
+    showToast('❌ Completá nombre de mascota y dueño', 'error');
+    return;
+  }
+
+  const { error } = await supabase.from('cobros_glory').insert({
+    nombre_mascota: mascota,
+    nombre_dueno: dueno,
+    telefono_dueno: telefono,
+    fecha: new Date().toISOString().split('T')[0],
+    cobrado: false
+  });
+
+  if (error) {
+    showToast('❌ Error al agregar paciente', 'error');
+    return;
+  }
+
+  showToast('✅ Paciente agregado', 'success');
+  document.getElementById('nombre-mascota').value = '';
+  document.getElementById('nombre-dueno').value = '';
+  document.getElementById('telefono-dueno').value = '';
+
+  cargarPacientesEspera();
+}
+
+async function cargarPacientesEspera() {
+  const hoy = new Date().toISOString().split('T')[0];
+  const { data } = await supabase.from('cobros_glory')
+    .select('*')
+    .eq('cobrado', false)
+    .eq('fecha', hoy)
+    .order('hora_ingreso', { ascending: true });
+
+  const container = document.getElementById('pacientes-espera');
+  const empty = document.getElementById('empty-espera');
+  const count = document.getElementById('count-espera');
+
+  if (!data || data.length === 0) {
+    container.innerHTML = '';
+    empty.style.display = 'block';
+    count.textContent = '0';
+    return;
+  }
+
+  empty.style.display = 'none';
+  count.textContent = data.length;
+
+  container.innerHTML = data.map(p => `
+    <div class="patient-card">
+      <div class="patient-info">
+        <div class="patient-info-row"><span class="patient-info-label">Mascota</span></div>
+        <div class="patient-info-value" style="font-weight: 600;">${p.nombre_mascota}</div>
+        <div class="patient-info-row" style="margin-top: 8px;"><span class="patient-info-label">Dueño</span></div>
+        <div class="patient-info-value">${p.nombre_dueno}</div>
+        <div class="patient-info-row" style="margin-top: 8px;"><span class="patient-info-label">Ingreso</span></div>
+        <div class="patient-info-value" style="font-family: 'DM Mono', monospace;">${new Date(p.hora_ingreso).toLocaleTimeString('es-CR', {hour:'2-digit', minute:'2-digit'})}</div>
+      </div>
+      <button onclick="abrirModalCobro('${p.id}', '${p.nombre_mascota}', '${p.nombre_dueno}')">Cobrar</button>
+    </div>
+  `).join('');
+}
+
+async function abrirModalCobro(id, mascota, dueno) {
+  pacienteEnModal = id;
+  document.getElementById('modal-mascota').textContent = mascota;
+  document.getElementById('modal-dueno').textContent = dueno;
+  document.getElementById('select-metodo').value = '';
+  document.getElementById('input-monto').value = '';
+  document.getElementById('modal-cobro').classList.add('active');
+
+  await cargarCajeras();
+}
+
+function cerrarModal() {
+  document.getElementById('modal-cobro').classList.remove('active');
+  pacienteEnModal = null;
+}
+
+async function cargarCajeras() {
+  const { data } = await supabase.from('colaboradores').select('nombre').order('nombre');
+  const select = document.getElementById('select-cajera');
+  select.innerHTML = '<option value="">Seleccionar...</option>';
+  (data || []).forEach(col => {
+    const opt = document.createElement('option');
+    opt.value = col.nombre;
+    opt.textContent = col.nombre;
+    select.appendChild(opt);
+  });
+}
+
+async function confirmarCobro() {
+  const cajera = document.getElementById('select-cajera').value;
+  const metodo = document.getElementById('select-metodo').value;
+  const monto = parseFloat(document.getElementById('input-monto').value);
+
+  if (!cajera || !metodo || !monto || monto <= 0) {
+    showToast('❌ Completá todos los campos', 'error');
+    return;
+  }
+
+  const { error } = await supabase.from('cobros_glory')
+    .update({
+      cobrado: true,
+      metodo_pago: metodo,
+      monto: monto,
+      cajera: cajera,
+      hora_cobro: new Date().toISOString()
+    })
+    .eq('id', pacienteEnModal);
+
+  if (error) {
+    showToast('❌ Error al registrar cobro', 'error');
+    return;
+  }
+
+  showToast('✅ Cobro registrado', 'success');
+  cerrarModal();
+  cargarPacientesEspera();
+  cargarRegistrosDia();
+}
+
+async function cargarRegistrosDia() {
+  const fecha = document.getElementById('filter-fecha').value;
+  const { data } = await supabase.from('cobros_glory')
+    .select('*')
+    .eq('cobrado', true)
+    .eq('fecha', fecha)
+    .order('hora_cobro', { ascending: true });
+
+  const tbody = document.getElementById('tbody-registros');
+  const tabla = document.getElementById('tabla-registros');
+  const empty = document.getElementById('empty-registros');
+  const totalDiv = document.getElementById('total-dia');
+  const totalValor = document.getElementById('total-valor');
+
+  if (!data || data.length === 0) {
+    tbody.innerHTML = '';
+    tabla.style.display = 'none';
+    empty.style.display = 'block';
+    totalDiv.style.display = 'none';
+    return;
+  }
+
+  empty.style.display = 'none';
+  tabla.style.display = 'table';
+
+  const total = data.reduce((sum, r) => sum + (r.monto || 0), 0);
+  totalValor.textContent = fmt(total);
+  totalDiv.style.display = 'block';
+
+  tbody.innerHTML = data.map(r => `
+    <tr>
+      <td style="font-family: 'DM Mono', monospace;">${new Date(r.hora_cobro).toLocaleTimeString('es-CR', {hour:'2-digit', minute:'2-digit'})}</td>
+      <td>${r.nombre_mascota}</td>
+      <td>${r.nombre_dueno}</td>
+      <td>${r.metodo_pago}</td>
+      <td style="text-align: right; font-weight: 600;">${fmt(r.monto)}</td>
+      <td>${r.cajera}</td>
+    </tr>
+  `).join('');
+}
+
+// Init
+document.getElementById('filter-fecha').value = new Date().toISOString().split('T')[0];
+document.getElementById('filter-fecha').addEventListener('change', cargarRegistrosDia);
+
+cargarPacientesEspera();
+cargarRegistrosDia();
+</script>
+
+</body>
+</html>
