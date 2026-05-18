@@ -103,6 +103,11 @@ export default function CobroGloryPage() {
       return;
     }
 
+    if (!cajera || !caja) {
+      showToast('❌ Debe haber una cajera y caja seleccionada');
+      return;
+    }
+
     try {
       const fecha = new Date().toISOString().split('T')[0];
       const pacientesParaGuardar = pacientesAIngresar.map(p => ({
@@ -229,8 +234,8 @@ export default function CobroGloryPage() {
               <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Caja</label>
               <select value={caja} onChange={(e) => setCaja(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px' }}>
                 <option value="">Seleccionar...</option>
-                <option>Caja 1 (clínica)</option>
-                <option>Caja 2</option>
+                <option value="Caja 1 (clínica)">Caja 1 (clínica)</option>
+                <option value="Caja 2">Caja 2</option>
               </select>
             </div>
           </div>
