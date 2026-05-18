@@ -152,17 +152,18 @@ export default function Home() {
 
           {/* Período actual */}
           <div style={{
-            background: '#6366F1',
+            background: '#2a78a5',
             color: 'white',
             padding: '20px 32px',
             borderRadius: '16px',
             textAlign: 'center',
-            boxShadow: '0 4px 12px rgba(99,102,241,0.2)',
+            boxShadow: '0 4px 12px rgba(42,120,165,0.2)',
             minWidth: '200px',
           }}>
-            <div style={{ fontSize: '12px', opacity: 0.8, marginBottom: '8px', letterSpacing: '0.5px', textTransform: 'uppercase', fontWeight: '600' }}>Período actual</div>
-            <div style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>Período {periodo}</div>
-            <div style={{ fontSize: '13px', opacity: 0.9 }}>{new Date().toLocaleDateString('es-CR', { day: 'numeric', month: 'long' })}</div>
+            <div style={{ fontSize: '36px', fontWeight: '700', marginBottom: '8px', fontFamily: "'DM Mono', monospace" }}>
+              {new Date().getDate()} de {new Date().toLocaleDateString('es-CR', { month: 'long' })}
+            </div>
+            <div style={{ fontSize: '12px', opacity: 0.8, letterSpacing: '0.5px', textTransform: 'uppercase', fontWeight: '600' }}>Período {periodo}</div>
           </div>
         </div>
 
