@@ -29,6 +29,7 @@ export default function CobroGloryPage() {
   const [selectMetodo, setSelectMetodo] = useState('');
   const [inputMonto, setInputMonto] = useState('');
   const [selectCajeraModal, setSelectCajeraModal] = useState('');
+  const [pacientesSeleccionados, setPacientesSeleccionados] = useState(new Set());
 
   useEffect(() => {
     const hoy = new Date().toISOString().split('T')[0];
@@ -180,6 +181,37 @@ export default function CobroGloryPage() {
     setPacienteEnModal(null);
   }
 
+  function toggleSeleccionar(id) {
+    const nuevo = new Set(pacientesSeleccionados);
+    if (nuevo.has(id)) {
+      nuevo.delete(id);
+    } else {
+      nuevo.add(id);
+    }
+    setPacientesSeleccionados(nuevo);
+  }
+
+  function abrirModalUnificado() {
+    if (pacientesSeleccionados.size < 2) {
+      showToast('❌ Selecciona al menos 2 pacientes');
+      return;
+    }
+
+    const pacientes = pacientesEspera.filter(p => pacientesSeleccionados.has(p.id));
+    const montoTotal = pacientes.reduce((sum, p) => sum + (p.monto || 0), 0);
+
+    setPacienteEnModal({
+      id: Array.from(pacientesSeleccionados),
+      mascota: `${pacientes.length} pacientes`,
+      dueno: pacientes.map(p => p.nombre_dueno).join(', '),
+      montoTotal
+    });
+    setInputMonto(montoTotal.toString());
+    setSelectMetodo('');
+    setSelectCajeraModal(cajera);
+    setModalActivo(true);
+  }
+
   async function confirmarCobro() {
     if (!selectCajeraModal || !selectMetodo || !inputMonto || parseFloat(inputMonto) <= 0) {
       showToast('❌ Completá todos los campos');
@@ -187,23 +219,31 @@ export default function CobroGloryPage() {
     }
 
     try {
-      const { error } = await supabase.from('cobros_glory')
-        .update({
-          cobrado: true,
-          metodo_pago: selectMetodo,
-          monto: parseFloat(inputMonto),
-          cajera: selectCajeraModal,
-          hora_cobro: new Date().toISOString()
-        })
-        .eq('id', pacienteEnModal.id);
+      const esTarjeta = selectMetodo === 'Tarjeta BAC' || selectMetodo === 'Tarjeta BN';
+      const montoTotal = esTarjeta ? parseFloat(inputMonto) * 1.13 : parseFloat(inputMonto);
 
-      if (error) {
-        showToast('❌ Error al registrar cobro');
-        return;
+      const idsAActualizar = Array.isArray(pacienteEnModal.id) ? pacienteEnModal.id : [pacienteEnModal.id];
+
+      for (const id of idsAActualizar) {
+        const { error } = await supabase.from('cobros_glory')
+          .update({
+            cobrado: true,
+            metodo_pago: selectMetodo,
+            monto: esTarjeta ? parseFloat(inputMonto) / idsAActualizar.length : parseFloat(inputMonto) / idsAActualizar.length,
+            cajera: selectCajeraModal,
+            hora_cobro: new Date().toISOString()
+          })
+          .eq('id', id);
+
+        if (error) {
+          showToast('❌ Error al registrar cobro');
+          return;
+        }
       }
 
-      showToast('✅ Cobro registrado');
+      showToast('✅ Cobro(s) registrado(s)');
       cerrarModal();
+      setPacientesSeleccionados(new Set());
       cargarPacientesEspera();
       cargarRegistrosDia(filterFecha);
     } catch (err) {
@@ -356,21 +396,31 @@ export default function CobroGloryPage() {
             {pacientesEspera.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '20px', color: '#6B6560' }}>Sin pacientes en espera</div>
             ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px' }}>
-                {pacientesEspera.map(p => (
-                  <div key={p.id} style={{ background: '#F0EDE6', border: '1px solid #E2DDD4', borderRadius: '8px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontSize: '11px', color: '#6B6560', textTransform: 'uppercase', fontWeight: '600' }}>Mascota</div>
-                      <div style={{ fontSize: '14px', color: '#1A1714', fontWeight: '600' }}>{p.nombre_mascota}</div>
-                      <div style={{ fontSize: '11px', color: '#6B6560', textTransform: 'uppercase', fontWeight: '600', marginTop: '8px' }}>Dueño</div>
-                      <div style={{ fontSize: '14px', color: '#1A1714' }}>{p.nombre_dueno}</div>
-                      <div style={{ fontSize: '11px', color: '#6B6560', textTransform: 'uppercase', fontWeight: '600', marginTop: '8px' }}>Ingreso</div>
-                      <div style={{ fontSize: '14px', color: '#1A1714', fontFamily: "'DM Mono', monospace" }}>{new Date(p.hora_ingreso).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' })}</div>
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', marginBottom: '16px' }}>
+                  {pacientesEspera.map(p => (
+                    <div key={p.id} style={{ background: pacientesSeleccionados.has(p.id) ? '#E8F3EC' : '#F0EDE6', border: pacientesSeleccionados.has(p.id) ? '2px solid #2a78a5' : '1px solid #E2DDD4', borderRadius: '8px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
+                      <input type="checkbox" checked={pacientesSeleccionados.has(p.id)} onChange={() => toggleSeleccionar(p.id)} style={{ width: '20px', height: '20px', cursor: 'pointer' }} />
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '11px', color: '#6B6560', textTransform: 'uppercase', fontWeight: '600' }}>Mascota</div>
+                        <div style={{ fontSize: '14px', color: '#1A1714', fontWeight: '600' }}>{p.nombre_mascota}</div>
+                        <div style={{ fontSize: '11px', color: '#6B6560', textTransform: 'uppercase', fontWeight: '600', marginTop: '8px' }}>Dueño</div>
+                        <div style={{ fontSize: '14px', color: '#1A1714' }}>{p.nombre_dueno}</div>
+                        <div style={{ fontSize: '11px', color: '#6B6560', textTransform: 'uppercase', fontWeight: '600', marginTop: '8px' }}>Ingreso</div>
+                        <div style={{ fontSize: '14px', color: '#1A1714', fontFamily: "'DM Mono', monospace" }}>{new Date(p.hora_ingreso).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' })}</div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
+                        <button onClick={() => abrirModalCobro(p.id, p.nombre_mascota, p.nombre_dueno)} style={{ padding: '8px 12px', background: '#2a78a5', color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'background 0.2s' }} onMouseEnter={(e) => e.target.style.background = '#1f5780'} onMouseLeave={(e) => e.target.style.background = '#2a78a5'}>Cobrar</button>
+                      </div>
                     </div>
-                    <button onClick={() => abrirModalCobro(p.id, p.nombre_mascota, p.nombre_dueno)} style={{ padding: '10px 16px', background: '#2a78a5', color: 'white', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'background 0.2s' }} onMouseEnter={(e) => e.target.style.background = '#1f5780'} onMouseLeave={(e) => e.target.style.background = '#2a78a5'}>Cobrar</button>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+                {pacientesSeleccionados.size > 0 && (
+                  <button onClick={abrirModalUnificado} style={{ width: '100%', padding: '12px', background: '#10B981', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={(e) => e.target.style.background = '#059669'} onMouseLeave={(e) => e.target.style.background = '#10B981'}>
+                    ✓ Unificar {pacientesSeleccionados.size} pacientes
+                  </button>
+                )}
+              </>
             )}
           </div>
         </div>
@@ -435,12 +485,7 @@ export default function CobroGloryPage() {
             <div style={{ marginBottom: '20px' }}>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Cajera</label>
-                <select value={selectCajeraModal} onChange={(e) => setSelectCajeraModal(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px' }}>
-                  <option value="">Seleccionar...</option>
-                  {colaboradores.map((col) => (
-                    <option key={col.id} value={col.nombre}>{col.nombre}</option>
-                  ))}
-                </select>
+                <div style={{ width: '100%', padding: '10px 12px', background: '#F0EDE6', borderRadius: '8px', fontSize: '14px', color: '#1A1714', fontWeight: '600', border: '1.5px solid #E2DDD4' }}>{selectCajeraModal}</div>
               </div>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Método de pago</label>
@@ -453,10 +498,28 @@ export default function CobroGloryPage() {
                   <option value="Transferencia">Transferencia</option>
                 </select>
               </div>
-              <div>
+              <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Monto (₡)</label>
                 <input type="number" value={inputMonto} onChange={(e) => setInputMonto(e.target.value)} placeholder="0" min="0" style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px' }} />
               </div>
+              {inputMonto && selectMetodo && (
+                <div style={{ marginTop: '16px', padding: '12px', background: '#F7F5F0', borderRadius: '8px', borderLeft: '4px solid #2a78a5' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px' }}>
+                    <span style={{ color: '#6B6560' }}>Subtotal:</span>
+                    <span style={{ fontWeight: '600', color: '#1A1714' }}>₡{parseFloat(inputMonto).toLocaleString('es-CR')}</span>
+                  </div>
+                  {(selectMetodo === 'Tarjeta BAC' || selectMetodo === 'Tarjeta BN') && (
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px' }}>
+                      <span style={{ color: '#6B6560' }}>Comisión (13%):</span>
+                      <span style={{ fontWeight: '600', color: '#E67E22' }}>₡{(parseFloat(inputMonto) * 0.13).toLocaleString('es-CR', { maximumFractionDigits: 0 })}</span>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid #E2DDD4', fontSize: '14px' }}>
+                    <span style={{ color: '#1A1714', fontWeight: '600' }}>Total:</span>
+                    <span style={{ fontWeight: '700', color: '#2a78a5', fontSize: '16px' }}>₡{((selectMetodo === 'Tarjeta BAC' || selectMetodo === 'Tarjeta BN') ? parseFloat(inputMonto) * 1.13 : parseFloat(inputMonto)).toLocaleString('es-CR', { maximumFractionDigits: 0 })}</span>
+                  </div>
+                </div>
+              )}
             </div>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button onClick={cerrarModal} style={{ padding: '10px 16px', fontSize: '14px', background: '#F0EDE6', color: '#1A1714', border: '1.5px solid #E2DDD4', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', transition: 'background 0.2s' }} onMouseEnter={(e) => e.target.style.background = '#E2DDD4'} onMouseLeave={(e) => e.target.style.background = '#F0EDE6'}>Cancelar</button>
