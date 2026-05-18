@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import * as XLSX from 'xlsx';
 import Header from '../components/Header';
 
 const SUPABASE_URL = 'https://ccvhtcqeknbexmywzhiv.supabase.co';
@@ -222,28 +223,26 @@ export default function CobroGloryPage() {
     }
   }
 
-  async function descargarExcel() {
+  function descargarExcel() {
     if (!resumenMes || resumenMes.registros.length === 0) {
       showToast('❌ No hay datos para descargar');
       return;
     }
 
     try {
-      const { default: XLSX } = await import('xlsx');
-
       const [año, mes] = mesSeleccionado.split('-');
       const nombreMes = new Date(año, parseInt(mes) - 1).toLocaleString('es-CR', { month: 'long', year: 'numeric' });
 
       const datosTabla = resumenMes.registros.map(r => ({
-        Fecha: r.fecha,
-        Hora: new Date(r.hora_cobro).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }),
-        Mascota: r.nombre_mascota,
-        Dueño: r.nombre_dueno,
-        Teléfono: r.telefono_dueno || '—',
-        Servicio: r.servicio || '—',
-        Método: r.metodo,
-        Monto: r.monto,
-        Cajera: r.cajera || '—',
+        Fecha: r.fecha || '',
+        Hora: r.hora_cobro ? new Date(r.hora_cobro).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }) : '',
+        Mascota: r.nombre_mascota || '',
+        Dueño: r.nombre_dueno || '',
+        Teléfono: r.telefono_dueno || '',
+        Servicio: r.servicio || '',
+        Método: r.metodo || '',
+        Monto: r.monto || 0,
+        Cajera: r.cajera || '',
         Unificado: r.unificado ? 'Sí' : 'No'
       }));
 
@@ -305,11 +304,12 @@ export default function CobroGloryPage() {
       ws2['!cols'] = [{ wch: 25 }, { wch: 15 }];
       XLSX.utils.book_append_sheet(wb, ws2, 'Resumen');
 
-      XLSX.writeFile(wb, `Cobros_Glory_${nombreMes.replace(' ', '_')}.xlsx`);
+      const nombreArchivo = `Cobros_Glory_${nombreMes.replace(' ', '_')}.xlsx`;
+      XLSX.writeFile(wb, nombreArchivo);
       showToast('✅ Excel descargado');
     } catch (err) {
       console.error('Error descargando Excel:', err);
-      showToast('❌ Error descargando Excel');
+      showToast('❌ Error: ' + err.message);
     }
   }
 
