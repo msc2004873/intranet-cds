@@ -235,7 +235,7 @@ export default function CobroGloryPage() {
       const nombreMes = new Date(año, parseInt(mes) - 1).toLocaleString('es-CR', { month: 'long', year: 'numeric' });
 
       const datosTabla = resumenMes.registros.map(r => ({
-        Fecha: r.fecha || '',
+        Fecha: r.fecha ? new Date(r.fecha + 'T00:00:00') : '',
         Hora: r.hora_cobro ? new Date(r.hora_cobro).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }) : '',
         Mascota: r.nombre_mascota || '',
         Dueño: r.nombre_dueno || '',
@@ -300,6 +300,8 @@ export default function CobroGloryPage() {
             // Filas alternadas
             cell.fill = R % 2 === 0 ? colorClaro : colorOscuro;
             if (C === 7) cell.alignment = { horizontal: 'right' };
+            // Formato de fecha para columna Fecha (C === 0)
+            if (C === 0) cell.numFmt = 'dd/mm/yyyy';
           }
         }
       }
