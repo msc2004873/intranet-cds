@@ -8,6 +8,7 @@ export default function Home() {
   const [logs, setLogs] = useState([]);
   const [selectedLog, setSelectedLog] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
 
   useEffect(() => {
     fetchTipoCambio();
@@ -320,7 +321,22 @@ export default function Home() {
 
         {/* Tabla de logs */}
         <div style={{ maxWidth: '960px', width: '100%', marginTop: '48px' }}>
-          <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1A1714', marginBottom: '16px' }}>📋 Últimos movimientos</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1A1714' }}>Movimientos</h3>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              style={{
+                padding: '8px 12px',
+                border: '1.5px solid #E2DDD4',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontFamily: "'DM Mono', monospace",
+                color: '#1A1714',
+              }}
+            />
+          </div>
           <div style={{
             background: '#FFFFFF',
             border: '1.5px solid #E2DDD4',
@@ -329,8 +345,8 @@ export default function Home() {
           }}>
             {loading ? (
               <div style={{ padding: '40px 20px', textAlign: 'center', color: '#9C9590' }}>Cargando...</div>
-            ) : logs.length === 0 ? (
-              <div style={{ padding: '40px 20px', textAlign: 'center', color: '#9C9590' }}>No hay movimientos registrados</div>
+            ) : logs.filter(log => log.fecha === selectedDate).length === 0 ? (
+              <div style={{ padding: '40px 20px', textAlign: 'center', color: '#9C9590' }}>No hay movimientos para esta fecha</div>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
@@ -338,18 +354,16 @@ export default function Home() {
                     <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Movimiento</th>
                     <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Usuario</th>
                     <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Caja</th>
-                    <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Fecha</th>
                     <th style={{ padding: '12px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Hora</th>
                     <th style={{ padding: '12px 16px', textAlign: 'center', fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Detalles</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {logs.slice(0, 10).map((log, idx) => (
-                    <tr key={log.id} style={{ borderBottom: idx < 9 ? '1px solid #E2DDD4' : 'none' }}>
+                  {logs.filter(log => log.fecha === selectedDate).map((log, idx) => (
+                    <tr key={log.id} style={{ borderBottom: '1px solid #E2DDD4' }}>
                       <td style={{ padding: '12px 16px', fontSize: '13px', color: '#1A1714', fontWeight: '500' }}>{log.tipo}</td>
                       <td style={{ padding: '12px 16px', fontSize: '13px', color: '#1A1714' }}>{log.usuario}</td>
                       <td style={{ padding: '12px 16px', fontSize: '13px', color: '#1A1714' }}>{log.caja}</td>
-                      <td style={{ padding: '12px 16px', fontSize: '13px', color: '#6B6560', fontFamily: "'DM Mono', monospace" }}>{log.fecha}</td>
                       <td style={{ padding: '12px 16px', fontSize: '13px', color: '#6B6560', fontFamily: "'DM Mono', monospace" }}>{log.hora}</td>
                       <td style={{ padding: '12px 16px', textAlign: 'center' }}>
                         <button
