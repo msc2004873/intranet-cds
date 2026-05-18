@@ -112,6 +112,8 @@ export default function CobroGloryPage() {
         servicio: p.servicio,
         comentarios: p.comentarios,
         fecha: fecha,
+        cajera: cajera,
+        caja: caja,
         cobrado: false
       }));
 
