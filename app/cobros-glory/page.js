@@ -30,6 +30,8 @@ export default function CobroGloryPage() {
   const [inputMonto, setInputMonto] = useState('');
   const [selectCajeraModal, setSelectCajeraModal] = useState('');
   const [pacientesSeleccionados, setPacientesSeleccionados] = useState(new Set());
+  const [mesSeleccionado, setMesSeleccionado] = useState(new Date().toISOString().slice(0, 7));
+  const [resumenMes, setResumenMes] = useState(null);
 
   useEffect(() => {
     const hoy = new Date().toISOString().split('T')[0];
@@ -165,6 +167,123 @@ export default function CobroGloryPage() {
       setRegistrosDia(data || []);
     } catch (err) {
       console.error('Error cargando registros:', err);
+    }
+  }
+
+  async function cargarResumenMes(mes) {
+    try {
+      const [año, mesNum] = mes.split('-');
+      const inicio = `${año}-${mesNum}-01`;
+      const fin = `${año}-${mesNum}-31`;
+
+      const { data } = await supabase.from('cobros_glory')
+        .select('*')
+        .eq('cobrado', true)
+        .gte('fecha', inicio)
+        .lte('fecha', fin)
+        .order('fecha', { ascending: false });
+
+      const registros = data || [];
+
+      const resumen = {
+        total: registros.reduce((sum, r) => sum + (r.monto || 0), 0),
+        totalUnificado: registros.filter(r => r.unificado).reduce((sum, r) => sum + (r.monto || 0), 0),
+        transacciones: registros.length,
+        transaccionesUnificadas: registros.filter(r => r.unificado).length,
+        porMetodo: {},
+        porCajera: {},
+        registros: registros
+      };
+
+      registros.forEach(r => {
+        const metodo = r.metodo || 'Sin registro';
+        resumen.porMetodo[metodo] = (resumen.porMetodo[metodo] || 0) + (r.monto || 0);
+        const nombreCajera = r.cajera || 'Sin asignar';
+        resumen.porCajera[nombreCajera] = (resumen.porCajera[nombreCajera] || 0) + (r.monto || 0);
+      });
+
+      setResumenMes(resumen);
+    } catch (err) {
+      console.error('Error cargando resumen:', err);
+      showToast('❌ Error cargando resumen del mes');
+    }
+  }
+
+  async function descargarExcel() {
+    if (!resumenMes || resumenMes.registros.length === 0) {
+      showToast('❌ No hay datos para descargar');
+      return;
+    }
+
+    try {
+      const { default: XLSX } = await import('xlsx');
+
+      const [año, mes] = mesSeleccionado.split('-');
+      const nombreMes = new Date(año, parseInt(mes) - 1).toLocaleString('es-CR', { month: 'long', year: 'numeric' });
+
+      const datosTabla = resumenMes.registros.map(r => ({
+        Fecha: r.fecha,
+        Hora: new Date(r.hora_cobro).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }),
+        Mascota: r.nombre_mascota,
+        Dueño: r.nombre_dueno,
+        Teléfono: r.telefono_dueno || '—',
+        Servicio: r.servicio || '—',
+        Método: r.metodo || '—',
+        Monto: r.monto || 0,
+        Cajera: r.cajera || '—',
+        Unificado: r.unificado ? 'Sí' : 'No'
+      }));
+
+      const wb = XLSX.utils.book_new();
+
+      // Hoja de registros
+      const ws1 = XLSX.utils.json_to_sheet(datosTabla);
+      ws1['!cols'] = [
+        { wch: 12 },
+        { wch: 10 },
+        { wch: 20 },
+        { wch: 20 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 15 },
+        { wch: 12 }
+      ];
+      XLSX.utils.book_append_sheet(wb, ws1, 'Registros');
+
+      // Hoja de resumen
+      const resumenData = [
+        { Concepto: 'RESUMEN DEL MES', Valor: '' },
+        { Concepto: '', Valor: '' },
+        { Concepto: 'Total General', Valor: resumenMes.total },
+        { Concepto: 'Total Unificado', Valor: resumenMes.totalUnificado },
+        { Concepto: 'Transacciones', Valor: resumenMes.transacciones },
+        { Concepto: 'Transacciones Unificadas', Valor: resumenMes.transaccionesUnificadas },
+        { Concepto: '', Valor: '' },
+        { Concepto: 'POR MÉTODO', Valor: '' }
+      ];
+
+      Object.entries(resumenMes.porMetodo).forEach(([metodo, monto]) => {
+        resumenData.push({ Concepto: metodo, Valor: monto });
+      });
+
+      resumenData.push({ Concepto: '', Valor: '' });
+      resumenData.push({ Concepto: 'POR CAJERA', Valor: '' });
+
+      Object.entries(resumenMes.porCajera).forEach(([cajera, monto]) => {
+        resumenData.push({ Concepto: cajera, Valor: monto });
+      });
+
+      const ws2 = XLSX.utils.json_to_sheet(resumenData);
+      ws2['!cols'] = [{ wch: 25 }, { wch: 15 }];
+      XLSX.utils.book_append_sheet(wb, ws2, 'Resumen');
+
+      XLSX.writeFile(wb, `Cobros_Glory_${nombreMes.replace(' ', '_')}.xlsx`);
+      showToast('✅ Excel descargado');
+    } catch (err) {
+      console.error('Error descargando Excel:', err);
+      showToast('❌ Error descargando Excel');
     }
   }
 
@@ -533,6 +652,75 @@ export default function CobroGloryPage() {
                   <div style={{ fontSize: '22px', fontWeight: '700', color: '#2a78a5', fontFamily: "'DM Mono', monospace" }}>{fmt(totalDia)}</div>
                 </div>
               </>
+            )}
+          </div>
+        </div>
+
+        {/* SECCIÓN 4: Resumen del mes */}
+        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
+            <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600', flexShrink: 0 }}>4</div>
+            <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Resumen del mes</div>
+          </div>
+          <div style={{ padding: '20px' }}>
+            <div style={{ marginBottom: '16px', display: 'flex', gap: '12px', alignItems: 'center' }}>
+              <div style={{ flex: 1 }}>
+                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Seleccionar mes</label>
+                <input type="month" value={mesSeleccionado} onChange={(e) => { setMesSeleccionado(e.target.value); cargarResumenMes(e.target.value); }} style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px' }} />
+              </div>
+              <button onClick={() => descargarExcel()} disabled={!resumenMes} style={{ marginTop: '22px', padding: '10px 16px', background: '#27AE60', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: resumenMes ? 'pointer' : 'not-allowed', opacity: resumenMes ? 1 : 0.5, transition: 'background 0.2s' }} onMouseEnter={(e) => resumenMes && (e.target.style.background = '#1E8449')} onMouseLeave={(e) => (e.target.style.background = '#27AE60')}>📥 Descargar Excel</button>
+            </div>
+
+            {resumenMes ? (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '12px', marginBottom: '20px' }}>
+                  <div style={{ padding: '16px', background: '#F7F5F0', borderRadius: '8px', borderLeft: '4px solid #2a78a5' }}>
+                    <div style={{ fontSize: '11px', color: '#6B6560', textTransform: 'uppercase', fontWeight: '600', marginBottom: '4px' }}>Total General</div>
+                    <div style={{ fontSize: '20px', fontWeight: '700', color: '#2a78a5', fontFamily: "'DM Mono', monospace" }}>{fmt(resumenMes.total)}</div>
+                  </div>
+                  <div style={{ padding: '16px', background: '#F7F5F0', borderRadius: '8px', borderLeft: '4px solid #10B981' }}>
+                    <div style={{ fontSize: '11px', color: '#6B6560', textTransform: 'uppercase', fontWeight: '600', marginBottom: '4px' }}>Unificado</div>
+                    <div style={{ fontSize: '20px', fontWeight: '700', color: '#10B981', fontFamily: "'DM Mono', monospace" }}>{fmt(resumenMes.totalUnificado)}</div>
+                  </div>
+                  <div style={{ padding: '16px', background: '#F7F5F0', borderRadius: '8px', borderLeft: '4px solid #8B5CF6' }}>
+                    <div style={{ fontSize: '11px', color: '#6B6560', textTransform: 'uppercase', fontWeight: '600', marginBottom: '4px' }}>Transacciones</div>
+                    <div style={{ fontSize: '20px', fontWeight: '700', color: '#8B5CF6', fontFamily: "'DM Mono', monospace" }}>{resumenMes.transacciones}</div>
+                  </div>
+                  <div style={{ padding: '16px', background: '#F7F5F0', borderRadius: '8px', borderLeft: '4px solid #F59E0B' }}>
+                    <div style={{ fontSize: '11px', color: '#6B6560', textTransform: 'uppercase', fontWeight: '600', marginBottom: '4px' }}>Unificadas</div>
+                    <div style={{ fontSize: '20px', fontWeight: '700', color: '#F59E0B', fontFamily: "'DM Mono', monospace" }}>{resumenMes.transaccionesUnificadas}</div>
+                  </div>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '16px' }}>
+                  <div>
+                    <div style={{ fontSize: '12px', fontWeight: '600', color: '#1A1714', marginBottom: '12px', textTransform: 'uppercase' }}>Por Método</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {Object.entries(resumenMes.porMetodo).map(([metodo, monto]) => (
+                        <div key={metodo} style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '8px', borderBottom: '1px solid #E2DDD4' }}>
+                          <span style={{ fontSize: '13px', color: '#6B6560' }}>{metodo}</span>
+                          <span style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714', fontFamily: "'DM Mono', monospace" }}>{fmt(monto)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '12px', fontWeight: '600', color: '#1A1714', marginBottom: '12px', textTransform: 'uppercase' }}>Por Cajera</div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                      {Object.entries(resumenMes.porCajera).map(([cajera, monto]) => (
+                        <div key={cajera} style={{ display: 'flex', justifyContent: 'space-between', paddingBottom: '8px', borderBottom: '1px solid #E2DDD4' }}>
+                          <span style={{ fontSize: '13px', color: '#6B6560' }}>{cajera}</span>
+                          <span style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714', fontFamily: "'DM Mono', monospace" }}>{fmt(monto)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div style={{ textAlign: 'center', padding: '40px 20px', color: '#6B6560' }}>
+                <div style={{ fontSize: '14px', marginBottom: '8px' }}>Selecciona un mes para ver el resumen</div>
+              </div>
             )}
           </div>
         </div>
