@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
+import Header from '../components/Header';
 
 const SUPABASE_URL = 'https://ccvhtcqeknbexmywzhiv.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_ZbOn9YmMlAtPkWnAdIZbEQ_muWS-plF';
@@ -32,6 +33,14 @@ export default function CobroGloryPage() {
   useEffect(() => {
     const hoy = new Date().toISOString().split('T')[0];
     setFilterFecha(hoy);
+
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      const user = JSON.parse(userData);
+      setCajera(user.nombre);
+      setSelectCajeraModal(user.nombre);
+    }
+
     loadCajeras();
     cargarPacientesEspera();
     cargarRegistrosDia(hoy);
@@ -199,12 +208,7 @@ export default function CobroGloryPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
-      {/* Header */}
-      <div style={{ background: '#2a78a5', color: 'white', padding: '20px 24px', boxShadow: '0 2px 12px rgba(42,120,165,0.2)' }}>
-        <a href="/" style={{ color: 'white', textDecoration: 'none', fontSize: '12px', opacity: 0.8, display: 'inline-block', marginBottom: '8px' }}>← Volver</a>
-        <div style={{ fontSize: '18px', fontWeight: '600' }}>🐕‍🦺 Cobros Glory</div>
-        <div style={{ fontSize: '12px', opacity: 0.7, marginTop: '4px' }}>Registra servicios de grooming</div>
-      </div>
+      <Header title="Cobros Glory" subtitle="Registra servicios de grooming" showLogout={false} />
 
       {/* Main */}
       <div style={{ flex: 1, maxWidth: '720px', margin: '0 auto', padding: '24px 16px', width: '100%' }}>
@@ -217,12 +221,7 @@ export default function CobroGloryPage() {
           <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div>
               <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Cajera</label>
-              <select value={cajera} onChange={(e) => setCajera(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px' }}>
-                <option value="">Seleccionar...</option>
-                {colaboradores.map((col) => (
-                  <option key={col.id} value={col.nombre}>{col.nombre}</option>
-                ))}
-              </select>
+              <div style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px', background: '#F0EDE6', color: '#1A1714', fontWeight: '600' }}>{cajera || 'Cargando...'}</div>
             </div>
             <div>
               <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Caja</label>

@@ -5,7 +5,7 @@ export async function POST(request) {
     const data = await request.json();
 
     const { data: result, error } = await supabase
-      .from('respuestas_revisora')
+      .from('revision_caja')
       .insert([
         {
           revisora: data.revisora,

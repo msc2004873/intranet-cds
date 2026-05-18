@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Header from '../components/Header';
 
 const DENOMS = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 25, 10, 5];
 const fmt = n => '₡' + Math.round(n).toLocaleString('es-CR');
@@ -37,6 +38,13 @@ export default function CajeraPage() {
 
     // Setear fecha actual
     setFecha(new Date().toISOString().split('T')[0]);
+
+    // Pre-llenar cajera desde localStorage
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      const user = JSON.parse(userData);
+      setCajera(user.nombre);
+    }
 
     // Cargar cajeras
     loadCajeras();
@@ -249,11 +257,7 @@ export default function CajeraPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
-      {/* Header */}
-      <div style={{ background: '#2a78a5', color: 'white', padding: '20px 24px', boxShadow: '0 2px 12px rgba(42,120,165,0.2)' }}>
-        <div style={{ fontSize: '18px', fontWeight: '600' }}>🐾 Corral del Sol</div>
-        <div style={{ fontSize: '12px', opacity: 0.7, marginTop: '4px' }}>Cierre de Caja</div>
-      </div>
+      <Header title="Cierre de Caja" subtitle="Registro de cierre diario" showLogout={false} />
 
       {/* Main */}
       <div style={{ flex: 1, maxWidth: '720px', margin: '0 auto', padding: '24px 16px', width: '100%' }}>
@@ -267,12 +271,7 @@ export default function CajeraPage() {
             <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
               <div>
                 <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Cajera</label>
-                <select value={cajera} onChange={(e) => setCajera(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px' }}>
-                  <option value="">Seleccionar...</option>
-                  {colaboradores.map((col) => (
-                    <option key={col.id} value={col.nombre}>{col.nombre}</option>
-                  ))}
-                </select>
+                <div style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px', background: '#F0EDE6', color: '#1A1714', fontWeight: '600' }}>{cajera || 'Cargando...'}</div>
               </div>
               <div>
                 <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Caja</label>

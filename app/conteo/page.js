@@ -31,6 +31,13 @@ export default function ConteoPage() {
     setDenominaciones(init);
     setFecha(now.toLocaleDateString('es-CR'));
     setHora(now.toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }));
+
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      const user = JSON.parse(userData);
+      setCajera(user.nombre);
+    }
+
     loadCajeras();
   }, []);
 
@@ -121,12 +128,7 @@ export default function ConteoPage() {
           <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
             <div>
               <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Cajera</label>
-              <select value={cajera} onChange={(e) => setCajera(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px' }}>
-                <option value="">Seleccionar...</option>
-                {colaboradores.map((col) => (
-                  <option key={col.id} value={col.nombre}>{col.nombre}</option>
-                ))}
-              </select>
+              <div style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px', background: '#F0EDE6', color: '#1A1714', fontWeight: '600' }}>{cajera || 'Cargando...'}</div>
             </div>
             <div>
               <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Caja</label>

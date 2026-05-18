@@ -5,9 +5,23 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
-export async function PATCH(req, { params }) {
+export async function GET(req) {
   try {
-    const { id } = params;
+    const { data, error } = await supabase
+      .from('colaboradores')
+      .select('id, nombre, iniciales, rol, activo')
+      .order('nombre');
+
+    if (error) throw error;
+    return Response.json(data);
+  } catch (err) {
+    console.error('Error:', err);
+    return Response.json({ error: err.message }, { status: 500 });
+  }
+}
+
+export async function POST(req) {
+  try {
     const { nombre, iniciales, pin, rol } = await req.json();
 
     if (!nombre || !iniciales || !pin) {
@@ -20,17 +34,17 @@ export async function PATCH(req, { params }) {
 
     const { data, error } = await supabase
       .from('colaboradores')
-      .update({
+      .insert({
         nombre,
         iniciales: iniciales.toUpperCase(),
         pin,
-        rol
+        rol: rol || 'cajera',
+        activo: true
       })
-      .eq('id', id)
       .select();
 
     if (error) throw error;
-    return Response.json(data[0], { status: 200 });
+    return Response.json(data[0], { status: 201 });
   } catch (err) {
     console.error('Error:', err);
     return Response.json({ error: err.message }, { status: 500 });
