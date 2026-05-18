@@ -228,15 +228,16 @@ export default function CobroGloryPage() {
         const { error } = await supabase.from('cobros_glory')
           .update({
             cobrado: true,
-            metodo_pago: selectMetodo,
-            monto: esTarjeta ? parseFloat(inputMonto) / idsAActualizar.length : parseFloat(inputMonto) / idsAActualizar.length,
+            metodo: selectMetodo,
+            monto: parseFloat(inputMonto) / idsAActualizar.length,
             cajera: selectCajeraModal,
             hora_cobro: new Date().toISOString()
           })
           .eq('id', id);
 
         if (error) {
-          showToast('❌ Error al registrar cobro');
+          console.error('Error Supabase:', error);
+          showToast('❌ Error al registrar cobro: ' + error.message);
           return;
         }
       }
@@ -406,6 +407,24 @@ export default function CobroGloryPage() {
                         <div style={{ fontSize: '14px', color: '#1A1714', fontWeight: '600' }}>{p.nombre_mascota}</div>
                         <div style={{ fontSize: '11px', color: '#6B6560', textTransform: 'uppercase', fontWeight: '600', marginTop: '8px' }}>Dueño</div>
                         <div style={{ fontSize: '14px', color: '#1A1714' }}>{p.nombre_dueno}</div>
+                        {p.telefono_dueno && (
+                          <>
+                            <div style={{ fontSize: '11px', color: '#6B6560', textTransform: 'uppercase', fontWeight: '600', marginTop: '6px' }}>Teléfono</div>
+                            <div style={{ fontSize: '13px', color: '#2a78a5', fontFamily: "'DM Mono', monospace" }}>{p.telefono_dueno}</div>
+                          </>
+                        )}
+                        {p.servicio && (
+                          <>
+                            <div style={{ fontSize: '11px', color: '#6B6560', textTransform: 'uppercase', fontWeight: '600', marginTop: '6px' }}>Servicio</div>
+                            <div style={{ fontSize: '13px', color: '#1A1714' }}>{p.servicio === 'corte' ? 'Corte' : p.servicio === 'corte_baño' ? 'Corte y baño' : 'Otro'}</div>
+                          </>
+                        )}
+                        {p.comentarios && (
+                          <>
+                            <div style={{ fontSize: '11px', color: '#6B6560', textTransform: 'uppercase', fontWeight: '600', marginTop: '6px' }}>Comentarios</div>
+                            <div style={{ fontSize: '13px', color: '#6B6560', fontStyle: 'italic' }}>{p.comentarios}</div>
+                          </>
+                        )}
                         <div style={{ fontSize: '11px', color: '#6B6560', textTransform: 'uppercase', fontWeight: '600', marginTop: '8px' }}>Ingreso</div>
                         <div style={{ fontSize: '14px', color: '#1A1714', fontFamily: "'DM Mono', monospace" }}>{new Date(p.hora_ingreso).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' })}</div>
                       </div>
