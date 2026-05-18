@@ -33,6 +33,7 @@ export default function CobroGloryPage() {
   const [pacientesSeleccionados, setPacientesSeleccionados] = useState(new Set());
   const [mesSeleccionado, setMesSeleccionado] = useState(new Date().toISOString().slice(0, 7));
   const [resumenMes, setResumenMes] = useState(null);
+  const [comentariosCobro, setComentariosCobro] = useState('');
 
   useEffect(() => {
     const hoy = new Date().toISOString().split('T')[0];
@@ -243,6 +244,7 @@ export default function CobroGloryPage() {
         Método: r.metodo || '',
         Monto: r.monto || 0,
         Cajera: r.cajera || '',
+        Comentarios: r.comentarios_cobro || '',
         Unificado: r.unificado ? 'Sí' : 'No'
       }));
 
@@ -274,6 +276,7 @@ export default function CobroGloryPage() {
         { wch: 15 },
         { wch: 15 },
         { wch: 15 },
+        { wch: 30 },
         { wch: 12 }
       ];
       XLSX.utils.book_append_sheet(wb, ws1, 'Transacciones');
@@ -318,12 +321,14 @@ export default function CobroGloryPage() {
     setSelectMetodo('');
     setInputMonto('');
     setSelectCajeraModal(cajera);
+    setComentariosCobro('');
     setModalActivo(true);
   }
 
   function cerrarModal() {
     setModalActivo(false);
     setPacienteEnModal(null);
+    setComentariosCobro('');
   }
 
   function toggleSeleccionar(id) {
@@ -394,7 +399,8 @@ export default function CobroGloryPage() {
             cajera: selectCajeraModal,
             cobrado: true,
             unificado: true,
-            caja: caja
+            caja: caja,
+            comentarios_cobro: comentariosCobro || null
           }
         ]);
 
@@ -418,7 +424,8 @@ export default function CobroGloryPage() {
             metodo: selectMetodo,
             monto: montoFinal,
             cajera: selectCajeraModal,
-            hora_cobro: new Date().toISOString()
+            hora_cobro: new Date().toISOString(),
+            comentarios_cobro: comentariosCobro || null
           })
           .eq('id', idsAActualizar[0]);
 
@@ -794,6 +801,10 @@ export default function CobroGloryPage() {
                   </div>
                 </div>
               )}
+              <div style={{ marginBottom: '12px', marginTop: '12px' }}>
+                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Comentarios (opcional)</label>
+                <textarea value={comentariosCobro} onChange={(e) => setComentariosCobro(e.target.value)} placeholder="Ej: Problemas con tarjeta, se reintentará..." style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px', minHeight: '80px', fontFamily: 'inherit', resize: 'none' }} />
+              </div>
             </div>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button onClick={cerrarModal} style={{ padding: '10px 16px', fontSize: '14px', background: '#F0EDE6', color: '#1A1714', border: '1.5px solid #E2DDD4', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', transition: 'background 0.2s' }} onMouseEnter={(e) => e.target.style.background = '#E2DDD4'} onMouseLeave={(e) => e.target.style.background = '#F0EDE6'}>Cancelar</button>
