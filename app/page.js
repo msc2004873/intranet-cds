@@ -12,6 +12,8 @@ export default function Home() {
   const [periodo, setPeriodo] = useState(null);
   const [esPrimerDia, setEsPrimerDia] = useState(false);
   const [tcActual, setTcActual] = useState(null);
+  const [showTCModal, setShowTCModal] = useState(false);
+  const [periodsTC, setPeriodsTC] = useState([]);
 
   useEffect(() => {
     fetchTipoCambio();
@@ -27,8 +29,21 @@ export default function Home() {
       setEsPrimerDia(data.esPrimerDia);
       setTcActual(data.tipoCambio);
       setTc(data.tipoCambio);
+
+      // Cargar TC de todos los períodos del mes
+      await fetchTCPeriodos();
     } catch (err) {
       console.error('Error fetching período:', err);
+    }
+  }
+
+  async function fetchTCPeriodos() {
+    try {
+      const res = await fetch('/api/periodos/tc-mes');
+      const data = await res.json();
+      setPeriodsTC(data.periodos || []);
+    } catch (err) {
+      console.error('Error fetching TC períodos:', err);
     }
   }
 
@@ -105,19 +120,35 @@ export default function Home() {
           justifyContent: 'center',
           flexWrap: 'wrap',
         }}>
-          <div style={{
-            background: '#2a78a5',
-            color: 'white',
-            padding: '20px 32px',
-            borderRadius: '16px',
-            textAlign: 'center',
-            boxShadow: '0 4px 12px rgba(42,120,165,0.2)',
-            minWidth: '200px',
-          }}>
+          <button
+            onClick={() => setShowTCModal(true)}
+            style={{
+              background: '#2a78a5',
+              color: 'white',
+              padding: '20px 32px',
+              borderRadius: '16px',
+              textAlign: 'center',
+              boxShadow: '0 4px 12px rgba(42,120,165,0.2)',
+              minWidth: '200px',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#1f5780';
+              e.currentTarget.style.transform = 'translateY(-2px)';
+              e.currentTarget.style.boxShadow = '0 6px 20px rgba(42,120,165,0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#2a78a5';
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(42,120,165,0.2)';
+            }}
+          >
             <div style={{ fontSize: '12px', opacity: 0.8, marginBottom: '8px', letterSpacing: '0.5px', textTransform: 'uppercase', fontWeight: '600' }}>Tipo de cambio del período</div>
             <div style={{ fontSize: '36px', fontWeight: '700', fontFamily: "'DM Mono', monospace", letterSpacing: '-1px' }}>₡{tcActual || '—'}</div>
-            <div style={{ fontSize: '10px', opacity: 0.7, marginTop: '6px' }}>Período {periodo}</div>
-          </div>
+            <div style={{ fontSize: '10px', opacity: 0.7, marginTop: '6px' }}>Período {periodo} • Click para ver todos</div>
+          </button>
 
           {/* Período actual */}
           <div style={{
@@ -456,6 +487,84 @@ export default function Home() {
           </div>
         </div>
       </div>
+
+      {/* Modal de TC por períodos */}
+      {showTCModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          width: '100%',
+          height: '100%',
+          background: 'rgba(0,0,0,0.4)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+        }} onClick={() => setShowTCModal(false)}>
+          <div style={{
+            background: '#FFFFFF',
+            borderRadius: '12px',
+            padding: '32px',
+            maxWidth: '500px',
+            width: '90%',
+            boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
+          }} onClick={(e) => e.stopPropagation()}>
+            <h4 style={{ fontSize: '18px', fontWeight: '600', color: '#1A1714', marginBottom: '24px' }}>💱 Tipos de cambio del mes</h4>
+
+            <div style={{ display: 'grid', gap: '12px', marginBottom: '24px' }}>
+              {periodsTC.map(p => (
+                <div key={p.periodo_num} style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  padding: '14px 16px',
+                  background: p.periodo_num === periodo ? '#E8F3EC' : '#F7F5F0',
+                  borderRadius: '8px',
+                  border: p.periodo_num === periodo ? '2px solid #2a78a5' : 'none',
+                }}>
+                  <div>
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714' }}>
+                      Período {p.periodo_num}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#6B6560', marginTop: '2px' }}>
+                      {p.fecha_inicio} a {p.fecha_fin}
+                    </div>
+                  </div>
+                  <div style={{
+                    fontSize: '16px',
+                    fontWeight: '700',
+                    fontFamily: "'DM Mono', monospace",
+                    color: '#2a78a5',
+                  }}>
+                    ₡{p.tipo_cambio}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setShowTCModal(false)}
+              style={{
+                width: '100%',
+                padding: '12px',
+                background: '#2a78a5',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.background = '#1f5780'}
+              onMouseLeave={(e) => e.currentTarget.style.background = '#2a78a5'}
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Modal de detalles */}
       {selectedLog && (
