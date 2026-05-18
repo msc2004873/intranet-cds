@@ -49,8 +49,8 @@ export default function CajeraPage() {
     // Cargar cajeras
     loadCajeras();
 
-    // Cargar tipo de cambio actual
-    fetchTipoCambio();
+    // Cargar tipo de cambio del período
+    fetchTipoCambioPeriodo();
 
     // Cargar todas las transacciones del día
     loadSinpeDelDia();
@@ -59,18 +59,15 @@ export default function CajeraPage() {
     loadGloryDelDia();
   }, []);
 
-  async function fetchTipoCambio() {
+  async function fetchTipoCambioPeriodo() {
     try {
-      const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+      const res = await fetch('/api/periodos/get-actual');
       const data = await res.json();
-      if (data.rates && data.rates.CRC) {
-        const tcInternet = Math.round(data.rates.CRC);
-        const tcAjustado = tcInternet - 10; // Restar 10 por riesgo cambiario
-        setTc(tcAjustado);
-        showToast(`✅ TC del día: ₡${tcAjustado} (internet: ₡${tcInternet} - 10)`);
-      }
+      setTc(data.tipoCambio);
+      showToast(`✅ TC del período ${data.periodo}: ₡${data.tipoCambio}`);
     } catch (err) {
-      console.log('No se pudo cargar TC automático');
+      console.log('No se pudo cargar TC del período');
+      setTc(475); // Default
     }
   }
 
