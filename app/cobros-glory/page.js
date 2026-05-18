@@ -198,13 +198,23 @@ export default function CobroGloryPage() {
     }
 
     const pacientes = pacientesEspera.filter(p => pacientesSeleccionados.has(p.id));
+
+    // Validar que todos tengan el mismo dueño
+    const dueños = new Set(pacientes.map(p => p.nombre_dueno));
+    if (dueños.size > 1) {
+      showToast('❌ Todos los pacientes deben tener el mismo dueño');
+      return;
+    }
+
     const montoTotal = pacientes.reduce((sum, p) => sum + (p.monto || 0), 0);
+    const nombresMascotas = pacientes.map(p => p.nombre_mascota).join(', ');
 
     setPacienteEnModal({
       id: Array.from(pacientesSeleccionados),
-      mascota: `${pacientes.length} pacientes`,
-      dueno: pacientes.map(p => p.nombre_dueno).join(', '),
-      montoTotal
+      mascota: nombresMascotas,
+      dueno: pacientes[0].nombre_dueno,
+      montoTotal,
+      unificado: true
     });
     setInputMonto(montoTotal.toString());
     setSelectMetodo('');
@@ -220,20 +230,52 @@ export default function CobroGloryPage() {
 
     try {
       const esTarjeta = selectMetodo === 'Tarjeta BAC' || selectMetodo === 'Tarjeta BN';
-      const montoTotal = esTarjeta ? parseFloat(inputMonto) * 1.13 : parseFloat(inputMonto);
-
+      const montoFinal = esTarjeta ? parseFloat(inputMonto) * 1.13 : parseFloat(inputMonto);
       const idsAActualizar = Array.isArray(pacienteEnModal.id) ? pacienteEnModal.id : [pacienteEnModal.id];
 
-      for (const id of idsAActualizar) {
+      if (pacienteEnModal.unificado) {
+        // Insertar UN registro unificado
+        const { error: insertError } = await supabase.from('cobros_glory').insert([
+          {
+            nombre_mascota: pacienteEnModal.mascota,
+            nombre_dueno: pacienteEnModal.dueno,
+            telefono_dueno: pacientesEspera.find(p => p.id === idsAActualizar[0])?.telefono_dueno,
+            servicio: pacientesEspera.find(p => p.id === idsAActualizar[0])?.servicio,
+            fecha: new Date().toISOString().split('T')[0],
+            hora_ingreso: new Date().toISOString(),
+            hora_cobro: new Date().toISOString(),
+            metodo: selectMetodo,
+            monto: montoFinal,
+            cajera: selectCajeraModal,
+            cobrado: true,
+            unificado: true,
+            caja: caja
+          }
+        ]);
+
+        if (insertError) {
+          console.error('Error Supabase:', insertError);
+          showToast('❌ Error al registrar cobro: ' + insertError.message);
+          return;
+        }
+
+        // Actualizar los pacientes para marcarlos como cobrados
+        for (const id of idsAActualizar) {
+          await supabase.from('cobros_glory')
+            .update({ cobrado: true })
+            .eq('id', id);
+        }
+      } else {
+        // Cobro individual - actualizar el registro existente
         const { error } = await supabase.from('cobros_glory')
           .update({
             cobrado: true,
             metodo: selectMetodo,
-            monto: parseFloat(inputMonto) / idsAActualizar.length,
+            monto: montoFinal,
             cajera: selectCajeraModal,
             hora_cobro: new Date().toISOString()
           })
-          .eq('id', id);
+          .eq('id', idsAActualizar[0]);
 
         if (error) {
           console.error('Error Supabase:', error);
@@ -472,11 +514,14 @@ export default function CobroGloryPage() {
                   </thead>
                   <tbody>
                     {registrosDia.map((r, idx) => (
-                      <tr key={idx} style={{ borderBottom: '1px solid #E2DDD4' }}>
+                      <tr key={idx} style={{ borderBottom: '1px solid #E2DDD4', background: r.unificado ? '#E8F3EC' : 'transparent' }}>
                         <td style={{ padding: '12px', fontSize: '14px', fontFamily: "'DM Mono', monospace" }}>{new Date(r.hora_cobro).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' })}</td>
-                        <td style={{ padding: '12px', fontSize: '14px' }}>{r.nombre_mascota}</td>
+                        <td style={{ padding: '12px', fontSize: '14px' }}>
+                          <div>{r.nombre_mascota}</div>
+                          {r.unificado && <div style={{ fontSize: '10px', color: '#2a78a5', fontWeight: '600', marginTop: '2px' }}>✓ Unificado</div>}
+                        </td>
                         <td style={{ padding: '12px', fontSize: '14px' }}>{r.nombre_dueno}</td>
-                        <td style={{ padding: '12px', fontSize: '14px' }}>{r.metodo_pago}</td>
+                        <td style={{ padding: '12px', fontSize: '14px' }}>{r.metodo || '—'}</td>
                         <td style={{ padding: '12px', fontSize: '14px', textAlign: 'right', fontWeight: '600' }}>{fmt(r.monto)}</td>
                         <td style={{ padding: '12px', fontSize: '14px' }}>{r.cajera || '—'}</td>
                       </tr>
