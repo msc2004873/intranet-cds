@@ -9,11 +9,28 @@ export default function Home() {
   const [selectedLog, setSelectedLog] = useState(null);
   const [loading, setLoading] = useState(false);
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [periodo, setPeriodo] = useState(null);
+  const [esPrimerDia, setEsPrimerDia] = useState(false);
+  const [tcActual, setTcActual] = useState(null);
 
   useEffect(() => {
     fetchTipoCambio();
     fetchLogs();
+    fetchPeriodoActual();
   }, []);
+
+  async function fetchPeriodoActual() {
+    try {
+      const res = await fetch('/api/periodos/get-actual');
+      const data = await res.json();
+      setPeriodo(data.periodo);
+      setEsPrimerDia(data.esPrimerDia);
+      setTcActual(data.tipoCambio);
+      setTc(data.tipoCambio);
+    } catch (err) {
+      console.error('Error fetching período:', err);
+    }
+  }
 
   async function fetchTipoCambio() {
     try {
@@ -44,6 +61,12 @@ export default function Home() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
+      <style>{`
+        @keyframes pulse {
+          0%, 100% { opacity: 1; }
+          50% { opacity: 0.7; }
+        }
+      `}</style>
       <Header title="Corral del Sol" subtitle="Sistema interno" showLogout={true} />
 
       <div style={{
@@ -57,19 +80,59 @@ export default function Home() {
         background: '#F7F5F0',
         color: '#1A1714',
       }}>
-        {/* TC del día */}
+        {/* Notificación roja si es primer día */}
+        {esPrimerDia && (
+          <div style={{
+            background: '#DC2626',
+            color: 'white',
+            padding: '16px 24px',
+            borderRadius: '12px',
+            textAlign: 'center',
+            boxShadow: '0 4px 12px rgba(220,38,38,0.3)',
+            fontSize: '18px',
+            fontWeight: '700',
+            letterSpacing: '0.5px',
+            animation: 'pulse 2s infinite',
+          }}>
+            ⚠️ CAMBIAR TIPO DE CAMBIO
+          </div>
+        )}
+
+        {/* TC del período */}
         <div style={{
-          background: '#2a78a5',
-          color: 'white',
-          padding: '20px 32px',
-          borderRadius: '16px',
-          textAlign: 'center',
-          boxShadow: '0 4px 12px rgba(42,120,165,0.2)',
-          minWidth: '200px',
+          display: 'flex',
+          gap: '16px',
+          justifyContent: 'center',
+          flexWrap: 'wrap',
         }}>
-          <div style={{ fontSize: '12px', opacity: 0.8, marginBottom: '8px', letterSpacing: '0.5px', textTransform: 'uppercase', fontWeight: '600' }}>Tipo de cambio del día</div>
-          <div style={{ fontSize: '36px', fontWeight: '700', fontFamily: "'DM Mono', monospace", letterSpacing: '-1px' }}>₡{tc || '—'}</div>
-          <div style={{ fontSize: '10px', opacity: 0.7, marginTop: '6px' }}>USD 1 = ₡{tc || '—'} (internet - 10)</div>
+          <div style={{
+            background: '#2a78a5',
+            color: 'white',
+            padding: '20px 32px',
+            borderRadius: '16px',
+            textAlign: 'center',
+            boxShadow: '0 4px 12px rgba(42,120,165,0.2)',
+            minWidth: '200px',
+          }}>
+            <div style={{ fontSize: '12px', opacity: 0.8, marginBottom: '8px', letterSpacing: '0.5px', textTransform: 'uppercase', fontWeight: '600' }}>Tipo de cambio del período</div>
+            <div style={{ fontSize: '36px', fontWeight: '700', fontFamily: "'DM Mono', monospace", letterSpacing: '-1px' }}>₡{tcActual || '—'}</div>
+            <div style={{ fontSize: '10px', opacity: 0.7, marginTop: '6px' }}>Período {periodo}</div>
+          </div>
+
+          {/* Período actual */}
+          <div style={{
+            background: '#6366F1',
+            color: 'white',
+            padding: '20px 32px',
+            borderRadius: '16px',
+            textAlign: 'center',
+            boxShadow: '0 4px 12px rgba(99,102,241,0.2)',
+            minWidth: '200px',
+          }}>
+            <div style={{ fontSize: '12px', opacity: 0.8, marginBottom: '8px', letterSpacing: '0.5px', textTransform: 'uppercase', fontWeight: '600' }}>Período actual</div>
+            <div style={{ fontSize: '18px', fontWeight: '700', marginBottom: '8px' }}>Período {periodo}</div>
+            <div style={{ fontSize: '13px', opacity: 0.9 }}>{new Date().toLocaleDateString('es-CR', { day: 'numeric', month: 'long' })}</div>
+          </div>
         </div>
 
         <div style={{ textAlign: 'center' }}>

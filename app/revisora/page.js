@@ -6,23 +6,29 @@ import Header from '../components/Header';
 
 const generarPeriodos = () => {
   const hoy = new Date();
-  const periodos = [];
-  
-  for (let i = 0; i < 6; i++) {
-    const inicio = new Date(hoy);
-    inicio.setDate(hoy.getDate() - (hoy.getDate() % 5) - (i * 5));
-    
-    const fin = new Date(inicio);
-    fin.setDate(inicio.getDate() + 4);
-    
-    periodos.push({
-      id: `${inicio.toISOString().split('T')[0]}_${fin.toISOString().split('T')[0]}`,
+  const ano = hoy.getFullYear();
+  const mes = hoy.getMonth() + 1;
+  const ultimoDiaMes = new Date(ano, mes, 0).getDate();
+
+  const periodos = [
+    { num: 1, inicio: 1, fin: 5 },
+    { num: 2, inicio: 6, fin: 10 },
+    { num: 3, inicio: 11, fin: 15 },
+    { num: 4, inicio: 16, fin: 20 },
+    { num: 5, inicio: 21, fin: 25 },
+    { num: 6, inicio: 26, fin: ultimoDiaMes },
+  ];
+
+  return periodos.map(p => {
+    const inicio = new Date(ano, mes - 1, p.inicio);
+    const fin = new Date(ano, mes - 1, p.fin);
+    return {
+      id: `${ano}-${String(mes).padStart(2, '0')}-P${p.num}`,
+      num: p.num,
       inicio,
-      fin
-    });
-  }
-  
-  return periodos;
+      fin,
+    };
+  });
 };
 
 const formatFecha = (date) => {
