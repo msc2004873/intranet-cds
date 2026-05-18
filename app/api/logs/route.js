@@ -8,7 +8,8 @@ export async function GET(request) {
     const { data: movimientos } = await supabase
       .from('movimientos')
       .select('id, tipo, monto, moneda, referencia, cajera, caja, created_at')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(50);
 
     if (movimientos) {
       movimientos.forEach(m => {
@@ -30,7 +31,8 @@ export async function GET(request) {
     const { data: cobros } = await supabase
       .from('cobros_glory')
       .select('id, monto, metodo_pago, cajera, caja, created_at')
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(50);
 
     if (cobros) {
       cobros.forEach(c => {
@@ -52,7 +54,8 @@ export async function GET(request) {
     const { data: cierres } = await supabase
       .from('cierre_caja')
       .select('id, cajera, caja, fecha_hora')
-      .order('fecha_hora', { ascending: false });
+      .order('fecha_hora', { ascending: false })
+      .limit(50);
 
     if (cierres) {
       cierres.forEach(cierre => {
@@ -74,8 +77,9 @@ export async function GET(request) {
     // 4. Conteos de Caja
     const { data: conteos } = await supabase
       .from('conteo_caja')
-      .select('id, cajera, caja, fecha, hora')
-      .order('created_at', { ascending: false });
+      .select('id, cajera, caja, fecha, hora, total_colones')
+      .order('created_at', { ascending: false })
+      .limit(50);
 
     if (conteos) {
       conteos.forEach(conteo => {
