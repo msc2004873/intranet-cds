@@ -116,7 +116,27 @@ export default function RegistrosPage() {
 
     setLoading(true);
     try {
-      // Aquí iría la lógica para guardar en Supabase
+      const fecha = new Date().toISOString().split('T')[0];
+      const res = await fetch('/api/movimientos', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          tipo: tipoMovimiento.toUpperCase(),
+          monto: parseFloat(monto),
+          moneda: moneda,
+          comprobante: comprobante || null,
+          descripcion: descripcion || null,
+          cajera: cajera,
+          caja: caja,
+          fecha: fecha
+        })
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        throw new Error(error.error || 'Error al guardar');
+      }
+
       showToast(`✅ ${tipoMovimiento.toUpperCase()} registrado: ${fmt(parseFloat(monto))}`);
       resetForm();
     } catch (err) {
