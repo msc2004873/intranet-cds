@@ -714,7 +714,7 @@ export default function CobroGloryPage() {
                       <tr key={idx} style={{ borderBottom: '1px solid #E2DDD4', background: r.unificado ? '#E8F3EC' : 'transparent' }}>
                         <td style={{ padding: '12px', fontSize: '14px', fontFamily: "'DM Mono', monospace" }}>{new Date(r.hora_cobro).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' })}</td>
                         <td style={{ padding: '12px', fontSize: '14px' }}>
-                          <div>{r.nombre_mascota}</div>
+                          <div style={{ textDecoration: 'none' }}>{r.nombre_mascota}</div>
                           {r.unificado && <div style={{ fontSize: '10px', color: '#2a78a5', fontWeight: '600', marginTop: '2px' }}>✓ Unificado</div>}
                         </td>
                         <td style={{ padding: '12px', fontSize: '14px' }}>{r.nombre_dueno}</td>
