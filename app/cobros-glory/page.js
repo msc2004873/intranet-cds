@@ -259,13 +259,55 @@ export default function CobroGloryPage() {
         Método: 'TOTAL',
         Monto: resumenMes.total,
         Cajera: '',
+        Comentarios: '',
         Unificado: ''
       });
 
       const wb = XLSX.utils.book_new();
 
-      // Hoja de transacciones
+      // Hoja de transacciones con estilos
       const ws1 = XLSX.utils.json_to_sheet(datosTabla);
+
+      // Aplicar estilos alternados y filtros
+      const range = XLSX.utils.decode_range(ws1['!ref']);
+
+      // Color de encabezado
+      const headerFill = { fgColor: { rgb: 'FF2A78A5' }, patternType: 'solid' };
+      const headerFont = { bold: true, color: { rgb: 'FFFFFFFF' } };
+
+      // Colores alternados para filas
+      const colorClaro = { fgColor: { rgb: 'FFFFFFFF' }, patternType: 'solid' };
+      const colorOscuro = { fgColor: { rgb: 'FFF0EDE6' }, patternType: 'solid' };
+      const colorTotal = { fgColor: { rgb: 'FFFFE8F3' }, patternType: 'solid' };
+
+      // Aplicar estilos a cada celda
+      for (let R = range.s.r; R <= range.e.r; ++R) {
+        for (let C = range.s.c; C <= range.e.c; ++C) {
+          const cellAddress = XLSX.utils.encode_col(C) + XLSX.utils.encode_row(R);
+          const cell = ws1[cellAddress];
+          if (!cell) continue;
+
+          if (R === 0) {
+            // Encabezado
+            cell.fill = headerFill;
+            cell.font = headerFont;
+            cell.alignment = { horizontal: 'center', vertical: 'center' };
+          } else if (R === range.e.r) {
+            // Fila de total
+            cell.fill = colorTotal;
+            if (C === 7) cell.font = { bold: true };
+          } else {
+            // Filas alternadas
+            cell.fill = R % 2 === 0 ? colorClaro : colorOscuro;
+            if (C === 7) cell.alignment = { horizontal: 'right' };
+          }
+        }
+      }
+
+      // Agregar filtros automáticos
+      ws1['!autofilter'] = { ref: XLSX.utils.encode_range(range.s, { r: range.e.r - 1, c: range.e.c }) };
+
+      // Configurar ancho de columnas
       ws1['!cols'] = [
         { wch: 12 },
         { wch: 10 },
@@ -279,6 +321,7 @@ export default function CobroGloryPage() {
         { wch: 30 },
         { wch: 12 }
       ];
+
       XLSX.utils.book_append_sheet(wb, ws1, 'Transacciones');
 
       // Hoja de resumen
