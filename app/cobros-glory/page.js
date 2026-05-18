@@ -711,7 +711,7 @@ export default function CobroGloryPage() {
                   </thead>
                   <tbody>
                     {registrosDia.map((r, idx) => (
-                      <tr key={idx} style={{ borderBottom: '1px solid #E2DDD4', background: r.unificado ? '#E8F3EC' : 'transparent' }}>
+                      <tr key={idx} style={{ borderBottom: '1px solid #E2DDD4' }}>
                         <td style={{ padding: '12px', fontSize: '14px', fontFamily: "'DM Mono', monospace" }}>{new Date(r.hora_cobro).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' })}</td>
                         <td style={{ padding: '12px', fontSize: '14px' }}>
                           <div style={{ textDecoration: 'none' }}>{r.nombre_mascota}</div>
