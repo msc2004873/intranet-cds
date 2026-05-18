@@ -160,10 +160,11 @@ export default function Home() {
             boxShadow: '0 4px 12px rgba(42,120,165,0.2)',
             minWidth: '200px',
           }}>
-            <div style={{ fontSize: '36px', fontWeight: '700', marginBottom: '8px', fontFamily: "'DM Mono', monospace" }}>
-              {new Date().getDate()} de {new Date().toLocaleDateString('es-CR', { month: 'long' })}
+            <div style={{ fontSize: '12px', opacity: 0.8, marginBottom: '8px', letterSpacing: '0.5px', textTransform: 'uppercase', fontWeight: '600' }}>Período actual</div>
+            <div style={{ fontSize: '28px', fontWeight: '700', fontFamily: "'DM Mono', monospace", letterSpacing: '-0.5px', marginBottom: '6px' }}>
+              {new Date().getDate()} de {new Date().toLocaleDateString('es-CR', { month: 'short' })}
             </div>
-            <div style={{ fontSize: '12px', opacity: 0.8, letterSpacing: '0.5px', textTransform: 'uppercase', fontWeight: '600' }}>Período {periodo}</div>
+            <div style={{ fontSize: '10px', opacity: 0.7 }}>Período {periodo}</div>
           </div>
         </div>
 
