@@ -162,7 +162,7 @@ export default function CobroGloryPage() {
         .select('*')
         .eq('cobrado', true)
         .eq('fecha', fecha)
-        .order('hora_cobro', { ascending: true });
+        .order('hora_cobro', { ascending: false });
 
       setRegistrosDia(data || []);
     } catch (err) {
@@ -185,17 +185,30 @@ export default function CobroGloryPage() {
 
       const registros = data || [];
 
+      // Filtrar solo registros con metodo (transacciones completadas)
+      const transacciones = registros.filter(r => r.metodo);
+
+      // Contar cantidad de pacientes
+      let cantidadPacientes = 0;
+      transacciones.forEach(r => {
+        if (r.unificado) {
+          // Contar comas + 1 para saber cuántas mascotas hay
+          cantidadPacientes += (r.nombre_mascota.split(',').length);
+        } else {
+          cantidadPacientes += 1;
+        }
+      });
+
       const resumen = {
-        total: registros.reduce((sum, r) => sum + (r.monto || 0), 0),
-        totalUnificado: registros.filter(r => r.unificado).reduce((sum, r) => sum + (r.monto || 0), 0),
-        transacciones: registros.length,
-        transaccionesUnificadas: registros.filter(r => r.unificado).length,
+        total: transacciones.reduce((sum, r) => sum + (r.monto || 0), 0),
+        transacciones: transacciones.length,
+        pacientes: cantidadPacientes,
         porMetodo: {},
         porCajera: {},
-        registros: registros
+        registros: transacciones
       };
 
-      registros.forEach(r => {
+      transacciones.forEach(r => {
         const metodo = r.metodo || 'Sin registro';
         resumen.porMetodo[metodo] = (resumen.porMetodo[metodo] || 0) + (r.monto || 0);
         const nombreCajera = r.cajera || 'Sin asignar';
@@ -228,15 +241,29 @@ export default function CobroGloryPage() {
         Dueño: r.nombre_dueno,
         Teléfono: r.telefono_dueno || '—',
         Servicio: r.servicio || '—',
-        Método: r.metodo || '—',
-        Monto: r.monto || 0,
+        Método: r.metodo,
+        Monto: r.monto,
         Cajera: r.cajera || '—',
         Unificado: r.unificado ? 'Sí' : 'No'
       }));
 
+      // Agregar fila de total al final
+      datosTabla.push({
+        Fecha: '',
+        Hora: '',
+        Mascota: '',
+        Dueño: '',
+        Teléfono: '',
+        Servicio: '',
+        Método: 'TOTAL',
+        Monto: resumenMes.total,
+        Cajera: '',
+        Unificado: ''
+      });
+
       const wb = XLSX.utils.book_new();
 
-      // Hoja de registros
+      // Hoja de transacciones
       const ws1 = XLSX.utils.json_to_sheet(datosTabla);
       ws1['!cols'] = [
         { wch: 12 },
@@ -250,16 +277,15 @@ export default function CobroGloryPage() {
         { wch: 15 },
         { wch: 12 }
       ];
-      XLSX.utils.book_append_sheet(wb, ws1, 'Registros');
+      XLSX.utils.book_append_sheet(wb, ws1, 'Transacciones');
 
       // Hoja de resumen
       const resumenData = [
         { Concepto: 'RESUMEN DEL MES', Valor: '' },
         { Concepto: '', Valor: '' },
         { Concepto: 'Total General', Valor: resumenMes.total },
-        { Concepto: 'Total Unificado', Valor: resumenMes.totalUnificado },
+        { Concepto: 'Pacientes', Valor: resumenMes.pacientes },
         { Concepto: 'Transacciones', Valor: resumenMes.transacciones },
-        { Concepto: 'Transacciones Unificadas', Valor: resumenMes.transaccionesUnificadas },
         { Concepto: '', Valor: '' },
         { Concepto: 'POR MÉTODO', Valor: '' }
       ];
@@ -679,16 +705,12 @@ export default function CobroGloryPage() {
                     <div style={{ fontSize: '20px', fontWeight: '700', color: '#2a78a5', fontFamily: "'DM Mono', monospace" }}>{fmt(resumenMes.total)}</div>
                   </div>
                   <div style={{ padding: '16px', background: '#F7F5F0', borderRadius: '8px', borderLeft: '4px solid #10B981' }}>
-                    <div style={{ fontSize: '11px', color: '#6B6560', textTransform: 'uppercase', fontWeight: '600', marginBottom: '4px' }}>Unificado</div>
-                    <div style={{ fontSize: '20px', fontWeight: '700', color: '#10B981', fontFamily: "'DM Mono', monospace" }}>{fmt(resumenMes.totalUnificado)}</div>
+                    <div style={{ fontSize: '11px', color: '#6B6560', textTransform: 'uppercase', fontWeight: '600', marginBottom: '4px' }}>Pacientes</div>
+                    <div style={{ fontSize: '20px', fontWeight: '700', color: '#10B981', fontFamily: "'DM Mono', monospace" }}>{resumenMes.pacientes}</div>
                   </div>
                   <div style={{ padding: '16px', background: '#F7F5F0', borderRadius: '8px', borderLeft: '4px solid #8B5CF6' }}>
                     <div style={{ fontSize: '11px', color: '#6B6560', textTransform: 'uppercase', fontWeight: '600', marginBottom: '4px' }}>Transacciones</div>
                     <div style={{ fontSize: '20px', fontWeight: '700', color: '#8B5CF6', fontFamily: "'DM Mono', monospace" }}>{resumenMes.transacciones}</div>
-                  </div>
-                  <div style={{ padding: '16px', background: '#F7F5F0', borderRadius: '8px', borderLeft: '4px solid #F59E0B' }}>
-                    <div style={{ fontSize: '11px', color: '#6B6560', textTransform: 'uppercase', fontWeight: '600', marginBottom: '4px' }}>Unificadas</div>
-                    <div style={{ fontSize: '20px', fontWeight: '700', color: '#F59E0B', fontFamily: "'DM Mono', monospace" }}>{resumenMes.transaccionesUnificadas}</div>
                   </div>
                 </div>
 
