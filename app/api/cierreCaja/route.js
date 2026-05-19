@@ -4,6 +4,8 @@ export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
     const fecha = searchParams.get('fecha');
+    const hasta = searchParams.get('hasta');
+    const caja = searchParams.get('caja');
 
     if (!fecha) {
       return Response.json(
@@ -13,14 +15,19 @@ export async function GET(req) {
     }
 
     const fechaInicio = `${fecha}T00:00:00`;
-    const fechaFin = `${fecha}T23:59:59`;
+    const fechaFin = hasta ? `${hasta}T23:59:59` : `${fecha}T23:59:59`;
 
-    const { data, error } = await supabase
+    let query = supabase
       .from('cierre_caja')
       .select('*')
       .gte('fecha_hora', fechaInicio)
-      .lte('fecha_hora', fechaFin)
-      .order('fecha_hora', { ascending: false });
+      .lte('fecha_hora', fechaFin);
+
+    if (caja) {
+      query = query.eq('caja', caja);
+    }
+
+    const { data, error } = await query.order('fecha_hora', { ascending: false });
 
     if (error) throw error;
 

@@ -382,7 +382,7 @@ export default function Home() {
             </div>
             <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Revisión de Caja</div>
             <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Revisá los cierres enviados y verificá los montos con el conteo físico</div>
-            <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#FBF6E9', color: '#8B6914' }}>Revisora</span>
+            <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#FBF6E9', color: '#8B6914' }}>Revisión</span>
           </a>
 
           <a href="/admin" style={{
