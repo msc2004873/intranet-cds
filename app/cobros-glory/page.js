@@ -164,6 +164,7 @@ export default function CobroGloryPage() {
         .select('*')
         .eq('cobrado', true)
         .eq('fecha', fecha)
+        .not('monto', 'is', null)
         .order('hora_cobro', { ascending: false });
 
       setRegistrosDia(data || []);
@@ -181,6 +182,7 @@ export default function CobroGloryPage() {
       const { data } = await supabase.from('cobros_glory')
         .select('*')
         .eq('cobrado', true)
+        .not('monto', 'is', null)
         .gte('fecha', inicio)
         .lte('fecha', fin)
         .order('fecha', { ascending: false });
@@ -455,10 +457,10 @@ export default function CobroGloryPage() {
           return;
         }
 
-        // Actualizar los pacientes para marcarlos como cobrados
+        // Marcar solo como cobrados (sin monto duplicado) para no mostrar en registros
         for (const id of idsAActualizar) {
           await supabase.from('cobros_glory')
-            .update({ cobrado: true })
+            .update({ cobrado: true, metodo: selectMetodo, cajera: selectCajeraModal, hora_cobro: new Date().toISOString() })
             .eq('id', id);
         }
       } else {

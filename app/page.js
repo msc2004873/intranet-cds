@@ -74,6 +74,16 @@ export default function Home() {
     }
   }
 
+  const getTipoBadge = (tipo) => {
+    const tiposMap = {
+      'SINPE': { emoji: '📱', color: '#2a78a5', bg: '#E8F3EC' },
+      'TRANSFERENCIA': { emoji: '💳', color: '#8B6914', bg: '#FBF6E9' },
+      'SALIDA': { emoji: '💸', color: '#C0392B', bg: '#FDEDEC' }
+    };
+    const config = tiposMap[tipo] || { emoji: '📝', color: '#6B6560', bg: '#F0EDE6' };
+    return config;
+  };
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <style>{`
@@ -455,9 +465,24 @@ export default function Home() {
                   </tr>
                 </thead>
                 <tbody>
-                  {logs.filter(log => log.fecha === selectedDate).map((log, idx) => (
+                  {logs.filter(log => log.fecha === selectedDate).sort((a, b) => b.timestamp - a.timestamp).map((log, idx) => {
+                    const tipoBadge = getTipoBadge(log.tipo);
+                    return (
                     <tr key={log.id} style={{ borderBottom: '1px solid #E2DDD4' }}>
-                      <td style={{ padding: '12px 16px', fontSize: '13px', color: '#1A1714', fontWeight: '500' }}>{log.tipo}</td>
+                      <td style={{ padding: '12px 16px', fontSize: '13px', color: '#1A1714', fontWeight: '500' }}>
+                        <span style={{
+                          display: 'inline-block',
+                          padding: '4px 10px',
+                          borderRadius: '20px',
+                          background: tipoBadge.bg,
+                          color: tipoBadge.color,
+                          fontWeight: '600',
+                          fontSize: '12px',
+                          textTransform: 'capitalize'
+                        }}>
+                          {tipoBadge.emoji} {log.tipo}
+                        </span>
+                      </td>
                       <td style={{ padding: '12px 16px', fontSize: '13px', color: '#1A1714' }}>{log.usuario}</td>
                       <td style={{ padding: '12px 16px', fontSize: '13px', color: '#1A1714' }}>{log.caja}</td>
                       <td style={{ padding: '12px 16px', fontSize: '13px', color: '#6B6560', fontFamily: "'DM Mono', monospace" }}>{log.hora}</td>
@@ -482,7 +507,8 @@ export default function Home() {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                    );
+                  })}
                 </tbody>
               </table>
             )}
@@ -586,8 +612,10 @@ export default function Home() {
             background: '#FFFFFF',
             borderRadius: '12px',
             padding: '32px',
-            maxWidth: '500px',
+            maxWidth: '700px',
             width: '90%',
+            maxHeight: '90vh',
+            overflowY: 'auto',
             boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
           }} onClick={(e) => e.stopPropagation()}>
             <h4 style={{ fontSize: '18px', fontWeight: '600', color: '#1A1714', marginBottom: '20px' }}>📋 {selectedLog.tipo}</h4>
@@ -606,12 +634,45 @@ export default function Home() {
                 <div style={{ fontSize: '14px', color: '#1A1714' }}>{selectedLog.fecha} a las {selectedLog.hora}</div>
               </div>
               <div>
-                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Detalle</label>
-                <div style={{ fontSize: '14px', color: '#1A1714', background: '#F7F5F0', padding: '12px', borderRadius: '8px', maxHeight: '200px', overflowY: 'auto' }}>
-                  <pre style={{ margin: 0, fontFamily: "'DM Mono', monospace", fontSize: '12px', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>
-                    {JSON.stringify(selectedLog.data, null, 2)}
-                  </pre>
-                </div>
+                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Detalles</label>
+                <table style={{ width: '100%', borderCollapse: 'collapse', background: '#F7F5F0', borderRadius: '8px', overflow: 'hidden' }}>
+                  <tbody>
+                    {selectedLog.data && (() => {
+                      const entries = Object.entries(selectedLog.data);
+                      const denomFields = entries.filter(([k]) => k.startsWith('c_'));
+                      const otherFields = entries.filter(([k]) => !k.startsWith('c_'));
+
+                      return (
+                        <>
+                          {otherFields.map(([key, value]) => (
+                            <tr key={key} style={{ borderBottom: '1px solid #E2DDD4' }}>
+                              <td style={{ padding: '10px 12px', fontSize: '12px', fontWeight: '600', color: '#6B6560', background: '#F0EDE6', width: '35%', textTransform: 'capitalize' }}>{key}</td>
+                              <td style={{ padding: '10px 12px', fontSize: '12px', color: '#1A1714', fontFamily: "'DM Mono', monospace", wordBreak: 'break-all' }}>
+                                {typeof value === 'string' || typeof value === 'number' ? value : JSON.stringify(value)}
+                              </td>
+                            </tr>
+                          ))}
+                          {denomFields.length > 0 && (
+                            <>
+                              <tr style={{ borderBottom: '1px solid #E2DDD4', background: '#E8F3EC' }}>
+                                <td colSpan="2" style={{ padding: '10px 12px', fontSize: '12px', fontWeight: '600', color: '#2a78a5' }}>📊 Denominaciones</td>
+                              </tr>
+                              {denomFields.map(([key, value]) => {
+                                const denom = key.replace('c_', '');
+                                return (
+                                  <tr key={key} style={{ borderBottom: '1px solid #E2DDD4' }}>
+                                    <td style={{ padding: '10px 12px', fontSize: '12px', fontWeight: '600', color: '#6B6560', background: '#F0EDE6', width: '35%' }}>₡{parseInt(denom).toLocaleString('es-CR')}</td>
+                                    <td style={{ padding: '10px 12px', fontSize: '12px', color: '#1A1714' }}>{value} billetes</td>
+                                  </tr>
+                                );
+                              })}
+                            </>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </tbody>
+                </table>
               </div>
             </div>
 

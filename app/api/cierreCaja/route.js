@@ -1,102 +1,88 @@
 import supabase from '../../../lib/supabase-server.js';
 
+export async function GET(req) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const fecha = searchParams.get('fecha');
+
+    if (!fecha) {
+      return Response.json(
+        { error: 'Parámetro fecha es requerido' },
+        { status: 400 }
+      );
+    }
+
+    const fechaInicio = `${fecha}T00:00:00`;
+    const fechaFin = `${fecha}T23:59:59`;
+
+    const { data, error } = await supabase
+      .from('cierre_caja')
+      .select('*')
+      .gte('fecha_hora', fechaInicio)
+      .lte('fecha_hora', fechaFin)
+      .order('fecha_hora', { ascending: false });
+
+    if (error) throw error;
+
+    return Response.json(data || []);
+  } catch (err) {
+    console.error('Error obteniendo cierres:', err);
+    return Response.json({ error: err.message }, { status: 500 });
+  }
+}
+
 export async function POST(request) {
   try {
     const data = await request.json();
 
-    const c20k = data.denom20k || data.cierre?.[20000] || 0;
-    const c10k = data.denom10k || data.cierre?.[10000] || 0;
-    const c5k = data.denom5k || data.cierre?.[5000] || 0;
-    const c2k = data.denom2k || data.cierre?.[2000] || 0;
-    const c1k = data.denom1k || data.cierre?.[1000] || 0;
-    const c500 = data.denom500 || data.cierre?.[500] || 0;
-    const c100 = data.denom100 || data.cierre?.[100] || 0;
-    const c50 = data.denom50 || data.cierre?.[50] || 0;
-    const c25 = data.denom25 || data.cierre?.[25] || 0;
-    const c10 = data.denom10 || data.cierre?.[10] || 0;
-    const c5 = data.denom5 || data.cierre?.[5] || 0;
-    const dolares = data.dolares || 0;
+    if (!data.cajera || !data.caja) {
+      return Response.json(
+        { error: 'Faltan campos obligatorios: cajera y caja' },
+        { status: 400 }
+      );
+    }
 
-    // Calcular total en colones
-    const totalColones = (c20k * 20000) + (c10k * 10000) + (c5k * 5000) + (c2k * 2000) +
-                         (c1k * 1000) + (c500 * 500) + (c100 * 100) + (c50 * 50) +
-                         (c25 * 25) + (c10 * 10) + (c5 * 5);
+    const insertData = {
+      cajera: data.cajera,
+      caja: data.caja,
+      fecha_hora: new Date().toISOString(),
+      tc: parseFloat(data.tc) || 475,
+      dolares_total: parseFloat(data.dolares) || 0,
+      tarjeta_bac: parseFloat(data.tarjetaBac) || 0,
+      tarjeta_bn: parseFloat(data.tarjetaBn) || 0,
+      c_20000: parseInt(data.denom20000) || 0,
+      c_10000: parseInt(data.denom10000) || 0,
+      c_5000: parseInt(data.denom5000) || 0,
+      c_2000: parseInt(data.denom2000) || 0,
+      c_1000: parseInt(data.denom1000) || 0,
+      c_500: parseInt(data.denom500) || 0,
+      c_100: parseInt(data.denom100) || 0,
+      c_50: parseInt(data.denom50) || 0,
+      c_25: parseInt(data.denom25) || 0,
+      c_10: parseInt(data.denom10) || 0,
+      c_5: parseInt(data.denom5) || 0,
+      sinpe_json: data.sinpeList || null,
+      depositos_json: data.depositoList || null,
+      salidas_json: data.salidaList || null,
+      glory_json: data.gloryList || null
+    };
 
-    // 1. Guardar en cierre_caja (cierre completo)
     const { data: result, error } = await supabase
       .from('cierre_caja')
-      .insert([
-        {
-          cajera: data.cajera,
-          caja: data.caja,
-          fecha_hora: new Date(data.fecha || data.fechaCierre || new Date()).toISOString(),
-          tc: data.tc || 475,
-          c_20000: c20k,
-          c_10000: c10k,
-          c_5000: c5k,
-          c_2000: c2k,
-          c_1000: c1k,
-          c_500: c500,
-          c_100: c100,
-          c_50: c50,
-          c_25: c25,
-          c_10: c10,
-          c_5: c5,
-          dolares_total: dolares,
-          tarjeta_bac: data.tarjetaBac || 0,
-          tarjeta_bn: data.tarjetaBn || 0,
-          sinpe_json: null,
-          depositos_json: null,
-          salidas_json: null,
-          glory_json: null,
-          qvet_pdf_url: null,
-          fotos_sinpe_urls: null,
-        },
-      ])
+      .insert([insertData])
       .select();
 
     if (error) {
       console.error('Supabase error:', error);
-      return Response.json({ success: false, message: `Error: ${error.message}` }, { status: 400 });
+      return Response.json(
+        { error: error.message },
+        { status: 400 }
+      );
     }
 
-    // 2. Guardar snapshot en conteo_caja (conteo rápido)
-    const fecha = new Date(data.fecha || data.fechaCierre || new Date());
-    const { error: conteoError } = await supabase
-      .from('conteo_caja')
-      .insert([
-        {
-          cajera: data.cajera,
-          caja: data.caja,
-          fecha: fecha.toISOString().split('T')[0],
-          hora: fecha.toISOString(),
-          c_20000: c20k,
-          c_10000: c10k,
-          c_5000: c5k,
-          c_2000: c2k,
-          c_1000: c1k,
-          c_500: c500,
-          c_100: c100,
-          c_50: c50,
-          c_25: c25,
-          c_10: c10,
-          c_5: c5,
-          dolares: dolares,
-          total_colones: totalColones,
-        },
-      ]);
-
-    if (conteoError) {
-      console.error('Error guardando conteo_caja:', conteoError);
-      // No retornar error aquí - el cierre ya se guardó
-    }
-
-    return Response.json(
-      { success: true, message: '✅ Cierre de caja guardado exitosamente', data: result },
-      { status: 200 }
-    );
+    return Response.json(result[0], { status: 201 });
   } catch (err) {
     console.error('Server error:', err);
-    return Response.json({ success: false, message: `Error: ${err.message}` }, { status: 500 });
+    return Response.json({ error: err.message }, { status: 500 });
   }
 }

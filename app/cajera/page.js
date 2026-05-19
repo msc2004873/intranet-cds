@@ -25,6 +25,7 @@ export default function CajeraPage() {
   const [depositoList, setDepositoList] = useState([{ id: 1, nombre: '', monto: 0 }]);
   const [salidaList, setSalidaList] = useState([{ id: 1, descripcion: '', monto: 0 }]);
   const [gloryList, setGloryList] = useState([{ id: 1, metodo: '', monto: 0 }]);
+  const [cerrarGlory, setCerrarGlory] = useState(false);
   let sinpeCount = 1, depCount = 1, salidaCount = 1, gloryCount = 1;
 
   // Inicializar denominaciones
@@ -59,6 +60,15 @@ export default function CajeraPage() {
     loadGloryDelDia();
   }, []);
 
+  // Recargar movimientos cuando cambia la caja
+  useEffect(() => {
+    if (caja) {
+      loadSinpeDelDia();
+      loadDepositosDelDia();
+      loadSalidasDelDia();
+    }
+  }, [caja]);
+
   async function fetchTipoCambioPeriodo() {
     try {
       const res = await fetch('/api/periodos/get-actual');
@@ -74,15 +84,19 @@ export default function CajeraPage() {
   async function loadSinpeDelDia() {
     try {
       const hoy = new Date().toISOString().split('T')[0];
-      const res = await fetch(`/api/movimientos?tipo=SINPE&fecha=${hoy}`);
+      const cajaParam = caja ? `&caja=${encodeURIComponent(caja)}` : '';
+      const res = await fetch(`/api/movimientos?tipo=SINPE&fecha=${hoy}${cajaParam}`);
       const data = await res.json();
       if (Array.isArray(data)) {
         const items = data.map((m, i) => ({
           id: m.id || i,
-          monto: m.monto || 0
+          monto: m.monto || 0,
+          referencia: m.referencia || 'N/A'
         }));
         if (items.length > 0) {
           setSinpeList(items);
+        } else {
+          setSinpeList([]);
         }
       }
     } catch (err) {
@@ -113,7 +127,8 @@ export default function CajeraPage() {
   async function loadDepositosDelDia() {
     try {
       const hoy = new Date().toISOString().split('T')[0];
-      const res = await fetch(`/api/movimientos?tipo=TRANSFERENCIA&fecha=${hoy}`);
+      const cajaParam = caja ? `&caja=${encodeURIComponent(caja)}` : '';
+      const res = await fetch(`/api/movimientos?tipo=TRANSFERENCIA&fecha=${hoy}${cajaParam}`);
       const data = await res.json();
       if (Array.isArray(data)) {
         const items = data.map((m, i) => ({
@@ -123,6 +138,8 @@ export default function CajeraPage() {
         }));
         if (items.length > 0) {
           setDepositoList(items);
+        } else {
+          setDepositoList([]);
         }
       }
     } catch (err) {
@@ -133,7 +150,8 @@ export default function CajeraPage() {
   async function loadSalidasDelDia() {
     try {
       const hoy = new Date().toISOString().split('T')[0];
-      const res = await fetch(`/api/movimientos?tipo=SALIDA&fecha=${hoy}`);
+      const cajaParam = caja ? `&caja=${encodeURIComponent(caja)}` : '';
+      const res = await fetch(`/api/movimientos?tipo=SALIDA&fecha=${hoy}${cajaParam}`);
       const data = await res.json();
       if (Array.isArray(data)) {
         const items = data.map((m, i) => ({
@@ -143,6 +161,8 @@ export default function CajeraPage() {
         }));
         if (items.length > 0) {
           setSalidaList(items);
+        } else {
+          setSalidaList([]);
         }
       }
     } catch (err) {
@@ -221,29 +241,35 @@ export default function CajeraPage() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/admin/colaboradores', {
+      const body = {
+        cajera,
+        caja,
+        fecha,
+        tc,
+        dolares,
+        tarjetaBac,
+        tarjetaBn,
+        sinpeList,
+        depositoList,
+        salidaList,
+        ...Object.fromEntries(DENOMS.map(d => [`denom${d}`, denominaciones[d] || 0]))
+      };
+
+      if (cerrarGlory) {
+        body.gloryList = gloryList;
+      }
+
+      const res = await fetch('/api/cierreCaja', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          cajera,
-          caja,
-          fecha,
-          tc,
-          totalCierre,
-          totalQueda,
-          totalSobre,
-          dolares,
-          dolaresEnColones,
-          tarjetaBac,
-          tarjetaBn,
-          totalTarjetas,
-        }),
+        body: JSON.stringify(body),
       });
 
       if (res.ok) {
         showToast('✅ Cierre guardado');
       } else {
-        showToast('❌ Error al guardar');
+        const errorData = await res.json();
+        showToast('❌ Error: ' + (errorData.error || 'Error al guardar'));
       }
     } catch (err) {
       showToast('❌ Error: ' + err.message);
@@ -390,7 +416,7 @@ export default function CajeraPage() {
             <div style={{ padding: '20px' }}>
               {sinpeList.map((item) => (
                 <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: '#F7F5F0', borderRadius: '6px', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '13px', color: '#6B6560' }}>SINPE #{item.id}</span>
+                  <span style={{ fontSize: '13px', color: '#6B6560' }}>Ref: {item.referencia}</span>
                   <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '600', color: '#2a78a5' }}>{fmt(item.monto)}</span>
                 </div>
               ))}
@@ -443,22 +469,40 @@ export default function CajeraPage() {
 
           {/* SECCIÓN 9: Glory */}
           <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
-              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>9</div>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Glory — Groomer</div>
-            </div>
-            <div style={{ padding: '20px' }}>
-              {gloryList.map((item) => (
-                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: '#F7F5F0', borderRadius: '6px', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '13px', color: '#6B6560' }}>{item.metodo || 'Pago'}</span>
-                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '600', color: '#2a78a5' }}>{fmt(item.monto)}</span>
-                </div>
-              ))}
-              <div style={{ marginTop: '12px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#E8F3EC' }}>
-                <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total Glory</span>
-                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#2a78a5' }}>{fmt(totalGlory)}</span>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F0EDE6' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>9</div>
+                <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Glory — Groomer</div>
               </div>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: '600', color: '#6B6560', cursor: 'pointer' }}>
+                <input
+                  type="checkbox"
+                  checked={cerrarGlory}
+                  onChange={(e) => setCerrarGlory(e.target.checked)}
+                  style={{ cursor: 'pointer', width: '16px', height: '16px' }}
+                />
+                ¿Registrar cierre?
+              </label>
             </div>
+            {cerrarGlory && (
+              <div style={{ padding: '20px' }}>
+                {gloryList.map((item) => (
+                  <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: '#F7F5F0', borderRadius: '6px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '13px', color: '#6B6560' }}>{item.metodo || 'Pago'}</span>
+                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '600', color: '#2a78a5' }}>{fmt(item.monto)}</span>
+                  </div>
+                ))}
+                <div style={{ marginTop: '12px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#E8F3EC' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total Glory</span>
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#2a78a5' }}>{fmt(totalGlory)}</span>
+                </div>
+              </div>
+            )}
+            {!cerrarGlory && (
+              <div style={{ padding: '20px', textAlign: 'center', color: '#9C9590', fontSize: '13px', fontStyle: 'italic' }}>
+                Cierre de Glory deshabilitado para esta sesión
+              </div>
+            )}
           </div>
 
           {/* SECCIÓN 10: Comentarios */}

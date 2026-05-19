@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Header from '../components/Header';
 
 const DENOMS = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 25, 10, 5];
 const fmt = n => '₡' + Math.round(n).toLocaleString('es-CR');
@@ -21,6 +22,7 @@ export default function ConteoPage() {
   const [dolares, setDolares] = useState(0);
   const [toast, setToast] = useState('');
   const [loading, setLoading] = useState(false);
+  const [fechaHoraFormato, setFechaHoraFormato] = useState('');
 
   useEffect(() => {
     const now = new Date();
@@ -31,6 +33,7 @@ export default function ConteoPage() {
     setDenominaciones(init);
     setFecha(now.toLocaleDateString('es-CR'));
     setHora(now.toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }));
+    setFechaHoraFormato(formatFechaHora());
 
     const userData = localStorage.getItem('user');
     if (userData) {
@@ -71,11 +74,19 @@ export default function ConteoPage() {
 
     setLoading(true);
     try {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+
       const body = {
         cajera,
         caja,
-        fecha: new Date().toISOString().split('T')[0],
-        hora: new Date().toISOString(),
+        fecha: `${year}-${month}-${day}`,
+        hora: `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`,
         dolares,
         total_colones: total,
         ...Object.fromEntries(DENOMS.map(d => [`c_${d}`, denominaciones[d] || 0]))
@@ -87,7 +98,10 @@ export default function ConteoPage() {
         body: JSON.stringify(body)
       });
 
-      if (!res.ok) throw new Error('Error guardando conteo');
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.error || 'Error guardando conteo');
+      }
 
       showToast(`✅ Conteo registrado: ${fmt(total)}`);
       setTimeout(() => {
@@ -110,12 +124,7 @@ export default function ConteoPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
-      {/* Header */}
-      <div style={{ background: '#2a78a5', color: 'white', padding: '20px 24px', boxShadow: '0 2px 12px rgba(42,120,165,0.2)' }}>
-        <a href="/" style={{ color: 'white', textDecoration: 'none', fontSize: '12px', opacity: 0.8, display: 'inline-block', marginBottom: '8px' }}>← Volver</a>
-        <div style={{ fontSize: '18px', fontWeight: '600' }}>📊 Conteo de Caja</div>
-        <div style={{ fontSize: '12px', opacity: 0.7, marginTop: '4px' }}>Contá las denominaciones en cualquier momento</div>
-      </div>
+      <Header title="Conteo de Caja" subtitle="Contá las denominaciones en cualquier momento" showLogout={false} />
 
       {/* Main */}
       <div style={{ flex: 1, maxWidth: '720px', margin: '0 auto', padding: '24px 16px', width: '100%' }}>
@@ -143,7 +152,7 @@ export default function ConteoPage() {
 
         {/* Fecha y Hora */}
         <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', padding: '16px 20px', textAlign: 'center' }}>
-          <div style={{ fontSize: '14px', fontWeight: '600', color: '#6B6560' }}>📅 Conteo de caja del <span style={{ color: '#2a78a5' }}>{formatFechaHora()}</span></div>
+          <div style={{ fontSize: '14px', fontWeight: '600', color: '#6B6560' }}>📅 Conteo de caja del <span style={{ color: '#2a78a5' }}>{fechaHoraFormato || 'cargando...'}</span></div>
         </div>
 
         {/* Denominaciones */}
@@ -157,7 +166,7 @@ export default function ConteoPage() {
                 <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#6B6560', fontWeight: '500' }}>{fmt(d)}</div>
                 <input
                   type="number"
-                  value={denominaciones[d] || 0}
+                  value={denominaciones[d] || ''}
                   onChange={(e) => handleDenomChange(d, e.target.value)}
                   min="0"
                   placeholder="0"

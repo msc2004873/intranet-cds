@@ -12,15 +12,16 @@ export async function GET(request) {
 
     if (movimientos && Array.isArray(movimientos)) {
       movimientos.forEach(m => {
+        const dateObj = new Date(m.created_at);
         logs.push({
           id: m.id,
-          tipo: 'Registrar Movimiento',
-          detalle: `${m.tipo} - ₡${m.monto}`,
+          tipo: m.tipo,
+          detalle: `₡${m.monto} ${m.moneda === 'dolares' ? 'USD' : 'CRC'} - Ref: ${m.referencia || 'N/A'}`,
           usuario: m.cajera || 'N/A',
           caja: m.caja || 'N/A',
-          fecha: new Date(m.created_at).toISOString().split('T')[0],
-          hora: new Date(m.created_at).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }),
-          timestamp: new Date(m.created_at).getTime(),
+          fecha: dateObj.toISOString().split('T')[0],
+          hora: dateObj.toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }),
+          timestamp: dateObj.getTime(),
           data: m,
         });
       });
@@ -34,15 +35,16 @@ export async function GET(request) {
 
     if (cobros && Array.isArray(cobros)) {
       cobros.forEach(c => {
+        const dateObj = new Date(c.created_at);
         logs.push({
           id: c.id,
           tipo: 'Cobro Glory',
           detalle: `${c.metodo_pago || 'N/A'} - ₡${c.monto}`,
           usuario: c.cajera || 'N/A',
           caja: c.caja || 'N/A',
-          fecha: new Date(c.created_at).toISOString().split('T')[0],
-          hora: new Date(c.created_at).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }),
-          timestamp: new Date(c.created_at).getTime(),
+          fecha: dateObj.toISOString().split('T')[0],
+          hora: dateObj.toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }),
+          timestamp: dateObj.getTime(),
           data: c,
         });
       });
@@ -56,16 +58,16 @@ export async function GET(request) {
 
     if (cierres && Array.isArray(cierres)) {
       cierres.forEach(cierre => {
-        const fechaObj = new Date(cierre.fecha_hora);
+        const dateObj = new Date(cierre.fecha_hora);
         logs.push({
           id: cierre.id,
           tipo: 'Cierre de Caja',
           detalle: 'Cierre completado',
           usuario: cierre.cajera || 'N/A',
           caja: cierre.caja || 'N/A',
-          fecha: fechaObj.toISOString().split('T')[0],
-          hora: fechaObj.toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }),
-          timestamp: fechaObj.getTime(),
+          fecha: dateObj.toISOString().split('T')[0],
+          hora: dateObj.toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }),
+          timestamp: dateObj.getTime(),
           data: cierre,
         });
       });
@@ -74,12 +76,12 @@ export async function GET(request) {
     // 4. Conteos de Caja
     const { data: conteos, error: err4 } = await supabase
       .from('conteo_caja')
-      .select('id, cajera, caja, fecha, hora, total_colones')
+      .select('id, cajera, caja, fecha, hora, total_colones, dolares, c_20000, c_10000, c_5000, c_2000, c_1000, c_500, c_100, c_50, c_25, c_10, c_5')
       .order('created_at', { ascending: false });
 
     if (conteos && Array.isArray(conteos)) {
       conteos.forEach(conteo => {
-        const fechaObj = new Date(`${conteo.fecha}T${conteo.hora || '00:00:00'}`);
+        const fechaObj = conteo.hora ? new Date(conteo.hora) : new Date(`${conteo.fecha}T00:00:00`);
         logs.push({
           id: conteo.id,
           tipo: 'Conteo de Caja',
@@ -87,7 +89,7 @@ export async function GET(request) {
           usuario: conteo.cajera || 'N/A',
           caja: conteo.caja || 'N/A',
           fecha: conteo.fecha,
-          hora: new Date(conteo.hora).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }),
+          hora: fechaObj.toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }),
           timestamp: fechaObj.getTime(),
           data: conteo,
         });

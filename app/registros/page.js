@@ -11,7 +11,7 @@ export default function RegistrosPage() {
   const [colaboradores, setColaboradores] = useState([]);
   const [tipoMovimiento, setTipoMovimiento] = useState('');
   const [monto, setMonto] = useState('');
-  const [comprobante, setComprobante] = useState('');
+  const [referencia, setReferencia] = useState('');
   const [archivo, setArchivo] = useState(null);
   const [preview, setPreview] = useState(null);
   const [descripcion, setDescripcion] = useState('');
@@ -63,6 +63,30 @@ export default function RegistrosPage() {
     }
   };
 
+  const handleDrop = (e, setFile, setPreviewState) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      setFile(file);
+
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          setPreviewState(event.target?.result);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        setPreviewState(`📄 ${file.name}`);
+      }
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
   const handleArchivoSalidaChange = (e) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -84,7 +108,7 @@ export default function RegistrosPage() {
   const resetForm = () => {
     setTipoMovimiento('');
     setMonto('');
-    setComprobante('');
+    setReferencia('');
     setArchivo(null);
     setPreview(null);
     setDescripcion('');
@@ -109,27 +133,29 @@ export default function RegistrosPage() {
       return;
     }
 
-    if ((tipoMovimiento === 'sinpe' || tipoMovimiento === 'transferencia') && !comprobante) {
-      showToast('❌ Ingresa referencia/comprobante');
+    if ((tipoMovimiento === 'sinpe' || tipoMovimiento === 'transferencia') && !referencia) {
+      showToast('❌ Ingresa referencia');
       return;
     }
 
     setLoading(true);
     try {
-      const fecha = new Date().toISOString().split('T')[0];
+      const formData = new FormData();
+      formData.append('tipo', tipoMovimiento.toUpperCase());
+      formData.append('monto', parseFloat(monto));
+      formData.append('moneda', moneda);
+      formData.append('referencia', tipoMovimiento === 'salida' ? descripcion : (referencia || null));
+      formData.append('cajera', cajera);
+      formData.append('caja', caja);
+
+      const fileToSend = tipoMovimiento === 'salida' ? archivoSalida : archivo;
+      if (fileToSend) {
+        formData.append('archivo', fileToSend);
+      }
+
       const res = await fetch('/api/movimientos', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          tipo: tipoMovimiento.toUpperCase(),
-          monto: parseFloat(monto),
-          moneda: moneda,
-          comprobante: comprobante || null,
-          descripcion: descripcion || null,
-          cajera: cajera,
-          caja: caja,
-          fecha: fecha
-        })
+        body: formData
       });
 
       if (!res.ok) {
@@ -190,7 +216,7 @@ export default function RegistrosPage() {
                 onClick={() => {
                   setTipoMovimiento(tipo.id);
                   setMonto('');
-                  setComprobante('');
+                  setReferencia('');
                   setArchivo(null);
                   setPreview(null);
                   setDescripcion('');
@@ -235,11 +261,11 @@ export default function RegistrosPage() {
               {tipoMovimiento === 'sinpe' && (
                 <>
                   <div style={{ marginBottom: '16px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Referencia / Comprobante</label>
+                    <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Referencia</label>
                     <input
                       type="text"
-                      value={comprobante}
-                      onChange={(e) => setComprobante(e.target.value)}
+                      value={referencia}
+                      onChange={(e) => setReferencia(e.target.value)}
                       placeholder='Ej: 123456789'
                       style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px' }}
                     />
@@ -247,7 +273,7 @@ export default function RegistrosPage() {
 
                   {/* Upload de archivo */}
                   <div style={{ marginBottom: '16px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Comprobante (imagen/PDF)</label>
+                    <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Imagen/PDF</label>
                     <label style={{
                       display: 'block',
                       border: '2px dashed #E2DDD4',
@@ -257,15 +283,20 @@ export default function RegistrosPage() {
                       cursor: 'pointer',
                       background: '#F0EDE6',
                       transition: 'all 0.2s',
-                    }} onMouseEnter={(e) => {
+                    }}
+                    onMouseEnter={(e) => {
                       e.currentTarget.style.borderColor = '#2a78a5';
                       e.currentTarget.style.background = '#E8F3EC';
-                    }} onMouseLeave={(e) => {
+                    }}
+                    onMouseLeave={(e) => {
                       e.currentTarget.style.borderColor = '#E2DDD4';
                       e.currentTarget.style.background = '#F0EDE6';
-                    }}>
+                    }}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, setArchivo, setPreview)}
+                    >
                       <div style={{ fontSize: '20px', marginBottom: '6px' }}>📎</div>
-                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560' }}>Selecciona archivo</div>
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560' }}>Selecciona o arrastra archivo</div>
                       <div style={{ fontSize: '10px', color: '#9C9590', marginTop: '4px' }}>JPG, PNG o PDF</div>
                       <input
                         type="file"
@@ -341,11 +372,11 @@ export default function RegistrosPage() {
                   </div>
 
                   <div style={{ marginBottom: '16px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Referencia / Comprobante</label>
+                    <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Referencia</label>
                     <input
                       type="text"
-                      value={comprobante}
-                      onChange={(e) => setComprobante(e.target.value)}
+                      value={referencia}
+                      onChange={(e) => setReferencia(e.target.value)}
                       placeholder='Ej: TRF-001'
                       style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px' }}
                     />
@@ -353,7 +384,7 @@ export default function RegistrosPage() {
 
                   {/* Upload de archivo */}
                   <div style={{ marginBottom: '16px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Comprobante (imagen/PDF)</label>
+                    <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Imagen/PDF</label>
                     <label style={{
                       display: 'block',
                       border: '2px dashed #E2DDD4',
@@ -363,15 +394,20 @@ export default function RegistrosPage() {
                       cursor: 'pointer',
                       background: '#F0EDE6',
                       transition: 'all 0.2s',
-                    }} onMouseEnter={(e) => {
+                    }}
+                    onMouseEnter={(e) => {
                       e.currentTarget.style.borderColor = '#2a78a5';
                       e.currentTarget.style.background = '#E8F3EC';
-                    }} onMouseLeave={(e) => {
+                    }}
+                    onMouseLeave={(e) => {
                       e.currentTarget.style.borderColor = '#E2DDD4';
                       e.currentTarget.style.background = '#F0EDE6';
-                    }}>
+                    }}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, setArchivo, setPreview)}
+                    >
                       <div style={{ fontSize: '20px', marginBottom: '6px' }}>📎</div>
-                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560' }}>Selecciona archivo</div>
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560' }}>Selecciona o arrastra archivo</div>
                       <div style={{ fontSize: '10px', color: '#9C9590', marginTop: '4px' }}>JPG, PNG o PDF</div>
                       <input
                         type="file"
@@ -419,7 +455,7 @@ export default function RegistrosPage() {
 
                   {/* Upload de comprobante - OPCIONAL */}
                   <div style={{ marginBottom: '16px' }}>
-                    <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Comprobante (opcional)</label>
+                    <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '8px' }}>Imagen/PDF (opcional)</label>
                     <label style={{
                       display: 'block',
                       border: '2px dashed #E2DDD4',
@@ -429,15 +465,20 @@ export default function RegistrosPage() {
                       cursor: 'pointer',
                       background: '#F0EDE6',
                       transition: 'all 0.2s',
-                    }} onMouseEnter={(e) => {
+                    }}
+                    onMouseEnter={(e) => {
                       e.currentTarget.style.borderColor = '#2a78a5';
                       e.currentTarget.style.background = '#E8F3EC';
-                    }} onMouseLeave={(e) => {
+                    }}
+                    onMouseLeave={(e) => {
                       e.currentTarget.style.borderColor = '#E2DDD4';
                       e.currentTarget.style.background = '#F0EDE6';
-                    }}>
+                    }}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, setArchivoSalida, setPreviewSalida)}
+                    >
                       <div style={{ fontSize: '20px', marginBottom: '6px' }}>📎</div>
-                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560' }}>Selecciona archivo</div>
+                      <div style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560' }}>Selecciona o arrastra archivo</div>
                       <div style={{ fontSize: '10px', color: '#9C9590', marginTop: '4px' }}>JPG, PNG o PDF</div>
                       <input
                         type="file"

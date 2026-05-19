@@ -10,6 +10,8 @@ export async function GET(req) {
     const { searchParams } = new URL(req.url);
     const cobrado = searchParams.get('cobrado');
     const fecha = searchParams.get('fecha');
+    const inicio = searchParams.get('inicio');
+    const fin = searchParams.get('fin');
 
     let query = supabase.from('cobros_glory').select('*');
 
@@ -22,6 +24,13 @@ export async function GET(req) {
     if (fecha) {
       query = query.eq('fecha', fecha);
     }
+
+    if (inicio && fin) {
+      query = query.gte('fecha', inicio).lte('fecha', fin);
+    }
+
+    // Filtrar solo registros con monto (omitir registros individuales de cobros unificados)
+    query = query.not('monto', 'is', null);
 
     const { data, error } = await query;
 

@@ -1,3 +1,4 @@
+import Script from 'next/script';
 import './globals.css';
 
 export const metadata = {
@@ -10,7 +11,7 @@ export default function RootLayout({ children }) {
     <html lang="es">
       <body>
         {children}
-        <script src="/supabase-bridge.js" defer></script>
+        <Script src="/supabase-bridge.js" defer />
       </body>
     </html>
   );
