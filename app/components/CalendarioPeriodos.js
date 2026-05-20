@@ -32,8 +32,18 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
     dias.push(i);
   }
 
+  const handleSelectPeriodo = (periodo) => {
+    const inicio = new Date(ano, mes, periodo.inicio);
+    const fin = new Date(ano, mes, periodo.fin);
+    onSelectPeriodo({
+      num: periodo.num,
+      inicio,
+      fin,
+    });
+  };
+
   return (
-    <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '8px', padding: '16px', marginBottom: '20px' }}>
+    <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
       <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714', marginBottom: '12px', textAlign: 'center' }}>
         {nombreMes.toUpperCase()}
       </div>
@@ -48,7 +58,7 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
       </div>
 
       {/* Grid de días */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px' }}>
         {dias.map((dia, idx) => {
           if (dia === null) {
             return <div key={`empty-${idx}`} style={{ minHeight: '28px' }} />;
@@ -58,7 +68,7 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
           return (
             <div
               key={dia}
-              onClick={() => periodo && onSelectPeriodo(periodo)}
+              onClick={() => periodo && handleSelectPeriodo(periodo)}
               style={{
                 minHeight: '28px',
                 background: periodo?.color || '#F0EDE6',
@@ -70,7 +80,8 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                transition: 'opacity 0.2s'
+                transition: 'opacity 0.2s',
+                borderRadius: '6px'
               }}
               onMouseEnter={(e) => {
                 if (periodo) {
