@@ -14,6 +14,7 @@ export default function Home() {
   const [tcActual, setTcActual] = useState(null);
   const [showTCModal, setShowTCModal] = useState(false);
   const [periodsTC, setPeriodsTC] = useState([]);
+  const [mesModalOffset, setMesModalOffset] = useState(0);
 
   useEffect(() => {
     fetchTipoCambio();
@@ -31,17 +32,30 @@ export default function Home() {
       setTc(data.tipoCambio);
 
       // Cargar TC de todos los períodos del mes
-      await fetchTCPeriodos();
+      await fetchTCPeriodos(0);
     } catch (err) {
       console.error('Error fetching período:', err);
     }
   }
 
-  async function fetchTCPeriodos() {
+  async function fetchTCPeriodos(offset = 0) {
     try {
       const res = await fetch('/api/periodos/tc-mes');
       const data = await res.json();
-      setPeriodsTC(data.periodos || []);
+
+      if (!data.periodos) {
+        setPeriodsTC([]);
+        return;
+      }
+
+      // Filtrar por mes/año según el offset
+      const hoy = new Date();
+      const mesTarget = new Date(hoy.getFullYear(), hoy.getMonth() + offset, 1);
+      const anoTarget = mesTarget.getFullYear();
+      const mesTarget_num = mesTarget.getMonth() + 1;
+
+      const filtered = data.periodos.filter(p => p.ano === anoTarget && p.mes === mesTarget_num);
+      setPeriodsTC(filtered.length > 0 ? filtered : data.periodos.slice(0, 6));
     } catch (err) {
       console.error('Error fetching TC períodos:', err);
     }
@@ -538,7 +552,45 @@ export default function Home() {
             width: '90%',
             boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
           }} onClick={(e) => e.stopPropagation()}>
-            <h4 style={{ fontSize: '18px', fontWeight: '600', color: '#1A1714', marginBottom: '24px' }}>💱 Tipos de cambio del mes</h4>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+              <button
+                onClick={() => {
+                  setMesModalOffset(mesModalOffset - 1);
+                  fetchTCPeriodos(mesModalOffset - 1);
+                }}
+                style={{
+                  background: '#F0EDE6',
+                  border: '1px solid #E2DDD4',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  color: '#6B6560',
+                }}
+              >
+                ← Anterior
+              </button>
+              <h4 style={{ fontSize: '18px', fontWeight: '600', color: '#1A1714', margin: '0' }}>💱 Tipos de cambio</h4>
+              <button
+                onClick={() => {
+                  setMesModalOffset(mesModalOffset + 1);
+                  fetchTCPeriodos(mesModalOffset + 1);
+                }}
+                style={{
+                  background: '#F0EDE6',
+                  border: '1px solid #E2DDD4',
+                  padding: '6px 12px',
+                  borderRadius: '6px',
+                  fontSize: '12px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  color: '#6B6560',
+                }}
+              >
+                Siguiente →
+              </button>
+            </div>
 
             <div style={{ display: 'grid', gap: '12px', marginBottom: '24px' }}>
               {periodsTC.map(p => (
