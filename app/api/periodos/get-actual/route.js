@@ -48,7 +48,7 @@ export async function GET(request) {
     const tcData = await obtenerTipoCambioAPI();
     let tipoCambio = tcData.ajustado;
 
-    // Guardar en BD el TC actual (siempre, para que esté actualizado)
+    // Guardar en BD el TC actual del período
     try {
       await supabase
         .from('periodo_tipos_cambio')
@@ -59,37 +59,38 @@ export async function GET(request) {
           tipo_cambio: tipoCambio,
           tipo_cambio_bruto: tcData.bruto,
         }, { onConflict: 'ano,mes,periodo_num' });
-    } catch (err) {
-      console.log('Error guardando TC en BD:', err.message);
-    }
 
-    // Si hay períodos anteriores sin TC, completarlos con el mismo TC
-    if (periodoNum > 1) {
-      try {
+      // Si hay períodos anteriores sin TC, completarlos con el mismo TC de hoy
+      if (periodoNum > 1) {
         for (let p = 1; p < periodoNum; p++) {
-          const { data: existente } = await supabase
-            .from('periodo_tipos_cambio')
-            .select('id')
-            .eq('ano', ano)
-            .eq('mes', mes)
-            .eq('periodo_num', p)
-            .single();
-
-          if (!existente) {
-            await supabase
+          try {
+            const { data: existente } = await supabase
               .from('periodo_tipos_cambio')
-              .insert({
-                ano,
-                mes,
-                periodo_num: p,
-                tipo_cambio: tipoCambio,
-                tipo_cambio_bruto: tcData.bruto,
-              });
+              .select('id')
+              .eq('ano', ano)
+              .eq('mes', mes)
+              .eq('periodo_num', p)
+              .single();
+
+            if (!existente) {
+              // Guardar con el TC de hoy para todos los períodos anteriores
+              await supabase
+                .from('periodo_tipos_cambio')
+                .insert({
+                  ano,
+                  mes,
+                  periodo_num: p,
+                  tipo_cambio: tipoCambio,
+                  tipo_cambio_bruto: tcData.bruto,
+                });
+            }
+          } catch (err) {
+            // Ignore if period already exists
           }
         }
-      } catch (err) {
-        console.log('Error completando períodos anteriores:', err.message);
       }
+    } catch (err) {
+      console.log('Error guardando TC en BD:', err.message);
     }
 
     return Response.json({
