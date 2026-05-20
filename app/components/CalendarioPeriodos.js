@@ -1,5 +1,7 @@
 'use client';
 
+import { useState } from 'react';
+
 const PERIODOS = [
   { num: 1, inicio: 1, fin: 5, color: '#FF6B6B' },
   { num: 2, inicio: 6, fin: 10, color: '#4ECDC4' },
@@ -14,14 +16,17 @@ const obtenerPeriodo = (dia) => {
 };
 
 export default function CalendarioPeriodos({ onSelectPeriodo }) {
+  const [mesOffset, setMesOffset] = useState(0);
+
   const hoy = new Date();
-  const ano = hoy.getFullYear();
-  const mes = hoy.getMonth();
+  const fechaActual = new Date(hoy.getFullYear(), hoy.getMonth() + mesOffset, 1);
+  const ano = fechaActual.getFullYear();
+  const mes = fechaActual.getMonth();
   const ultimoDiaMes = new Date(ano, mes + 1, 0).getDate();
   const primerDia = new Date(ano, mes, 1).getDay();
   const primerDiaLunes = (primerDia === 0 ? 6 : primerDia - 1);
 
-  const nombreMes = hoy.toLocaleDateString('es-CR', { month: 'long', year: 'numeric' });
+  const nombreMes = fechaActual.toLocaleDateString('es-CR', { month: 'long', year: 'numeric' });
   const diasSemana = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
   const dias = [];
@@ -42,10 +47,55 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
     });
   };
 
+  const getRadiusStyle = (dia, periodo) => {
+    if (!periodo) return {};
+
+    const esInicio = dia === periodo.inicio;
+    const esFin = dia === periodo.fin;
+
+    if (esInicio && esFin) return { borderRadius: '6px' };
+    if (esInicio) return { borderRadius: '6px 0 0 6px' };
+    if (esFin) return { borderRadius: '0 6px 6px 0' };
+    return { borderRadius: '0px' };
+  };
+
   return (
     <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '16px', padding: '16px', marginBottom: '20px', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
-      <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714', marginBottom: '12px', textAlign: 'center' }}>
-        {nombreMes.toUpperCase()}
+      {/* Header con navegación */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+        <button
+          onClick={() => setMesOffset(mesOffset - 1)}
+          style={{
+            background: '#F0EDE6',
+            border: '1px solid #E2DDD4',
+            borderRadius: '6px',
+            padding: '4px 8px',
+            cursor: 'pointer',
+            fontSize: '12px',
+            fontWeight: '600',
+            color: '#6B6560'
+          }}
+        >
+          ← Anterior
+        </button>
+        <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714' }}>
+          {nombreMes.toUpperCase()}
+        </div>
+        <button
+          onClick={() => setMesOffset(mesOffset + 1)}
+          style={{
+            background: '#F0EDE6',
+            border: '1px solid #E2DDD4',
+            borderRadius: '6px',
+            padding: '4px 8px',
+            cursor: 'pointer',
+            fontSize: '12px',
+            fontWeight: '600',
+            color: '#6B6560'
+          }}
+        >
+          Siguiente →
+        </button>
       </div>
 
       {/* Encabezados días de la semana */}
@@ -58,13 +108,15 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
       </div>
 
       {/* Grid de días */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0' }}>
         {dias.map((dia, idx) => {
           if (dia === null) {
             return <div key={`empty-${idx}`} style={{ minHeight: '28px' }} />;
           }
 
           const periodo = obtenerPeriodo(dia);
+          const radiusStyle = getRadiusStyle(dia, periodo);
+
           return (
             <div
               key={dia}
@@ -81,7 +133,7 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 transition: 'opacity 0.2s',
-                borderRadius: '6px'
+                ...radiusStyle
               }}
               onMouseEnter={(e) => {
                 if (periodo) {
