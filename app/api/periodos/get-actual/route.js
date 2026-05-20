@@ -6,12 +6,12 @@ async function obtenerTipoCambioAPI() {
     const data = await res.json();
     if (data.rates && data.rates.CRC) {
       const tcBruto = Math.round(data.rates.CRC);
-      return tcBruto - 10;
+      return { bruto: tcBruto, ajustado: tcBruto - 10 };
     }
   } catch (err) {
     console.error('Error obteniendo TC de API:', err);
   }
-  return 475;
+  return { bruto: 485, ajustado: 475 };
 }
 
 export async function GET(request) {
@@ -44,41 +44,51 @@ export async function GET(request) {
       esPrimerDia = dia === 26;
     }
 
-    let tipoCambio = 475;
+    // Obtener TC de la API
+    const tcData = await obtenerTipoCambioAPI();
+    let tipoCambio = tcData.ajustado;
 
-    // Si es primer día, obtener de API y guardar
-    if (esPrimerDia) {
-      tipoCambio = await obtenerTipoCambioAPI();
-      
-      // Guardar en BD (si tabla existe)
-      try {
-        await supabase
-          .from('periodo_tipos_cambio')
-          .upsert({
-            ano,
-            mes,
-            periodo_num: periodoNum,
-            tipo_cambio: tipoCambio,
-          }, { onConflict: 'ano,mes,periodo_num' });
-      } catch (err) {
-        console.log('Tabla TC no existe aún, usando valor en memoria');
-      }
-    } else {
-      // Si no es primer día, obtener de BD
-      try {
-        const { data } = await supabase
-          .from('periodo_tipos_cambio')
-          .select('tipo_cambio')
-          .eq('ano', ano)
-          .eq('mes', mes)
-          .eq('periodo_num', periodoNum)
-          .single();
+    // Guardar en BD el TC actual (siempre, para que esté actualizado)
+    try {
+      await supabase
+        .from('periodo_tipos_cambio')
+        .upsert({
+          ano,
+          mes,
+          periodo_num: periodoNum,
+          tipo_cambio: tipoCambio,
+          tipo_cambio_bruto: tcData.bruto,
+        }, { onConflict: 'ano,mes,periodo_num' });
+    } catch (err) {
+      console.log('Error guardando TC en BD:', err.message);
+    }
 
-        if (data?.tipo_cambio) {
-          tipoCambio = data.tipo_cambio;
+    // Si hay períodos anteriores sin TC, completarlos con el mismo TC
+    if (periodoNum > 1) {
+      try {
+        for (let p = 1; p < periodoNum; p++) {
+          const { data: existente } = await supabase
+            .from('periodo_tipos_cambio')
+            .select('id')
+            .eq('ano', ano)
+            .eq('mes', mes)
+            .eq('periodo_num', p)
+            .single();
+
+          if (!existente) {
+            await supabase
+              .from('periodo_tipos_cambio')
+              .insert({
+                ano,
+                mes,
+                periodo_num: p,
+                tipo_cambio: tipoCambio,
+                tipo_cambio_bruto: tcData.bruto,
+              });
+          }
         }
       } catch (err) {
-        console.log('TC no encontrado en BD, usando default');
+        console.log('Error completando períodos anteriores:', err.message);
       }
     }
 
@@ -88,6 +98,7 @@ export async function GET(request) {
       esPrimerDia,
       ano,
       mes,
+      tcBruto: tcData.bruto,
     });
   } catch (err) {
     console.error('Error:', err);
