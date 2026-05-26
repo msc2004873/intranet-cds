@@ -16,7 +16,7 @@ async function obtenerTipoCambioAPI() {
 
 export async function GET(request) {
   try {
-    const hoy = new Date();
+    const hoy = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Costa_Rica' }));
     const ano = hoy.getFullYear();
     const mes = hoy.getMonth() + 1;
     const dia = hoy.getDate();

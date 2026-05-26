@@ -2,7 +2,7 @@ import supabase from '../../../../lib/supabase-server.js';
 
 export async function GET(request) {
   try {
-    const hoy = new Date();
+    const hoy = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Costa_Rica' }));
     const anoActual = hoy.getFullYear();
     const mesActual = hoy.getMonth() + 1;
     const diaActual = hoy.getDate();

@@ -43,7 +43,7 @@ export default function Home() {
 
   async function fetchTCPeriodos(offset = 0) {
     try {
-      const hoy = new Date();
+      const hoy = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Costa_Rica' }));
       const mesTarget = new Date(hoy.getFullYear(), hoy.getMonth() + offset, 1);
       const anoTarget = mesTarget.getFullYear();
       const mesTarget_num = mesTarget.getMonth() + 1;
