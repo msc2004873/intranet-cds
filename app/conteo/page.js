@@ -161,13 +161,21 @@ export default function ConteoPage() {
             <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Denominaciones</div>
           </div>
           <div style={{ padding: '20px' }}>
-            {DENOMS.map(d => (
+            {DENOMS.map((d, idx) => (
               <div key={d} style={{ display: 'grid', gridTemplateColumns: '100px 1fr 110px', alignItems: 'center', gap: '10px', padding: '6px 0', borderBottom: '1px solid #E2DDD4' }}>
                 <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#6B6560', fontWeight: '500' }}>{fmt(d)}</div>
                 <input
                   type="number"
+                  ref={(el) => (window[`inputDenom${idx}`] = el)}
                   value={denominaciones[d] || ''}
                   onChange={(e) => handleDenomChange(d, e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const nextInput = window[`inputDenom${idx + 1}`];
+                      if (nextInput) nextInput.focus();
+                    }
+                  }}
                   min="0"
                   placeholder="0"
                   style={{
@@ -196,7 +204,7 @@ export default function ConteoPage() {
               <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', flex: 1 }}>Dólares</label>
               <input
                 type="number"
-                value={dolares}
+                value={dolares === 0 ? '' : dolares}
                 onChange={(e) => setDolares(parseFloat(e.target.value) || 0)}
                 placeholder="0"
                 style={{
