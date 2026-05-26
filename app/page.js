@@ -43,12 +43,21 @@ export default function Home() {
 
   async function fetchTCPeriodos(offset = 0) {
     try {
-      const hoy = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Costa_Rica' }));
-      const mesTarget = new Date(hoy.getFullYear(), hoy.getMonth() + offset, 1);
-      const anoTarget = mesTarget.getFullYear();
-      const mesTarget_num = mesTarget.getMonth() + 1;
+      const now = new Date();
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Costa_Rica',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+      const [mes, dia, ano] = formatter.format(now).split('/');
+      const anoTarget = parseInt(ano);
+      const mesActual = parseInt(mes);
+      const mesTarget = new Date(anoTarget, mesActual - 1 + offset, 1);
+      const anoTargetFinal = mesTarget.getFullYear();
+      const mesTargetNum = mesTarget.getMonth() + 1;
 
-      const res = await fetch(`/api/periodos/tc-mes?ano=${anoTarget}&mes=${mesTarget_num}`);
+      const res = await fetch(`/api/periodos/tc-mes?ano=${anoTargetFinal}&mes=${mesTargetNum}`);
       const data = await res.json();
 
       if (!data.periodos) {

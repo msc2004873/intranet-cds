@@ -16,43 +16,50 @@ async function obtenerTipoCambioAPI() {
 
 export async function GET(request) {
   try {
-    const hoy = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Costa_Rica' }));
-    const ano = hoy.getFullYear();
-    const mes = hoy.getMonth() + 1;
-    const dia = hoy.getDate();
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Costa_Rica',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    const [mes, dia, ano] = formatter.format(now).split('/');
+    const mesNum = parseInt(mes);
+    const diaNum = parseInt(dia);
+    const anoNum = parseInt(ano);
 
     let periodoNum = 1;
     let esPrimerDia = false;
 
-    if (dia <= 5) {
+    if (diaNum <= 5) {
       periodoNum = 1;
-      esPrimerDia = dia === 1;
-    } else if (dia <= 10) {
+      esPrimerDia = diaNum === 1;
+    } else if (diaNum <= 10) {
       periodoNum = 2;
-      esPrimerDia = dia === 6;
-    } else if (dia <= 15) {
+      esPrimerDia = diaNum === 6;
+    } else if (diaNum <= 15) {
       periodoNum = 3;
-      esPrimerDia = dia === 11;
-    } else if (dia <= 20) {
+      esPrimerDia = diaNum === 11;
+    } else if (diaNum <= 20) {
       periodoNum = 4;
-      esPrimerDia = dia === 16;
-    } else if (dia <= 25) {
+      esPrimerDia = diaNum === 16;
+    } else if (diaNum <= 25) {
       periodoNum = 5;
-      esPrimerDia = dia === 21;
+      esPrimerDia = diaNum === 21;
     } else {
       periodoNum = 6;
-      esPrimerDia = dia === 26;
+      esPrimerDia = diaNum === 26;
     }
 
     // Obtener TC de la API
     const tipoCambio = await obtenerTipoCambioAPI();
 
     // Generar fechas para el período actual
-    const ultimoDiaDelMes = new Date(ano, mes, 0).getDate();
+    const ultimoDiaDelMes = new Date(anoNum, mesNum, 0).getDate();
     const inicio = (periodoNum - 1) * 5 + 1;
     const fin = periodoNum === 6 ? ultimoDiaDelMes : periodoNum * 5;
-    const fechaInicio = new Date(ano, mes - 1, inicio).toISOString().split('T')[0];
-    const fechaFin = new Date(ano, mes - 1, fin).toISOString().split('T')[0];
+    const fechaInicio = new Date(anoNum, mesNum - 1, inicio).toISOString().split('T')[0];
+    const fechaFin = new Date(anoNum, mesNum - 1, fin).toISOString().split('T')[0];
 
     // Guardar en BD el TC actual del período (solo si es primer día)
     if (esPrimerDia) {
@@ -63,8 +70,8 @@ export async function GET(request) {
         await supabase
           .from('periodos_tipo_cambio')
           .upsert({
-            ano,
-            mes,
+            ano: anoNum,
+            mes: mesNum,
             periodo_num: periodoNum,
             tipo_cambio: tcReal,
             tipo_cambio_ajustado: tcAjustado,
@@ -80,8 +87,8 @@ export async function GET(request) {
     const { data: periodoData } = await supabase
       .from('periodos_tipo_cambio')
       .select('tipo_cambio_ajustado')
-      .eq('ano', ano)
-      .eq('mes', mes)
+      .eq('ano', anoNum)
+      .eq('mes', mesNum)
       .eq('periodo_num', periodoNum)
       .single();
 
@@ -91,7 +98,7 @@ export async function GET(request) {
       periodo: periodoNum,
       tipoCambio: tcActual,
       esPrimerDia,
-      ano,
+      ano: anoNum,
       mes,
     });
   } catch (err) {

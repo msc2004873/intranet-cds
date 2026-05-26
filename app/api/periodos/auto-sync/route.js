@@ -2,10 +2,17 @@ import supabase from '../../../../lib/supabase-server.js';
 
 export async function GET(request) {
   try {
-    const hoy = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Costa_Rica' }));
-    const anoActual = hoy.getFullYear();
-    const mesActual = hoy.getMonth() + 1;
-    const diaActual = hoy.getDate();
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Costa_Rica',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    const [mes, dia, ano] = formatter.format(now).split('/');
+    const mesActual = parseInt(mes);
+    const diaActual = parseInt(dia);
+    const anoActual = parseInt(ano);
 
     let resultado = { creados: 0, actualizados: 0, mensaje: 'Sin cambios' };
 
