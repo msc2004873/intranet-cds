@@ -6,12 +6,12 @@ async function obtenerTipoCambioAPI() {
     const data = await res.json();
     if (data.rates && data.rates.CRC) {
       const tcBruto = Math.round(data.rates.CRC);
-      return { bruto: tcBruto, ajustado: tcBruto - 10 };
+      return tcBruto - 10;
     }
   } catch (err) {
     console.error('Error obteniendo TC de API:', err);
   }
-  return { bruto: 485, ajustado: 475 };
+  return 475;
 }
 
 export async function GET(request) {
@@ -45,61 +45,54 @@ export async function GET(request) {
     }
 
     // Obtener TC de la API
-    const tcData = await obtenerTipoCambioAPI();
-    let tipoCambio = tcData.ajustado;
+    const tipoCambio = await obtenerTipoCambioAPI();
 
-    // Guardar en BD el TC actual del período
-    try {
-      await supabase
-        .from('periodo_tipos_cambio')
-        .upsert({
-          ano,
-          mes,
-          periodo_num: periodoNum,
-          tipo_cambio: tipoCambio,
-          tipo_cambio_bruto: tcData.bruto,
-        }, { onConflict: 'ano,mes,periodo_num' });
+    // Generar fechas para el período actual
+    const ultimoDiaDelMes = new Date(ano, mes, 0).getDate();
+    const inicio = (periodoNum - 1) * 5 + 1;
+    const fin = periodoNum === 6 ? ultimoDiaDelMes : periodoNum * 5;
+    const fechaInicio = new Date(ano, mes - 1, inicio).toISOString().split('T')[0];
+    const fechaFin = new Date(ano, mes - 1, fin).toISOString().split('T')[0];
 
-      // Si hay períodos anteriores sin TC, completarlos con el mismo TC de hoy
-      if (periodoNum > 1) {
-        for (let p = 1; p < periodoNum; p++) {
-          try {
-            const { data: existente } = await supabase
-              .from('periodo_tipos_cambio')
-              .select('id')
-              .eq('ano', ano)
-              .eq('mes', mes)
-              .eq('periodo_num', p)
-              .single();
+    // Guardar en BD el TC actual del período (solo si es primer día)
+    if (esPrimerDia) {
+      try {
+        const tcReal = tipoCambio + 10;
+        const tcAjustado = tipoCambio;
 
-            if (!existente) {
-              // Guardar con el TC de hoy para todos los períodos anteriores
-              await supabase
-                .from('periodo_tipos_cambio')
-                .insert({
-                  ano,
-                  mes,
-                  periodo_num: p,
-                  tipo_cambio: tipoCambio,
-                  tipo_cambio_bruto: tcData.bruto,
-                });
-            }
-          } catch (err) {
-            // Ignore if period already exists
-          }
-        }
+        await supabase
+          .from('periodos_tipo_cambio')
+          .upsert({
+            ano,
+            mes,
+            periodo_num: periodoNum,
+            tipo_cambio: tcReal,
+            tipo_cambio_ajustado: tcAjustado,
+            fecha_inicio: fechaInicio,
+            fecha_fin: fechaFin,
+          }, { onConflict: 'ano,mes,periodo_num' });
+      } catch (err) {
+        console.log('Error guardando TC en BD:', err.message);
       }
-    } catch (err) {
-      console.log('Error guardando TC en BD:', err.message);
     }
+
+    // Obtener el TC del período actual de BD
+    const { data: periodoData } = await supabase
+      .from('periodos_tipo_cambio')
+      .select('tipo_cambio_ajustado')
+      .eq('ano', ano)
+      .eq('mes', mes)
+      .eq('periodo_num', periodoNum)
+      .single();
+
+    const tcActual = periodoData?.tipo_cambio_ajustado || tipoCambio;
 
     return Response.json({
       periodo: periodoNum,
-      tipoCambio,
+      tipoCambio: tcActual,
       esPrimerDia,
       ano,
       mes,
-      tcBruto: tcData.bruto,
     });
   } catch (err) {
     console.error('Error:', err);

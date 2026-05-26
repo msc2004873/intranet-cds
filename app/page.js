@@ -17,6 +17,9 @@ export default function Home() {
   const [mesModalOffset, setMesModalOffset] = useState(0);
 
   useEffect(() => {
+    // Asegurar que existan datos de prueba
+    fetch('/api/periodos/ensure-test-data');
+
     fetchTipoCambio();
     fetchLogs();
     fetchPeriodoActual();
@@ -40,7 +43,12 @@ export default function Home() {
 
   async function fetchTCPeriodos(offset = 0) {
     try {
-      const res = await fetch('/api/periodos/tc-mes');
+      const hoy = new Date();
+      const mesTarget = new Date(hoy.getFullYear(), hoy.getMonth() + offset, 1);
+      const anoTarget = mesTarget.getFullYear();
+      const mesTarget_num = mesTarget.getMonth() + 1;
+
+      const res = await fetch(`/api/periodos/tc-mes?ano=${anoTarget}&mes=${mesTarget_num}`);
       const data = await res.json();
 
       if (!data.periodos) {
@@ -48,14 +56,7 @@ export default function Home() {
         return;
       }
 
-      // Filtrar por mes/año según el offset
-      const hoy = new Date();
-      const mesTarget = new Date(hoy.getFullYear(), hoy.getMonth() + offset, 1);
-      const anoTarget = mesTarget.getFullYear();
-      const mesTarget_num = mesTarget.getMonth() + 1;
-
-      const filtered = data.periodos.filter(p => p.ano === anoTarget && p.mes === mesTarget_num);
-      setPeriodsTC(filtered.length > 0 ? filtered : data.periodos.slice(0, 6));
+      setPeriodsTC(data.periodos);
     } catch (err) {
       console.error('Error fetching TC períodos:', err);
     }
@@ -571,7 +572,14 @@ export default function Home() {
               >
                 ← Anterior
               </button>
-              <h4 style={{ fontSize: '18px', fontWeight: '600', color: '#1A1714', margin: '0' }}>💱 Tipos de cambio</h4>
+              <h4 style={{ fontSize: '18px', fontWeight: '600', color: '#1A1714', margin: '0' }}>
+                💱 Tipos de cambio de {(() => {
+                  const hoy = new Date();
+                  const mesTarget = new Date(hoy.getFullYear(), hoy.getMonth() + mesModalOffset, 1);
+                  const meses = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+                  return meses[mesTarget.getMonth()];
+                })()}
+              </h4>
               <button
                 onClick={() => {
                   setMesModalOffset(mesModalOffset + 1);
@@ -593,34 +601,38 @@ export default function Home() {
             </div>
 
             <div style={{ display: 'grid', gap: '12px', marginBottom: '24px' }}>
-              {periodsTC.map(p => (
-                <div key={p.periodo_num} style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  padding: '14px 16px',
-                  background: p.periodo_num === periodo ? '#E8F3EC' : '#F7F5F0',
-                  borderRadius: '8px',
-                  border: p.periodo_num === periodo ? '2px solid #2a78a5' : 'none',
-                }}>
-                  <div>
-                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714' }}>
-                      Período {p.periodo_num}
-                    </div>
-                    <div style={{ fontSize: '11px', color: '#6B6560', marginTop: '2px' }}>
-                      {p.fecha_inicio} a {p.fecha_fin}
-                    </div>
-                  </div>
-                  <div style={{
-                    fontSize: '16px',
-                    fontWeight: '700',
-                    fontFamily: "'DM Mono', monospace",
-                    color: '#2a78a5',
+              {periodsTC.map(p => {
+                const esDelPeriodoActual = mesModalOffset === 0 && p.periodo_num === periodo;
+
+                return (
+                  <div key={p.periodo_num} style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    padding: '14px 16px',
+                    background: esDelPeriodoActual ? '#E8F3EC' : '#F7F5F0',
+                    borderRadius: '8px',
+                    border: esDelPeriodoActual ? '2px solid #2a78a5' : 'none',
                   }}>
-                    ₡{p.tipo_cambio}
+                    <div>
+                      <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714' }}>
+                        Período {p.periodo_num}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#6B6560', marginTop: '2px' }}>
+                        {p.fecha_inicio} a {p.fecha_fin}
+                      </div>
+                    </div>
+                    <div style={{
+                      fontSize: '16px',
+                      fontWeight: '700',
+                      fontFamily: "'DM Mono', monospace",
+                      color: '#2a78a5',
+                    }}>
+                      {p.esFuturo ? '—' : (p.tipo_cambio ? `₡${p.tipo_cambio}` : '—')}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             <button
