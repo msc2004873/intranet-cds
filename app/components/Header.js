@@ -33,7 +33,7 @@ export default function Header({ title, subtitle, showLogout = false }) {
           cursor: 'pointer'
         }}
       >
-        {showLogout ? '🚪 Salir' : '🏠 Inicio'}
+        {showLogout ? 'Salir' : '🏠 Inicio'}
       </button>
     </div>
   );
