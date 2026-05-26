@@ -13,14 +13,24 @@ export async function GET(request) {
     if (movimientos && Array.isArray(movimientos)) {
       movimientos.forEach(m => {
         const dateObj = new Date(m.created_at);
+        const formatter = new Intl.DateTimeFormat('es-CR', {
+          timeZone: 'America/Costa_Rica',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        const formatted = formatter.format(dateObj);
+        const [fecha, hora] = formatted.split(', ');
         logs.push({
           id: m.id,
           tipo: m.tipo,
           detalle: `₡${m.monto} ${m.moneda === 'dolares' ? 'USD' : 'CRC'} - Ref: ${m.referencia || 'N/A'}`,
           usuario: m.cajera || 'N/A',
           caja: m.caja || 'N/A',
-          fecha: dateObj.toISOString().split('T')[0],
-          hora: dateObj.toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }),
+          fecha: fecha.split('/').reverse().join('-'),
+          hora,
           timestamp: dateObj.getTime(),
           data: m,
         });
@@ -36,14 +46,24 @@ export async function GET(request) {
     if (cobros && Array.isArray(cobros)) {
       cobros.forEach(c => {
         const dateObj = new Date(c.created_at);
+        const formatter = new Intl.DateTimeFormat('es-CR', {
+          timeZone: 'America/Costa_Rica',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        const formatted = formatter.format(dateObj);
+        const [fecha, hora] = formatted.split(', ');
         logs.push({
           id: c.id,
           tipo: 'Cobro Glory',
           detalle: `${c.metodo_pago || 'N/A'} - ₡${c.monto}`,
           usuario: c.cajera || 'N/A',
           caja: c.caja || 'N/A',
-          fecha: dateObj.toISOString().split('T')[0],
-          hora: dateObj.toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }),
+          fecha: fecha.split('/').reverse().join('-'),
+          hora,
           timestamp: dateObj.getTime(),
           data: c,
         });
@@ -59,14 +79,24 @@ export async function GET(request) {
     if (cierres && Array.isArray(cierres)) {
       cierres.forEach(cierre => {
         const dateObj = new Date(cierre.fecha_hora);
+        const formatter = new Intl.DateTimeFormat('es-CR', {
+          timeZone: 'America/Costa_Rica',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        const formatted = formatter.format(dateObj);
+        const [fecha, hora] = formatted.split(', ');
         logs.push({
           id: cierre.id,
           tipo: 'Cierre de Caja',
           detalle: 'Cierre completado',
           usuario: cierre.cajera || 'N/A',
           caja: cierre.caja || 'N/A',
-          fecha: dateObj.toISOString().split('T')[0],
-          hora: dateObj.toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }),
+          fecha: fecha.split('/').reverse().join('-'),
+          hora,
           timestamp: dateObj.getTime(),
           data: cierre,
         });
@@ -82,14 +112,24 @@ export async function GET(request) {
     if (conteos && Array.isArray(conteos)) {
       conteos.forEach(conteo => {
         const fechaObj = conteo.hora ? new Date(conteo.hora) : new Date(`${conteo.fecha}T00:00:00`);
+        const formatter = new Intl.DateTimeFormat('es-CR', {
+          timeZone: 'America/Costa_Rica',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+        const formatted = formatter.format(fechaObj);
+        const [fecha, hora] = formatted.split(', ');
         logs.push({
           id: conteo.id,
           tipo: 'Conteo de Caja',
           detalle: `Total: ₡${conteo.total_colones || 0}`,
           usuario: conteo.cajera || 'N/A',
           caja: conteo.caja || 'N/A',
-          fecha: conteo.fecha,
-          hora: fechaObj.toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }),
+          fecha: fecha.split('/').reverse().join('-'),
+          hora,
           timestamp: fechaObj.getTime(),
           data: conteo,
         });
