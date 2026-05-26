@@ -713,7 +713,7 @@ export default function Home() {
                     {selectedLog.data && (() => {
                       const entries = Object.entries(selectedLog.data);
                       const denomFields = entries.filter(([k]) => k.startsWith('c_'));
-                      const otherFields = entries.filter(([k]) => !k.startsWith('c_'));
+                      const otherFields = entries.filter(([k]) => !k.startsWith('c_') && !['id', 'created_at', 'updated_at'].includes(k));
 
                       return (
                         <>
