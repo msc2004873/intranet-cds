@@ -207,9 +207,9 @@ export default function RegistrosPage() {
           </div>
           <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px' }}>
             {[
-              { id: 'sinpe', label: 'SINPE', emoji: '📱' },
-              { id: 'transferencia', label: 'Transferencia', emoji: '💳' },
-              { id: 'salida', label: 'Salida', emoji: '💸' }
+              { id: 'sinpe', label: 'SINPE', icon: '/sinpe-icon.svg' },
+              { id: 'transferencia', label: 'Transferencia', icon: '/transferencia-icon.svg' },
+              { id: 'salida', label: 'Salida', icon: '/salida-icon.svg' }
             ].map(tipo => (
               <button
                 key={tipo.id}
@@ -231,9 +231,13 @@ export default function RegistrosPage() {
                   fontWeight: '600',
                   transition: 'all 0.2s',
                   textAlign: 'center',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: '8px',
                 }}
               >
-                <div style={{ fontSize: '20px', marginBottom: '6px' }}>{tipo.emoji}</div>
+                <img src={tipo.icon} alt={tipo.label} style={{ width: '24px', height: '24px', filter: tipoMovimiento === tipo.id ? 'brightness(0) saturate(100%) invert(17%) sepia(51%) saturate(1769%) hue-rotate(185deg)' : 'brightness(0.7)' }} />
                 {tipo.label}
               </button>
             ))}
