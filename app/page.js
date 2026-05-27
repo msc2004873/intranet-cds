@@ -107,11 +107,11 @@ export default function Home() {
 
   const getTipoBadge = (tipo) => {
     const tiposMap = {
-      'SINPE': { emoji: '📱', color: '#2a78a5', bg: '#E8F3EC' },
-      'TRANSFERENCIA': { emoji: '💳', color: '#8B6914', bg: '#FBF6E9' },
-      'SALIDA': { emoji: '💸', color: '#C0392B', bg: '#FDEDEC' }
+      'SINPE': { color: '#2a78a5', bg: '#E8F3EC' },
+      'TRANSFERENCIA': { color: '#8B6914', bg: '#FBF6E9' },
+      'SALIDA': { color: '#C0392B', bg: '#FDEDEC' }
     };
-    const config = tiposMap[tipo] || { emoji: '📝', color: '#6B6560', bg: '#F0EDE6' };
+    const config = tiposMap[tipo] || { color: '#6B6560', bg: '#F0EDE6' };
     return config;
   };
 
@@ -511,7 +511,7 @@ export default function Home() {
                           fontSize: '12px',
                           textTransform: 'capitalize'
                         }}>
-                          {tipoBadge.emoji} {log.tipo}
+                          {log.tipo}
                         </span>
                       </td>
                       <td style={{ padding: '12px 16px', fontSize: '13px', color: '#1A1714' }}>{log.usuario}</td>

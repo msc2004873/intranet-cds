@@ -33,10 +33,18 @@ export default function Header({ title, subtitle, showLogout = false }) {
           color: 'white',
           fontSize: '12px',
           fontWeight: '600',
-          cursor: 'pointer'
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '6px'
         }}
       >
-        {showLogout ? 'Salir' : '🏠 Inicio'}
+        {showLogout ? 'Salir' : (
+          <>
+            <img src="/home-icon.svg" alt="Inicio" style={{ width: '16px', height: '16px' }} />
+            Inicio
+          </>
+        )}
       </button>
     </div>
   );
