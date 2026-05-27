@@ -15,10 +15,17 @@ export default function Home() {
   const [showTCModal, setShowTCModal] = useState(false);
   const [periodsTC, setPeriodsTC] = useState([]);
   const [mesModalOffset, setMesModalOffset] = useState(0);
+  const [userName, setUserName] = useState('');
 
   useEffect(() => {
     // Asegurar que existan datos de prueba
     fetch('/api/periodos/ensure-test-data');
+
+    const userData = localStorage.getItem('user');
+    if (userData) {
+      const user = JSON.parse(userData);
+      setUserName(user.nombre || '');
+    }
 
     fetchTipoCambio();
     fetchLogs();
@@ -203,7 +210,7 @@ export default function Home() {
         </div>
 
         <div style={{ textAlign: 'center' }}>
-          <h2 style={{ fontSize: '22px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.4px' }}>¿Qué querés hacer hoy?</h2>
+          <h2 style={{ fontSize: '22px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.4px' }}>Hola {userName}, ¿qué quieres hacer hoy?</h2>
           <p style={{ fontSize: '14px', color: '#6B6560', marginTop: '6px' }}>Seleccioná tu área de trabajo</p>
         </div>
 
