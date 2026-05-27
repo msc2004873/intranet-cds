@@ -27,7 +27,6 @@ export default function Home() {
       setUserName(user.nombre || '');
     }
 
-    fetchTipoCambio();
     fetchLogs();
     fetchPeriodoActual();
   }, []);
@@ -78,19 +77,6 @@ export default function Home() {
     }
   }
 
-  async function fetchTipoCambio() {
-    try {
-      const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
-      const data = await res.json();
-      if (data.rates && data.rates.CRC) {
-        const tcInternet = Math.round(data.rates.CRC);
-        const tcAjustado = tcInternet - 10;
-        setTc(tcAjustado);
-      }
-    } catch (err) {
-      setTc(475);
-    }
-  }
 
   async function fetchLogs() {
     setLoading(true);
@@ -644,7 +630,7 @@ export default function Home() {
                       fontFamily: "'DM Mono', monospace",
                       color: '#2a78a5',
                     }}>
-                      {p.esFuturo ? '—' : (p.tipo_cambio ? `₡${p.tipo_cambio}` : '—')}
+                      {p.esFuturo ? '—' : (p.tipo_cambio_ajustado ? `₡${p.tipo_cambio_ajustado}` : '—')}
                     </div>
                   </div>
                 );

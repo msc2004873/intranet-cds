@@ -6,9 +6,20 @@ export async function GET(request) {
     const anoParam = url.searchParams.get('ano');
     const mesParam = url.searchParams.get('mes');
 
-    const hoy = new Date();
-    let ano = anoParam ? parseInt(anoParam) : hoy.getFullYear();
-    let mes = mesParam ? parseInt(mesParam) : hoy.getMonth() + 1;
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Costa_Rica',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    const [mes_str, dia_str, ano_str] = formatter.format(now).split('/');
+    const diaHoy = parseInt(dia_str);
+    const mesHoy = parseInt(mes_str);
+    const anoHoy = parseInt(ano_str);
+
+    let ano = anoParam ? parseInt(anoParam) : anoHoy;
+    let mes = mesParam ? parseInt(mesParam) : mesHoy;
 
     // Obtener todos los TC disponibles del mes/año especificado
     let todosTc = [];
@@ -41,10 +52,7 @@ export async function GET(request) {
       tcMap[tc.periodo_num] = tc;
     });
 
-    // Determinar qué períodos son futuros
-    const diaHoy = hoy.getDate();
-    const mesHoy = hoy.getMonth() + 1;
-    const anoHoy = hoy.getFullYear();
+    // Determinar qué períodos son futuros (usando Costa Rica time)
     const esMesActual = ano === anoHoy && mes === mesHoy;
 
     // Generar los 6 períodos del mes
