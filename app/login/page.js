@@ -88,8 +88,8 @@ export default function LoginPage() {
         maxWidth: '400px',
         width: '100%'
       }}>
-        <div style={{ marginBottom: '16px', textAlign: 'center' }}>
-          <img src="/corral-del-sol-logo-negro.png" alt="Corral del Sol" style={{ height: '48px' }} />
+        <div style={{ marginBottom: '24px', textAlign: 'center' }}>
+          <img src="/corral-del-sol-logo-principal.png" alt="Corral del Sol" style={{ height: '100px', objectFit: 'contain' }} />
         </div>
         <h1 style={{ fontSize: '24px', fontWeight: '700', color: '#1A1714', marginBottom: '8px', textAlign: 'center' }}>Corral del Sol</h1>
         <p style={{ fontSize: '13px', color: '#6B6560', marginBottom: '28px', textAlign: 'center' }}>Sistema interno</p>
