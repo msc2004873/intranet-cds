@@ -11,6 +11,18 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 const fmt = n => '₡' + Math.round(n).toLocaleString('es-CR');
 
+const getFechaCostaRica = () => {
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Costa_Rica',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  const [mes, dia, ano] = formatter.format(now).split('/');
+  return `${ano}-${mes}-${dia}`;
+};
+
 export default function CobroGloryPage() {
   const [cajera, setCajera] = useState('');
   const [caja, setCaja] = useState('');
@@ -36,7 +48,7 @@ export default function CobroGloryPage() {
   const [comentariosCobro, setComentariosCobro] = useState('');
 
   useEffect(() => {
-    const hoy = new Date().toISOString().split('T')[0];
+    const hoy = getFechaCostaRica();
     setFilterFecha(hoy);
 
     const userData = localStorage.getItem('user');
@@ -114,7 +126,15 @@ export default function CobroGloryPage() {
     }
 
     try {
-      const fecha = new Date().toISOString().split('T')[0];
+      const now = new Date();
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Costa_Rica',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+      const [mes, dia, ano] = formatter.format(now).split('/');
+      const fecha = `${ano}-${mes}-${dia}`;
       const pacientesParaGuardar = pacientesAIngresar.map(p => ({
         nombre_mascota: p.nombre_mascota,
         nombre_dueno: p.nombre_dueno,
@@ -145,7 +165,7 @@ export default function CobroGloryPage() {
 
   async function cargarPacientesEspera() {
     try {
-      const hoy = new Date().toISOString().split('T')[0];
+      const hoy = getFechaCostaRica();
       const { data } = await supabase.from('cobros_glory')
         .select('*')
         .eq('cobrado', false)
@@ -438,7 +458,7 @@ export default function CobroGloryPage() {
             nombre_dueno: pacienteEnModal.dueno,
             telefono_dueno: pacientesEspera.find(p => p.id === idsAActualizar[0])?.telefono_dueno,
             servicio: pacientesEspera.find(p => p.id === idsAActualizar[0])?.servicio,
-            fecha: new Date().toISOString().split('T')[0],
+            fecha: getFechaCostaRica(),
             hora_ingreso: new Date().toISOString(),
             hora_cobro: new Date().toISOString(),
             metodo: selectMetodo,
