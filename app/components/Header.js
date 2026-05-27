@@ -17,7 +17,7 @@ export default function Header({ title, subtitle, showLogout = false }) {
   return (
     <div style={{ background: '#2a78a5', color: 'white', padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', boxShadow: '0 2px 12px rgba(42,120,165,0.2)' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-        <img src="/corral-del-sol-logo.svg" alt="Corral del Sol" style={{ width: '32px', height: '32px' }} />
+        <img src="/corral-del-sol-logo.png" alt="Corral del Sol" style={{ height: '32px' }} />
         <div>
           <div style={{ fontSize: '18px', fontWeight: '600' }}>{title}</div>
           {subtitle && <div style={{ fontSize: '12px', opacity: 0.7, marginTop: '4px' }}>{subtitle}</div>}
