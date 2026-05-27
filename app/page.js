@@ -93,11 +93,12 @@ export default function Home() {
 
   const getTipoBadge = (tipo) => {
     const tiposMap = {
-      'SINPE': { color: '#2a78a5', bg: '#E8F3EC' },
-      'TRANSFERENCIA': { color: '#8B6914', bg: '#FBF6E9' },
-      'SALIDA': { color: '#C0392B', bg: '#FDEDEC' }
+      'SINPE': { icon: '/sinpe-icon.svg', color: '#2a78a5', bg: '#E8F3EC' },
+      'TRANSFERENCIA': { icon: '/transferencia-icon.svg', color: '#8B6914', bg: '#FBF6E9' },
+      'SALIDA': { icon: '/salida-icon.svg', color: '#C0392B', bg: '#FDEDEC' },
+      'Cobro Glory': { icon: '/cobro-icon.svg', color: '#2a78a5', bg: '#E8F3EC' }
     };
-    const config = tiposMap[tipo] || { color: '#6B6560', bg: '#F0EDE6' };
+    const config = tiposMap[tipo] || { icon: '/home-icon.svg', color: '#6B6560', bg: '#F0EDE6' };
     return config;
   };
 
@@ -488,7 +489,9 @@ export default function Home() {
                     <tr key={log.id} style={{ borderBottom: '1px solid #E2DDD4' }}>
                       <td style={{ padding: '12px 16px', fontSize: '13px', color: '#1A1714', fontWeight: '500' }}>
                         <span style={{
-                          display: 'inline-block',
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '6px',
                           padding: '4px 10px',
                           borderRadius: '20px',
                           background: tipoBadge.bg,
@@ -497,6 +500,7 @@ export default function Home() {
                           fontSize: '12px',
                           textTransform: 'capitalize'
                         }}>
+                          <img src={tipoBadge.icon} alt="" style={{ width: '14px', height: '14px' }} />
                           {log.tipo}
                         </span>
                       </td>
