@@ -9,44 +9,17 @@ export async function GET(req) {
   try {
     const { data, error } = await supabase
       .from('colaboradores')
-      .select('id, nombre, iniciales, rol, activo')
-      .order('nombre');
+      .select('id, nombre, iniciales, rol, activo, created_at')
+      .order('nombre', { ascending: true });
 
-    if (error) throw error;
-    return Response.json(data);
-  } catch (err) {
-    console.error('Error:', err);
-    return Response.json({ error: err.message }, { status: 500 });
-  }
-}
-
-export async function POST(req) {
-  try {
-    const { nombre, iniciales, pin, rol } = await req.json();
-
-    if (!nombre || !iniciales || !pin) {
-      return Response.json({ error: 'Faltan campos' }, { status: 400 });
+    if (error) {
+      console.error('Error fetching colaboradores:', error);
+      return Response.json({ error: 'Error al obtener colaboradores' }, { status: 500 });
     }
 
-    if (!/^\d{4}$/.test(pin)) {
-      return Response.json({ error: 'PIN debe ser 4 dígitos' }, { status: 400 });
-    }
-
-    const { data, error } = await supabase
-      .from('colaboradores')
-      .insert({
-        nombre,
-        iniciales: iniciales.toUpperCase(),
-        pin,
-        rol: rol || 'cajera',
-        activo: true
-      })
-      .select();
-
-    if (error) throw error;
-    return Response.json(data[0], { status: 201 });
+    return Response.json({ colaboradores: data || [] });
   } catch (err) {
-    console.error('Error:', err);
-    return Response.json({ error: err.message }, { status: 500 });
+    console.error('Error en GET /api/admin/colaboradores:', err);
+    return Response.json({ error: 'Error al procesar solicitud' }, { status: 500 });
   }
 }
