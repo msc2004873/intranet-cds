@@ -238,46 +238,44 @@ export default function Home() {
           maxWidth: '960px',
           width: '100%',
         }}>
-          {userRole === 'cajera' && (
-            <>
-              <a href="/registros" style={buttonStyle} onMouseEnter={buttonHoverEnter} onMouseLeave={buttonHoverLeave}>
-                <div style={{ width: '56px', height: '56px', background: '#E8F3EC', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: '26px' }}>📝</span>
-                </div>
-                <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Registrar movimiento</div>
-                <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>SINPE, transferencias y salidas</div>
-                <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#E8F3EC', color: '#2a78a5' }}>Movimientos</span>
-              </a>
+          {/* Botones de Cajera - visibles para cajera y admin */}
+          <a href="/registros" style={buttonStyle} onMouseEnter={buttonHoverEnter} onMouseLeave={buttonHoverLeave}>
+            <div style={{ width: '56px', height: '56px', background: '#E8F3EC', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: '26px' }}>📝</span>
+            </div>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Registrar movimiento</div>
+            <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>SINPE, transferencias y salidas</div>
+            <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#E8F3EC', color: '#2a78a5' }}>Movimientos</span>
+          </a>
 
-              <a href="/cobros-glory" style={buttonStyle} onMouseEnter={buttonHoverEnter} onMouseLeave={buttonHoverLeave}>
-                <div style={{ width: '56px', height: '56px', background: '#E8F3EC', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: '26px' }}>🐕‍🦺</span>
-                </div>
-                <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Cobros Glory</div>
-                <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Registrá servicios de grooming y pagos realizados</div>
-                <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#E8F3EC', color: '#2a78a5' }}>Glory</span>
-              </a>
+          <a href="/cobros-glory" style={buttonStyle} onMouseEnter={buttonHoverEnter} onMouseLeave={buttonHoverLeave}>
+            <div style={{ width: '56px', height: '56px', background: '#E8F3EC', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: '26px' }}>🐕‍🦺</span>
+            </div>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Cobros Glory</div>
+            <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Registrá servicios de grooming y pagos realizados</div>
+            <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#E8F3EC', color: '#2a78a5' }}>Glory</span>
+          </a>
 
-              <a href="/cajera" style={buttonStyle} onMouseEnter={buttonHoverEnter} onMouseLeave={buttonHoverLeave}>
-                <div style={{ width: '56px', height: '56px', background: '#E8F3EC', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: '26px' }}>💰</span>
-                </div>
-                <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Cierre de Caja</div>
-                <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Registrá las denominaciones, SINPE, tarjetas y subí el cierre QVet</div>
-                <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#E8F3EC', color: '#2a78a5' }}>Cajera</span>
-              </a>
+          <a href="/cajera" style={buttonStyle} onMouseEnter={buttonHoverEnter} onMouseLeave={buttonHoverLeave}>
+            <div style={{ width: '56px', height: '56px', background: '#E8F3EC', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: '26px' }}>💰</span>
+            </div>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Cierre de Caja</div>
+            <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Registrá las denominaciones, SINPE, tarjetas y subí el cierre QVet</div>
+            <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#E8F3EC', color: '#2a78a5' }}>Cajera</span>
+          </a>
 
-              <a href="/conteo" style={buttonStyle} onMouseEnter={buttonHoverEnter} onMouseLeave={buttonHoverLeave}>
-                <div style={{ width: '56px', height: '56px', background: '#FBF6E9', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: '26px' }}>📊</span>
-                </div>
-                <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Conteo de Caja</div>
-                <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Contá las denominaciones en cualquier momento</div>
-                <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#FBF6E9', color: '#8B6914' }}>Conteo</span>
-              </a>
-            </>
-          )}
+          <a href="/conteo" style={buttonStyle} onMouseEnter={buttonHoverEnter} onMouseLeave={buttonHoverLeave}>
+            <div style={{ width: '56px', height: '56px', background: '#FBF6E9', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: '26px' }}>📊</span>
+            </div>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Conteo de Caja</div>
+            <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Contá las denominaciones en cualquier momento</div>
+            <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#FBF6E9', color: '#8B6914' }}>Conteo</span>
+          </a>
 
+          {/* Botones de Admin - solo visibles para admin */}
           {userRole === 'admin' && (
             <>
               <a href="/revisora" style={buttonStyle} onMouseEnter={buttonHoverEnter} onMouseLeave={buttonHoverLeave}>
