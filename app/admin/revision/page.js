@@ -1,10 +1,11 @@
 'use client';
 
+import Link from 'next/link';
+import Header from '../../components/Header';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Header from '../../components/Header';
 
-export default function RevisionPage() {
+export default function RevisionDashboard() {
   const router = useRouter();
   const [userRole, setUserRole] = useState('');
 
@@ -26,18 +27,65 @@ export default function RevisionPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#FDFBF7' }}>
-      <Header title="Revisión de Caja" subtitle="Validación de cierres" showLogout={true} showModuleSelector={true} />
-      <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' }}>
-        <div style={{ marginBottom: '48px' }}>
-          <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1A1714', marginBottom: '8px' }}>Revisión de Caja</h2>
-          <p style={{ fontSize: '14px', color: '#6B6560' }}>Revisa y valida los cierres de caja realizados</p>
-        </div>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
+      <Header title="Revisión de Cajas" subtitle="Selecciona qué revisar" showLogout={true} showModuleSelector={true} />
 
-        <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1.5px solid #E2DDD4', padding: '40px', textAlign: 'center', color: '#9C9590' }}>
-          <p style={{ fontSize: '16px', marginBottom: '20px' }}>Módulo de revisión de caja en construcción</p>
-          <p style={{ fontSize: '14px', color: '#B3A99F' }}>Esta sección estará disponible próximamente</p>
-        </div>
+      {/* Main */}
+      <div style={{ flex: 1, maxWidth: '720px', margin: '0 auto', padding: '24px 16px', width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '24px' }}>
+
+        {/* Botón Clínica */}
+        <Link href="/admin/revision/clinica" style={{ textDecoration: 'none' }}>
+          <div
+            style={{
+              padding: '48px 24px',
+              background: 'linear-gradient(135deg, #E8F3EC 0%, #D4E8E0 100%)',
+              border: '2px solid #2a78a5',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              transition: 'all 0.3s',
+              textAlign: 'center'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-4px)';
+              e.currentTarget.style.boxShadow = '0 8px 24px rgba(42, 120, 165, 0.2)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>🏥</div>
+            <div style={{ fontSize: '24px', fontWeight: '700', color: '#1A1714', marginBottom: '8px' }}>Cajas Clínica</div>
+            <div style={{ fontSize: '13px', color: '#6B6560' }}>Revisar cajas del período</div>
+          </div>
+        </Link>
+
+        {/* Botón Glory */}
+        <Link href="/admin/revision/glory" style={{ textDecoration: 'none' }}>
+          <div
+            style={{
+              padding: '48px 24px',
+              background: 'linear-gradient(135deg, #FBF6E9 0%, #F7F0DB 100%)',
+              border: '2px solid #C8A84B',
+              borderRadius: '12px',
+              cursor: 'pointer',
+              transition: 'all 0.3s',
+              textAlign: 'center'
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'translateY(-4px)';
+              e.currentTarget.style.boxShadow = '0 8px 24px rgba(200, 168, 75, 0.2)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'translateY(0)';
+              e.currentTarget.style.boxShadow = 'none';
+            }}
+          >
+            <div style={{ fontSize: '48px', marginBottom: '16px' }}>✨</div>
+            <div style={{ fontSize: '24px', fontWeight: '700', color: '#1A1714', marginBottom: '8px' }}>Caja Glory</div>
+            <div style={{ fontSize: '13px', color: '#6B6560' }}>Revisar cobros del período</div>
+          </div>
+        </Link>
       </div>
     </div>
   );
