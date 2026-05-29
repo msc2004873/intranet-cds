@@ -44,7 +44,6 @@ export default function Home() {
   const [periodsTC, setPeriodsTC] = useState([]);
   const [mesModalOffset, setMesModalOffset] = useState(0);
   const [userName, setUserName] = useState('');
-  const [userRole, setUserRole] = useState('cajera');
 
   useEffect(() => {
     // Asegurar que existan datos de prueba
@@ -54,7 +53,6 @@ export default function Home() {
     if (userData) {
       const user = JSON.parse(userData);
       setUserName(user.nombre || '');
-      setUserRole(user.rol || 'cajera');
     }
 
     fetchLogs();
@@ -238,7 +236,6 @@ export default function Home() {
           maxWidth: '960px',
           width: '100%',
         }}>
-          {/* Botones de Cajera - visibles para cajera y admin */}
           <a href="/registros" style={buttonStyle} onMouseEnter={buttonHoverEnter} onMouseLeave={buttonHoverLeave}>
             <div style={{ width: '56px', height: '56px', background: '#E8F3EC', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ fontSize: '26px' }}>📝</span>
@@ -274,38 +271,6 @@ export default function Home() {
             <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Contá las denominaciones en cualquier momento</div>
             <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#FBF6E9', color: '#8B6914' }}>Conteo</span>
           </a>
-
-          {/* Botones de Admin - solo visibles para admin */}
-          {userRole === 'admin' && (
-            <>
-              <a href="/revisora" style={buttonStyle} onMouseEnter={buttonHoverEnter} onMouseLeave={buttonHoverLeave}>
-                <div style={{ width: '56px', height: '56px', background: '#FBF6E9', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: '26px' }}>🔍</span>
-                </div>
-                <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Revisión de Caja</div>
-                <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Revisá los cierres enviados y verificá los montos con el conteo físico</div>
-                <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#FBF6E9', color: '#8B6914' }}>Revisión</span>
-              </a>
-
-              <a href="/depositos" style={buttonStyle} onMouseEnter={buttonHoverEnter} onMouseLeave={buttonHoverLeave}>
-                <div style={{ width: '56px', height: '56px', background: '#FBF6E9', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: '26px' }}>🏦</span>
-                </div>
-                <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Depósitos</div>
-                <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Registrá y seguí depósitos bancarios</div>
-                <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#FBF6E9', color: '#8B6914' }}>Depósitos</span>
-              </a>
-
-              <a href="/admin" style={buttonStyle} onMouseEnter={buttonHoverEnter} onMouseLeave={buttonHoverLeave}>
-                <div style={{ width: '56px', height: '56px', background: '#EDE9F6', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                  <span style={{ fontSize: '26px' }}>⚙️</span>
-                </div>
-                <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Administración</div>
-                <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Agregar y gestionar colaboradores</div>
-                <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#EDE9F6', color: '#5B35B5' }}>Admin</span>
-              </a>
-            </>
-          )}
         </div>
 
         {/* Tabla de logs */}
