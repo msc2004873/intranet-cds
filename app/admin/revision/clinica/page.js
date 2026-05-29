@@ -69,7 +69,7 @@ export default function RevisionClinicaPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
-      <Header title="Revisión — Cajas Clínica" subtitle="Revisa los cierres del período" showLogout={false} />
+      <Header title="Revisión — Cajas Clínica" subtitle="Revisa los cierres del período" showLogout={false} homeLink="/admin/revision" />
 
       <div style={{ flex: 1, maxWidth: '720px', margin: '0 auto', padding: '24px 16px', width: '100%' }}>
         <CalendarioPeriodos onSelectPeriodo={setPeriodo} />

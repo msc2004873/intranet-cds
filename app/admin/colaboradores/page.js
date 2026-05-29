@@ -52,7 +52,7 @@ export default function ColaboradoresPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#FDFBF7' }}>
-      <Header title="Colaboradores" subtitle="Gestión de usuarios" showLogout={true} showModuleSelector={true} />
+      <Header title="Colaboradores" subtitle="Gestión de usuarios" showLogout={false} showModuleSelector={true} homeLink="/admin" />
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' }}>
         <div style={{ marginBottom: '48px' }}>
           <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1A1714', marginBottom: '8px' }}>Gestión de Colaboradores</h2>

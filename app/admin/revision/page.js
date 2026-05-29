@@ -28,7 +28,7 @@ export default function RevisionDashboard() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
-      <Header title="Revisión de Cajas" subtitle="Selecciona qué revisar" showLogout={true} showModuleSelector={true} />
+      <Header title="Revisión de Cajas" subtitle="Selecciona qué revisar" showLogout={false} showModuleSelector={true} homeLink="/admin" />
 
       {/* Main */}
       <div style={{ flex: 1, maxWidth: '720px', margin: '0 auto', padding: '24px 16px', width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: '24px' }}>

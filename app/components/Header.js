@@ -3,7 +3,7 @@
 import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-export default function Header({ title, subtitle, showLogout = false, showModuleSelector = false }) {
+export default function Header({ title, subtitle, showLogout = false, showModuleSelector = false, homeLink = null }) {
   const router = useRouter();
   const pathname = usePathname();
   const [userRole, setUserRole] = useState('');
@@ -21,9 +21,13 @@ export default function Header({ title, subtitle, showLogout = false, showModule
       localStorage.removeItem('user');
       router.push('/login');
     } else {
-      // Si estamos en /admin/**, ir a /admin. Si no, ir a /
-      const isAdminModule = pathname.startsWith('/admin');
-      router.push(isAdminModule ? '/admin' : '/');
+      // Usar homeLink si se proporciona, si no, detectar automáticamente
+      if (homeLink) {
+        router.push(homeLink);
+      } else {
+        const isAdminModule = pathname.startsWith('/admin');
+        router.push(isAdminModule ? '/admin' : '/');
+      }
     }
   };
 

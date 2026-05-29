@@ -27,7 +27,7 @@ export default function DepositosPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#FDFBF7' }}>
-      <Header title="Depósitos" subtitle="Gestión de depósitos" showLogout={true} showModuleSelector={true} />
+      <Header title="Depósitos" subtitle="Gestión de depósitos" showLogout={false} showModuleSelector={true} homeLink="/admin" />
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' }}>
         <div style={{ marginBottom: '48px' }}>
           <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1A1714', marginBottom: '8px' }}>Gestión de Depósitos</h2>

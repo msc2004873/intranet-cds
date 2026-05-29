@@ -70,7 +70,7 @@ export default function RevisionGloryPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
-      <Header title="Revisión — Caja Glory" subtitle="Revisa los cobros del período" showLogout={false} />
+      <Header title="Revisión — Caja Glory" subtitle="Revisa los cobros del período" showLogout={false} homeLink="/admin/revision" />
 
       <div style={{ flex: 1, maxWidth: '720px', margin: '0 auto', padding: '24px 16px', width: '100%' }}>
 
