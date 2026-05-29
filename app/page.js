@@ -3,6 +3,34 @@
 import { useEffect, useState } from 'react';
 import Header from './components/Header';
 
+const buttonStyle = {
+  background: '#FFFFFF',
+  border: '1.5px solid #E2DDD4',
+  borderRadius: '16px',
+  padding: '28px 20px',
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  gap: '12px',
+  cursor: 'pointer',
+  textDecoration: 'none',
+  color: 'inherit',
+  transition: 'all 0.2s ease',
+  textAlign: 'center',
+};
+
+const buttonHoverEnter = (e) => {
+  e.currentTarget.style.borderColor = '#2a78a5';
+  e.currentTarget.style.boxShadow = '0 4px 20px rgba(42,120,165,0.12)';
+  e.currentTarget.style.transform = 'translateY(-2px)';
+};
+
+const buttonHoverLeave = (e) => {
+  e.currentTarget.style.borderColor = '#E2DDD4';
+  e.currentTarget.style.boxShadow = 'none';
+  e.currentTarget.style.transform = 'translateY(0)';
+};
+
 export default function Home() {
   const [tc, setTc] = useState(null);
   const [logs, setLogs] = useState([]);
@@ -16,6 +44,7 @@ export default function Home() {
   const [periodsTC, setPeriodsTC] = useState([]);
   const [mesModalOffset, setMesModalOffset] = useState(0);
   const [userName, setUserName] = useState('');
+  const [userRole, setUserRole] = useState('cajera');
 
   useEffect(() => {
     // Asegurar que existan datos de prueba
@@ -25,6 +54,7 @@ export default function Home() {
     if (userData) {
       const user = JSON.parse(userData);
       setUserName(user.nombre || '');
+      setUserRole(user.rol || 'cajera');
     }
 
     fetchLogs();
@@ -208,239 +238,76 @@ export default function Home() {
           maxWidth: '960px',
           width: '100%',
         }}>
-          <a href="/registros" style={{
-            background: '#FFFFFF',
-            border: '1.5px solid #E2DDD4',
-            borderRadius: '16px',
-            padding: '28px 20px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '12px',
-            cursor: 'pointer',
-            textDecoration: 'none',
-            color: 'inherit',
-            transition: 'all 0.2s ease',
-            textAlign: 'center',
-          }} onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = '#2a78a5';
-            e.currentTarget.style.boxShadow = '0 4px 20px rgba(42,120,165,0.12)';
-            e.currentTarget.style.transform = 'translateY(-2px)';
-          }} onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = '#E2DDD4';
-            e.currentTarget.style.boxShadow = 'none';
-            e.currentTarget.style.transform = 'translateY(0)';
-          }}>
-            <div style={{
-              width: '56px',
-              height: '56px',
-              background: '#E8F3EC',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <span style={{ fontSize: '26px' }}>📝</span>
-            </div>
-            <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Registrar movimiento</div>
-            <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>SINPE, transferencias y salidas</div>
-            <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#E8F3EC', color: '#2a78a5' }}>Movimientos</span>
-          </a>
+          {userRole === 'cajera' && (
+            <>
+              <a href="/registros" style={buttonStyle} onMouseEnter={buttonHoverEnter} onMouseLeave={buttonHoverLeave}>
+                <div style={{ width: '56px', height: '56px', background: '#E8F3EC', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: '26px' }}>📝</span>
+                </div>
+                <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Registrar movimiento</div>
+                <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>SINPE, transferencias y salidas</div>
+                <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#E8F3EC', color: '#2a78a5' }}>Movimientos</span>
+              </a>
 
-          <a href="/cobros-glory" style={{
-            background: '#FFFFFF',
-            border: '1.5px solid #E2DDD4',
-            borderRadius: '16px',
-            padding: '28px 20px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '12px',
-            cursor: 'pointer',
-            textDecoration: 'none',
-            color: 'inherit',
-            transition: 'all 0.2s ease',
-            textAlign: 'center',
-          }} onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = '#2a78a5';
-            e.currentTarget.style.boxShadow = '0 4px 20px rgba(42,120,165,0.12)';
-            e.currentTarget.style.transform = 'translateY(-2px)';
-          }} onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = '#E2DDD4';
-            e.currentTarget.style.boxShadow = 'none';
-            e.currentTarget.style.transform = 'translateY(0)';
-          }}>
-            <div style={{
-              width: '56px',
-              height: '56px',
-              background: '#E8F3EC',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <span style={{ fontSize: '26px' }}>🐕‍🦺</span>
-            </div>
-            <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Cobros Glory</div>
-            <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Registrá servicios de grooming y pagos realizados</div>
-            <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#E8F3EC', color: '#2a78a5' }}>Glory</span>
-          </a>
+              <a href="/cobros-glory" style={buttonStyle} onMouseEnter={buttonHoverEnter} onMouseLeave={buttonHoverLeave}>
+                <div style={{ width: '56px', height: '56px', background: '#E8F3EC', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: '26px' }}>🐕‍🦺</span>
+                </div>
+                <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Cobros Glory</div>
+                <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Registrá servicios de grooming y pagos realizados</div>
+                <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#E8F3EC', color: '#2a78a5' }}>Glory</span>
+              </a>
 
-          <a href="/cajera" style={{
-            background: '#FFFFFF',
-            border: '1.5px solid #E2DDD4',
-            borderRadius: '16px',
-            padding: '28px 20px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '12px',
-            cursor: 'pointer',
-            textDecoration: 'none',
-            color: 'inherit',
-            transition: 'all 0.2s ease',
-            textAlign: 'center',
-          }} onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = '#2a78a5';
-            e.currentTarget.style.boxShadow = '0 4px 20px rgba(42,120,165,0.12)';
-            e.currentTarget.style.transform = 'translateY(-2px)';
-          }} onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = '#E2DDD4';
-            e.currentTarget.style.boxShadow = 'none';
-            e.currentTarget.style.transform = 'translateY(0)';
-          }}>
-            <div style={{
-              width: '56px',
-              height: '56px',
-              background: '#E8F3EC',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <span style={{ fontSize: '26px' }}>💰</span>
-            </div>
-            <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Cierre de Caja</div>
-            <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Registrá las denominaciones, SINPE, tarjetas y subí el cierre QVet</div>
-            <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#E8F3EC', color: '#2a78a5' }}>Cajera</span>
-          </a>
+              <a href="/cajera" style={buttonStyle} onMouseEnter={buttonHoverEnter} onMouseLeave={buttonHoverLeave}>
+                <div style={{ width: '56px', height: '56px', background: '#E8F3EC', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: '26px' }}>💰</span>
+                </div>
+                <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Cierre de Caja</div>
+                <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Registrá las denominaciones, SINPE, tarjetas y subí el cierre QVet</div>
+                <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#E8F3EC', color: '#2a78a5' }}>Cajera</span>
+              </a>
 
-          <a href="/conteo" style={{
-            background: '#FFFFFF',
-            border: '1.5px solid #E2DDD4',
-            borderRadius: '16px',
-            padding: '28px 20px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '12px',
-            cursor: 'pointer',
-            textDecoration: 'none',
-            color: 'inherit',
-            transition: 'all 0.2s ease',
-            textAlign: 'center',
-          }} onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = '#2a78a5';
-            e.currentTarget.style.boxShadow = '0 4px 20px rgba(42,120,165,0.12)';
-            e.currentTarget.style.transform = 'translateY(-2px)';
-          }} onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = '#E2DDD4';
-            e.currentTarget.style.boxShadow = 'none';
-            e.currentTarget.style.transform = 'translateY(0)';
-          }}>
-            <div style={{
-              width: '56px',
-              height: '56px',
-              background: '#FBF6E9',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <span style={{ fontSize: '26px' }}>📊</span>
-            </div>
-            <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Conteo de Caja</div>
-            <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Contá las denominaciones en cualquier momento</div>
-            <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#FBF6E9', color: '#8B6914' }}>Conteo</span>
-          </a>
+              <a href="/conteo" style={buttonStyle} onMouseEnter={buttonHoverEnter} onMouseLeave={buttonHoverLeave}>
+                <div style={{ width: '56px', height: '56px', background: '#FBF6E9', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: '26px' }}>📊</span>
+                </div>
+                <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Conteo de Caja</div>
+                <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Contá las denominaciones en cualquier momento</div>
+                <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#FBF6E9', color: '#8B6914' }}>Conteo</span>
+              </a>
+            </>
+          )}
 
-          <a href="/revisora" style={{
-            background: '#FFFFFF',
-            border: '1.5px solid #E2DDD4',
-            borderRadius: '16px',
-            padding: '28px 20px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '12px',
-            cursor: 'pointer',
-            textDecoration: 'none',
-            color: 'inherit',
-            transition: 'all 0.2s ease',
-            textAlign: 'center',
-          }} onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = '#2a78a5';
-            e.currentTarget.style.boxShadow = '0 4px 20px rgba(42,120,165,0.12)';
-            e.currentTarget.style.transform = 'translateY(-2px)';
-          }} onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = '#E2DDD4';
-            e.currentTarget.style.boxShadow = 'none';
-            e.currentTarget.style.transform = 'translateY(0)';
-          }}>
-            <div style={{
-              width: '56px',
-              height: '56px',
-              background: '#FBF6E9',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <span style={{ fontSize: '26px' }}>🔍</span>
-            </div>
-            <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Revisión de Caja</div>
-            <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Revisá los cierres enviados y verificá los montos con el conteo físico</div>
-            <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#FBF6E9', color: '#8B6914' }}>Revisión</span>
-          </a>
+          {userRole === 'admin' && (
+            <>
+              <a href="/revisora" style={buttonStyle} onMouseEnter={buttonHoverEnter} onMouseLeave={buttonHoverLeave}>
+                <div style={{ width: '56px', height: '56px', background: '#FBF6E9', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: '26px' }}>🔍</span>
+                </div>
+                <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Revisión de Caja</div>
+                <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Revisá los cierres enviados y verificá los montos con el conteo físico</div>
+                <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#FBF6E9', color: '#8B6914' }}>Revisión</span>
+              </a>
 
-          <a href="/admin" style={{
-            background: '#FFFFFF',
-            border: '1.5px solid #E2DDD4',
-            borderRadius: '16px',
-            padding: '28px 20px',
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            gap: '12px',
-            cursor: 'pointer',
-            textDecoration: 'none',
-            color: 'inherit',
-            transition: 'all 0.2s ease',
-            textAlign: 'center',
-          }} onMouseEnter={(e) => {
-            e.currentTarget.style.borderColor = '#2a78a5';
-            e.currentTarget.style.boxShadow = '0 4px 20px rgba(42,120,165,0.12)';
-            e.currentTarget.style.transform = 'translateY(-2px)';
-          }} onMouseLeave={(e) => {
-            e.currentTarget.style.borderColor = '#E2DDD4';
-            e.currentTarget.style.boxShadow = 'none';
-            e.currentTarget.style.transform = 'translateY(0)';
-          }}>
-            <div style={{
-              width: '56px',
-              height: '56px',
-              background: '#EDE9F6',
-              borderRadius: '50%',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}>
-              <span style={{ fontSize: '26px' }}>⚙️</span>
-            </div>
-            <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Administración</div>
-            <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Agregar y gestionar colaboradores</div>
-            <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#EDE9F6', color: '#5B35B5' }}>Admin</span>
-          </a>
+              <a href="/depositos" style={buttonStyle} onMouseEnter={buttonHoverEnter} onMouseLeave={buttonHoverLeave}>
+                <div style={{ width: '56px', height: '56px', background: '#FBF6E9', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: '26px' }}>🏦</span>
+                </div>
+                <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Depósitos</div>
+                <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Registrá y seguí depósitos bancarios</div>
+                <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#FBF6E9', color: '#8B6914' }}>Depósitos</span>
+              </a>
+
+              <a href="/admin" style={buttonStyle} onMouseEnter={buttonHoverEnter} onMouseLeave={buttonHoverLeave}>
+                <div style={{ width: '56px', height: '56px', background: '#EDE9F6', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <span style={{ fontSize: '26px' }}>⚙️</span>
+                </div>
+                <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Administración</div>
+                <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Agregar y gestionar colaboradores</div>
+                <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#EDE9F6', color: '#5B35B5' }}>Admin</span>
+              </a>
+            </>
+          )}
         </div>
 
         {/* Tabla de logs */}
