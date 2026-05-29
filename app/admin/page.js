@@ -35,6 +35,8 @@ const buttonHoverLeave = (e) => {
 export default function AdminPage() {
   const router = useRouter();
   const [userRole, setUserRole] = useState('');
+  const [tcActual, setTcActual] = useState(null);
+  const [periodo, setPeriodo] = useState(null);
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -48,6 +50,23 @@ export default function AdminPage() {
       router.push('/login');
     }
   }, [router]);
+
+  useEffect(() => {
+    if (userRole === 'admin') {
+      fetchPeriodoActual();
+    }
+  }, [userRole]);
+
+  async function fetchPeriodoActual() {
+    try {
+      const res = await fetch('/api/periodos/get-actual');
+      const data = await res.json();
+      setPeriodo(data.periodo);
+      setTcActual(data.tipoCambio);
+    } catch (err) {
+      console.error('Error fetching período:', err);
+    }
+  }
 
   if (!userRole) {
     return <div style={{ padding: '40px', textAlign: 'center' }}>Cargando...</div>;
@@ -72,6 +91,44 @@ export default function AdminPage() {
         background: '#F7F5F0',
         color: '#1A1714',
       }}>
+        {/* TC y Período */}
+        <div style={{
+          display: 'flex',
+          gap: '16px',
+          justifyContent: 'center',
+          flexWrap: 'wrap',
+        }}>
+          <div style={{
+            background: '#5B35B5',
+            color: 'white',
+            padding: '20px 32px',
+            borderRadius: '16px',
+            textAlign: 'center',
+            boxShadow: '0 4px 12px rgba(91,53,181,0.2)',
+            minWidth: '200px',
+          }}>
+            <div style={{ fontSize: '12px', opacity: 0.8, marginBottom: '8px', letterSpacing: '0.5px', textTransform: 'uppercase', fontWeight: '600' }}>Tipo de cambio del período</div>
+            <div style={{ fontSize: '36px', fontWeight: '700', fontFamily: "'DM Mono', monospace", letterSpacing: '-1px' }}>₡{tcActual || '—'}</div>
+            <div style={{ fontSize: '10px', opacity: 0.7, marginTop: '6px' }}>Período {periodo}</div>
+          </div>
+
+          <div style={{
+            background: '#5B35B5',
+            color: 'white',
+            padding: '20px 32px',
+            borderRadius: '16px',
+            textAlign: 'center',
+            boxShadow: '0 4px 12px rgba(91,53,181,0.2)',
+            minWidth: '200px',
+          }}>
+            <div style={{ fontSize: '12px', opacity: 0.8, marginBottom: '8px', letterSpacing: '0.5px', textTransform: 'uppercase', fontWeight: '600' }}>Período actual</div>
+            <div style={{ fontSize: '28px', fontWeight: '700', fontFamily: "'DM Mono', monospace", letterSpacing: '-0.5px', marginBottom: '6px' }}>
+              {new Date().getDate()} de {new Date().toLocaleDateString('es-CR', { month: 'short' })}
+            </div>
+            <div style={{ fontSize: '10px', opacity: 0.7 }}>Período {periodo}</div>
+          </div>
+        </div>
+
         <div style={{ textAlign: 'center' }}>
           <h2 style={{ fontSize: '22px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.4px' }}>¿Qué necesitás administrar?</h2>
           <p style={{ fontSize: '14px', color: '#6B6560', marginTop: '6px' }}>Selecciona la sección que deseas gestionar</p>
