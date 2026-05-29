@@ -1,10 +1,11 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 export default function Header({ title, subtitle, showLogout = false, showModuleSelector = false }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [userRole, setUserRole] = useState('');
 
   useEffect(() => {
@@ -20,7 +21,9 @@ export default function Header({ title, subtitle, showLogout = false, showModule
       localStorage.removeItem('user');
       router.push('/login');
     } else {
-      router.push('/');
+      // Si estamos en /admin/**, ir a /admin. Si no, ir a /
+      const isAdminModule = pathname.startsWith('/admin');
+      router.push(isAdminModule ? '/admin' : '/');
     }
   };
 
