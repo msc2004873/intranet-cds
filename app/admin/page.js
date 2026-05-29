@@ -52,17 +52,14 @@ export default function AdminPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#FDFBF7' }}>
-      <Header />
+      <Header title="Administración" subtitle="Gestión del sistema" showLogout={true} showModuleSelector={true} />
       <div style={{ maxWidth: '1200px', margin: '0 auto', padding: '40px 20px' }}>
         <div style={{ marginBottom: '48px' }}>
-          <h1 style={{ fontSize: '32px', fontWeight: '700', color: '#1A1714', marginBottom: '12px' }}>Administración</h1>
-          <p style={{ fontSize: '16px', color: '#6B6560' }}>Gestión de colaboradores y configuración del sistema</p>
+          <h2 style={{ fontSize: '24px', fontWeight: '700', color: '#1A1714', marginBottom: '8px' }}>Colaboradores</h2>
+          <p style={{ fontSize: '14px', color: '#6B6560' }}>Gestión de usuarios y permisos del sistema</p>
         </div>
 
         <div style={{ background: '#FFFFFF', borderRadius: '12px', border: '1.5px solid #E2DDD4', overflow: 'hidden' }}>
-          <div style={{ padding: '20px', borderBottom: '1.5px solid #E2DDD4', background: '#F0EDE6' }}>
-            <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#1A1714', margin: 0 }}>Colaboradores</h2>
-          </div>
 
           {loading ? (
             <div style={{ padding: '40px', textAlign: 'center', color: '#9C9590' }}>Cargando colaboradores...</div>

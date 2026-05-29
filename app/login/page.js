@@ -62,7 +62,7 @@ export default function LoginPage() {
       }
 
       localStorage.setItem('user', JSON.stringify(data));
-      router.push('/');
+      router.push('/module-selection');
     } catch (err) {
       setError('Error de conexión');
       setLoading(false);
