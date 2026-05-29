@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Header from '../../components/Header';
-import CalendarioPeriodos from '../../components/CalendarioPeriodos';
-import FormularioRevision from '../../components/FormularioRevision';
+import Header from '../../../components/Header';
+import CalendarioPeriodos from '../../../components/CalendarioPeriodos';
+import FormularioRevision from '../../../components/FormularioRevision';
 
 export default function RevisionClinicaPage() {
   const [periodo, setPeriodo] = useState(null);
