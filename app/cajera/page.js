@@ -20,21 +20,10 @@ const getFechaCostaRica = () => {
   return `${year}-${month}-${day}`;
 };
 
-const getFechaHoraCostaRica = () => {
-  const formatter = new Intl.DateTimeFormat('es-CR', {
-    timeZone: 'America/Costa_Rica',
-    hour: '2-digit',
-    minute: '2-digit'
-  });
-  const formatted = formatter.format(new Date());
-  return formatted;
-};
-
 export default function CajeraPage() {
   const [cajera, setCajera] = useState('');
   const [caja, setCaja] = useState('');
   const [fecha, setFecha] = useState('');
-  const [hora, setHora] = useState('');
   const [tc, setTc] = useState(475);
   const [dolares, setDolares] = useState(0);
   const [tarjetaBac, setTarjetaBac] = useState(0);
@@ -62,9 +51,8 @@ export default function CajeraPage() {
     setDenominaciones(init);
     setQuedaDenominaciones(init);
 
-    // Setear fecha y hora actual
+    // Setear fecha actual
     setFecha(getFechaCostaRica());
-    setHora(getFechaHoraCostaRica());
 
     // Pre-llenar cajera desde localStorage
     const userData = localStorage.getItem('user');
@@ -261,8 +249,8 @@ export default function CajeraPage() {
   async function handleSubmit(e) {
     e.preventDefault();
 
-    if (!cajera || !caja || !hora) {
-      showToast('❌ Completá información general (incluyendo hora)');
+    if (!cajera || !caja) {
+      showToast('❌ Completá información general');
       return;
     }
 
@@ -273,7 +261,6 @@ export default function CajeraPage() {
         cajera,
         caja,
         fecha,
-        hora,
         tc,
         dolares,
         tarjetaBac,
@@ -336,10 +323,6 @@ export default function CajeraPage() {
               <div>
                 <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Fecha</label>
                 <input type="text" value={fecha} readOnly style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', background: '#F0EDE6', color: '#6B6560' }} />
-              </div>
-              <div>
-                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Hora del conteo</label>
-                <input type="time" value={hora} onChange={(e) => setHora(e.target.value)} style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px' }} />
               </div>
               <div>
                 <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Tipo de cambio (del día)</label>
