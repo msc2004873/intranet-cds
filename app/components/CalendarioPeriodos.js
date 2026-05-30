@@ -35,6 +35,13 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
   const esMessActual = mesOffset === 0 && ano === anoHoy;
   const periodoActual = esMessActual ? obtenerPeriodo(diaHoy) : null;
 
+  // Auto-seleccionar el período actual al montar
+  useEffect(() => {
+    if (periodoActual) {
+      setPeriodoSeleccionado(periodoActual.num);
+    }
+  }, [periodoActual]);
+
   const nombreMes = fechaActual.toLocaleDateString('es-CR', { month: 'long', year: 'numeric' });
   const diasSemana = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
 
@@ -154,10 +161,10 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
                 justifyContent: 'center',
                 transition: 'all 0.2s',
                 // Borde: completo en inicio, derecho en fin, arriba y abajo en todos del período
-                borderTop: `2px solid ${borderColor}`,
-                borderBottom: `2px solid ${borderColor}`,
-                borderLeft: esInicioPeriodo ? `2px solid ${borderColor}` : 'none',
-                borderRight: esFinPeriodo ? `2px solid ${borderColor}` : 'none',
+                borderTop: `3px solid ${borderColor}`,
+                borderBottom: `3px solid ${borderColor}`,
+                borderLeft: esInicioPeriodo ? `3px solid ${borderColor}` : 'none',
+                borderRight: esFinPeriodo ? `3px solid ${borderColor}` : 'none',
                 borderRadius: esInicioPeriodo ? '8px 0 0 8px' : esFinPeriodo ? '0 8px 8px 0' : '0',
                 boxShadow: esSeleccionado ? '0 2px 6px rgba(0,0,0,0.15)' : 'none',
                 marginRight: esFinPeriodo ? '4px' : '0'
