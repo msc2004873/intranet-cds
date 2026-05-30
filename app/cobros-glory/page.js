@@ -43,6 +43,7 @@ export default function CobroGloryPage() {
   const [inputMonto, setInputMonto] = useState('');
   const [selectCajeraModal, setSelectCajeraModal] = useState('');
   const [pacientesSeleccionados, setPacientesSeleccionados] = useState(new Set());
+  const [modoUnificacion, setModoUnificacion] = useState(false);
   const [mesSeleccionado, setMesSeleccionado] = useState(new Date().toISOString().slice(0, 7));
   const [resumenMes, setResumenMes] = useState(null);
   const [comentariosCobro, setComentariosCobro] = useState('');
@@ -408,6 +409,11 @@ export default function CobroGloryPage() {
     setPacientesSeleccionados(nuevo);
   }
 
+  function toggleModoUnificacion() {
+    setModoUnificacion(prev => !prev);
+    setPacientesSeleccionados(new Set());
+  }
+
   function abrirModalUnificado() {
     if (pacientesSeleccionados.size < 2) {
       showToast('❌ Selecciona al menos 2 pacientes');
@@ -650,9 +656,14 @@ export default function CobroGloryPage() {
 
         {/* SECCIÓN 2: Pacientes en espera */}
         <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
-          <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
-            <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600', flexShrink: 0 }}>2</div>
-            <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Pacientes en espera ({pacientesEspera.length})</div>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px', background: '#F0EDE6' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600', flexShrink: 0 }}>2</div>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Pacientes en espera ({pacientesEspera.length})</div>
+            </div>
+            <button onClick={toggleModoUnificacion} style={{ padding: '6px 12px', fontSize: '12px', fontWeight: '600', border: '1.5px solid ' + (modoUnificacion ? '#10B981' : '#E2DDD4'), background: modoUnificacion ? '#E8F5F1' : '#F0EDE6', color: modoUnificacion ? '#10B981' : '#6B6560', borderRadius: '6px', cursor: 'pointer', transition: 'all 0.2s', whiteSpace: 'nowrap' }}>
+              {modoUnificacion ? '✓ Unificación' : 'Unificación'}
+            </button>
           </div>
           <div style={{ padding: '20px' }}>
             {pacientesEspera.length === 0 ? (
@@ -662,7 +673,7 @@ export default function CobroGloryPage() {
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '12px', marginBottom: '16px' }}>
                   {pacientesEspera.map(p => (
                     <div key={p.id} style={{ background: pacientesSeleccionados.has(p.id) ? '#E8F3EC' : '#F0EDE6', border: pacientesSeleccionados.has(p.id) ? '2px solid #2a78a5' : '1px solid #E2DDD4', borderRadius: '8px', padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px' }}>
-                      <input type="checkbox" checked={pacientesSeleccionados.has(p.id)} onChange={() => toggleSeleccionar(p.id)} style={{ width: '20px', height: '20px', cursor: 'pointer' }} />
+                      {modoUnificacion && <input type="checkbox" checked={pacientesSeleccionados.has(p.id)} onChange={() => toggleSeleccionar(p.id)} style={{ width: '20px', height: '20px', cursor: 'pointer' }} />}
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: '11px', color: '#6B6560', textTransform: 'uppercase', fontWeight: '600' }}>Mascota</div>
                         <div style={{ fontSize: '14px', color: '#1A1714', fontWeight: '600' }}>{p.nombre_mascota}</div>
@@ -689,9 +700,11 @@ export default function CobroGloryPage() {
                         <div style={{ fontSize: '11px', color: '#6B6560', textTransform: 'uppercase', fontWeight: '600', marginTop: '8px' }}>Ingreso</div>
                         <div style={{ fontSize: '14px', color: '#1A1714', fontFamily: "'DM Mono', monospace" }}>{new Date(p.hora_ingreso).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' })}</div>
                       </div>
-                      <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
-                        <button onClick={() => abrirModalCobro(p.id, p.nombre_mascota, p.nombre_dueno)} style={{ padding: '8px 12px', background: '#2a78a5', color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'background 0.2s' }} onMouseEnter={(e) => e.target.style.background = '#1f5780'} onMouseLeave={(e) => e.target.style.background = '#2a78a5'}>Cobrar</button>
-                      </div>
+                      {!modoUnificacion && (
+                        <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
+                          <button onClick={() => abrirModalCobro(p.id, p.nombre_mascota, p.nombre_dueno)} style={{ padding: '8px 12px', background: '#2a78a5', color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'background 0.2s' }} onMouseEnter={(e) => e.target.style.background = '#1f5780'} onMouseLeave={(e) => e.target.style.background = '#2a78a5'}>Cobrar</button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
