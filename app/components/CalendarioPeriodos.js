@@ -137,16 +137,21 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
             return '#fff';
           };
 
+          const getBorderColor = () => {
+            if (esHoy) return '#27AE60';
+            if (esSeleccionado) return '#E74C3C';
+            return '#E2DDD4';
+          };
+
           const getBorderStyle = () => {
             if (!periodo) return {};
-            const hasHighlight = esHoy || esSeleccionado;
-            const color = esHoy ? '#27AE60' : '#E74C3C';
+            const borderColor = getBorderColor();
 
             return {
-              borderTop: esInicioPeriodo && hasHighlight ? `2px solid ${color}` : '1px solid #E2DDD4',
-              borderBottom: esFinPeriodo && hasHighlight ? `2px solid ${color}` : '1px solid #E2DDD4',
-              borderLeft: hasHighlight ? `2px solid ${color}` : '1px solid #E2DDD4',
-              borderRight: hasHighlight ? `2px solid ${color}` : '1px solid #E2DDD4',
+              borderTop: esInicioPeriodo ? `2px solid ${borderColor}` : 'none',
+              borderBottom: esFinPeriodo ? `2px solid ${borderColor}` : 'none',
+              borderLeft: esInicioPeriodo ? `2px solid ${borderColor}` : 'none',
+              borderRight: esFinPeriodo ? `2px solid ${borderColor}` : 'none',
             };
           };
 
@@ -169,14 +174,6 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
                 boxShadow: (esHoy || esSeleccionado) ? '0 2px 6px rgba(0,0,0,0.15)' : 'none',
                 ...radiusStyle,
                 ...getBorderStyle()
-              }}
-              onMouseEnter={(e) => {
-                if (periodo) {
-                  e.currentTarget.style.opacity = '0.8';
-                }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.opacity = '1';
               }}
             >
               {dia}
