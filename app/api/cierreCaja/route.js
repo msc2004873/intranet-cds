@@ -76,15 +76,13 @@ export async function POST(request) {
       second: '2-digit',
       hour12: false
     });
-    const parts = crFormatter.formatToParts(now);
-    const year = parts.find(p => p.type === 'year')?.value;
-    const month = parts.find(p => p.type === 'month')?.value;
-    const day = parts.find(p => p.type === 'day')?.value;
-    const hour = parts.find(p => p.type === 'hour')?.value;
-    const minute = parts.find(p => p.type === 'minute')?.value;
-    const second = parts.find(p => p.type === 'second')?.value;
-    const crDate = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}Z`);
-    const fechaHoraUTC = new Date(crDate.getTime() + (6 * 60 * 60 * 1000)).toISOString();
+    const crDateTime = crFormatter.format(now);
+    const [crDate, crTime] = crDateTime.split(', ');
+    const [m, d, y] = crDate.split('/');
+    const [h, min, s] = crTime.split(':');
+
+    const tempDate = new Date(Date.UTC(parseInt(y), parseInt(m) - 1, parseInt(d), parseInt(h), parseInt(min), parseInt(s)));
+    const fechaHoraUTC = new Date(tempDate.getTime() + (6 * 60 * 60 * 1000)).toISOString();
 
     const insertData = {
       cajera: data.cajera,
