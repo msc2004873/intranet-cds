@@ -57,8 +57,8 @@ export default function ConteoPage() {
   const total = Object.entries(denominaciones).reduce((sum, [d, qty]) => sum + (parseInt(d) * qty), 0);
 
   const handleDenomChange = (denom, value) => {
-    // Remover separador de miles (puntos) si lo hay
-    const cleanValue = value.toString().replace(/\./g, '');
+    // Remover separador de miles (espacios) si lo hay
+    const cleanValue = value.toString().replace(/\s/g, '');
     const newVal = parseInt(cleanValue) || 0;
     setDenominaciones({ ...denominaciones, [denom]: newVal });
   };
@@ -169,7 +169,7 @@ export default function ConteoPage() {
                 <input
                   type="text"
                   ref={(el) => (window[`inputDenom${idx}`] = el)}
-                  value={denominaciones[d] === 0 || denominaciones[d] === undefined ? '' : (denominaciones[d] || 0).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
+                  value={denominaciones[d] === 0 || denominaciones[d] === undefined ? '' : (denominaciones[d] || 0).toLocaleString('es-CR')}
                   onChange={(e) => handleDenomChange(d, e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === 'ArrowDown') {
@@ -183,6 +183,7 @@ export default function ConteoPage() {
                       if (prevInput) prevInput.focus();
                     }
                   }}
+                  placeholder="0"
                   inputMode="numeric"
                   style={{
                     width: '100%',
@@ -210,8 +211,9 @@ export default function ConteoPage() {
               <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', flex: 1 }}>Dólares</label>
               <input
                 type="text"
-                value={dolares === 0 ? '' : dolares.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.')}
-                onChange={(e) => setDolares(parseFloat(e.target.value.replace(/\./g, '')) || 0)}
+                value={dolares === 0 ? '' : dolares.toLocaleString('es-CR')}
+                onChange={(e) => setDolares(parseFloat(e.target.value.replace(/\s/g, '')) || 0)}
+                placeholder="0"
                 inputMode="decimal"
                 style={{
                   flex: 1,
