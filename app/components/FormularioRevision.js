@@ -5,11 +5,11 @@ import Header from './Header';
 
 const formatearMiles = (num) => {
   if (!num) return '';
-  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
 };
 
 const parsearMiles = (str) => {
-  return parseInt(str.replace(/,/g, '')) || 0;
+  return parseInt(str.replace(/\s/g, '')) || 0;
 };
 
 export default function FormularioRevision({ cierre, onVolver, onGuardar }) {

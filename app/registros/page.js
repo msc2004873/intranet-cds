@@ -252,11 +252,11 @@ export default function RegistrosPage() {
               <div style={{ marginBottom: '16px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Monto ({tipoMovimiento === 'transferencia' && moneda === 'dolares' ? '$' : '₡'})</label>
                 <input
-                  type="number"
-                  value={monto}
-                  onChange={(e) => setMonto(e.target.value)}
-                  placeholder="0.00"
-                  step="0.01"
+                  type="text"
+                  value={monto === 0 || monto === '' ? '' : (typeof monto === 'string' ? monto : monto.toLocaleString('es-CR'))}
+                  onChange={(e) => setMonto(parseFloat(e.target.value.replace(/\s/g, '')) || 0)}
+                  placeholder="0"
+                  inputMode="decimal"
                   style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px', fontFamily: "'DM Mono', monospace" }}
                 />
               </div>
