@@ -26,46 +26,58 @@
 
 **Regla**: Todo monto en la UI tiene separador de miles. Nunca redondear.
 
-**Display correcto**:
+**Display correcto** (siempre con `toLocaleString('es-CR')` que usa ESPACIO):
 ```jsx
-const fmt = n => '₡' + Math.round(n).toLocaleString('es-CR');  // ❌ MALO: redondea
-const fmt = n => '₡' + n.toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });  // ✅ BIEN: sin redondeo
+(5000).toLocaleString('es-CR')  // '5 000' ✅ CORRECTO
 ```
 
 Ejemplos:
-- `5000` → `₡5,000`
-- `5000.50` → `₡5,000.50`
-- `5000.9999` → `₡5,000.9999`
+- `5000` → `₡5 000` (espacio como separador)
+- `5000.50` → `₡5 000.50`
+- `5000.9999` → `₡5 000.9999`
 
-**Por qué**: Un monto de `₡100000` sin separador se ve como `₡100000` (confusión). Con separador `₡100,000` es claro.
+**Inputs numéricos**: 
+```jsx
+value={monto === 0 ? '' : monto.toLocaleString('es-CR')}
+onChange={(e) => setMonto(parseFloat(e.target.value.replace(/\s/g, '')) || 0)}
+```
+
+**Por qué**: Separador de espacio es estándar en Costa Rica. Sin separador `₡100000` es ilegible.
 
 ---
 
-### 3. INPUTS NUMÉRICOS — Sin spinners, valores 0 = vacío
+### 3. INPUTS NUMÉRICOS — Sin spinners, type="text" con formatter
 
-**Regla**: Los inputs `type="number"` NO tienen flechitas (spinners). Valor 0 se ve vacío.
+**Regla**: Los inputs deben ser `type="text"` (nunca `type="number"`). Valor 0 se ve como placeholder opaco.
 
-**CSS obligatorio** (agregar en cada input o en global stylesheet):
+**CSS obligatorio** (en `globals.css`):
 ```css
-input[type="number"]::-webkit-outer-spin-button,
-input[type="number"]::-webkit-inner-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-input[type="number"] {
-  -moz-appearance: textfield;
+input::placeholder {
+  opacity: 0.4;
+  color: currentColor;
 }
 ```
 
-**Valor en input**:
+**Implementación correcta**:
 ```jsx
-value={monto === 0 ? '' : monto}
-onChange={(e) => setMonto(parseFloat(e.target.value) || 0)}
+<input
+  type="text"
+  value={monto === 0 ? '' : monto.toLocaleString('es-CR')}
+  onChange={(e) => setMonto(parseFloat(e.target.value.replace(/\s/g, '')) || 0)}
+  placeholder="0"
+  inputMode="numeric"
+/>
 ```
+
+Resultado:
+- Campo vacío: aparece un "0" muy atenuado (placeholder opaco)
+- User tipea: el "0" desaparece, ve lo que escribe formateado con espacios
+- Ejemplo: tipea "1000" → ve "1 000" automáticamente
 
 **Por qué**: 
-- Flechitas + rueda del mouse = cambios accidentales de monto. Riesgo de error.
-- 0 visible confunde: ¿es obligatorio? ¿es error? Campo vacío es más claro.
+- `type="number"` trae spinners (flechitas) que causan cambios accidentales con rueda del mouse
+- Placeholder opaco es mejor que "0" visible: visualmente presente pero no confunde
+- Formateo automático con espacios es más legible
 
 **Aplica a**: Todos los inputs de montos, cantidad, denominaciones, etc.
 
