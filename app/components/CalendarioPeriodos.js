@@ -148,7 +148,7 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
                 cursor: periodo ? 'pointer' : 'default',
                 fontSize: '11px',
                 fontWeight: '600',
-                color: (esHoy || esSeleccionado) ? '#fff' : '#1A1714',
+                color: esSeleccionado ? '#fff' : '#1A1714',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -159,7 +159,7 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
                 borderLeft: esInicioPeriodo ? `2px solid ${borderColor}` : 'none',
                 borderRight: esFinPeriodo ? `2px solid ${borderColor}` : 'none',
                 borderRadius: esInicioPeriodo ? '8px 0 0 8px' : esFinPeriodo ? '0 8px 8px 0' : '0',
-                boxShadow: (esHoy || esSeleccionado) ? '0 2px 6px rgba(0,0,0,0.15)' : 'none',
+                boxShadow: esSeleccionado ? '0 2px 6px rgba(0,0,0,0.15)' : 'none',
                 marginRight: esFinPeriodo ? '4px' : '0'
               }}
             >
