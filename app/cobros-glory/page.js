@@ -861,7 +861,7 @@ export default function CobroGloryPage() {
               </div>
               <div style={{ marginBottom: '12px' }}>
                 <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Monto (₡)</label>
-                <input type="number" value={inputMonto} onChange={(e) => setInputMonto(e.target.value)} placeholder="0" min="0" style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px' }} />
+                <input type="number" value={inputMonto === '0' || inputMonto === '' ? '' : inputMonto} onChange={(e) => setInputMonto(e.target.value)} min="0" style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px' }} />
               </div>
               {inputMonto && selectMetodo && (
                 <div style={{ marginTop: '16px', padding: '12px', background: '#F7F5F0', borderRadius: '8px', borderLeft: '4px solid #2a78a5' }}>

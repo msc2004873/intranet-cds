@@ -152,11 +152,11 @@ function CajaDiaSection({ dia }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
         <div>
           <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>Datafono BAC (₡)</label>
-          <input type="number" placeholder=" " value={bac} onChange={(e) => setBac(e.target.value)} style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #E2DDD4', borderRadius: '4px', fontSize: '12px' }} />
+          <input type="number" value={bac === '0' || bac === '' ? '' : bac} onChange={(e) => setBac(e.target.value)} style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #E2DDD4', borderRadius: '4px', fontSize: '12px' }} />
         </div>
         <div>
           <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>Datafono BN (₡)</label>
-          <input type="number" placeholder=" " value={bn} onChange={(e) => setBn(e.target.value)} style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #E2DDD4', borderRadius: '4px', fontSize: '12px' }} />
+          <input type="number" value={bn === '0' || bn === '' ? '' : bn} onChange={(e) => setBn(e.target.value)} style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #E2DDD4', borderRadius: '4px', fontSize: '12px' }} />
         </div>
       </div>
 

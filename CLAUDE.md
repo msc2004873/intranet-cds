@@ -22,7 +22,26 @@
 
 ---
 
-### 2. INPUTS NUMÉRICOS — Sin spinners, valores 0 = vacío
+### 2. MONTOS EN INTERFAZ — Separador de miles, sin redondeo
+
+**Regla**: Todo monto en la UI tiene separador de miles. Nunca redondear.
+
+**Display correcto**:
+```jsx
+const fmt = n => '₡' + Math.round(n).toLocaleString('es-CR');  // ❌ MALO: redondea
+const fmt = n => '₡' + n.toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });  // ✅ BIEN: sin redondeo
+```
+
+Ejemplos:
+- `5000` → `₡5,000`
+- `5000.50` → `₡5,000.50`
+- `5000.9999` → `₡5,000.9999`
+
+**Por qué**: Un monto de `₡100000` sin separador se ve como `₡100000` (confusión). Con separador `₡100,000` es claro.
+
+---
+
+### 3. INPUTS NUMÉRICOS — Sin spinners, valores 0 = vacío
 
 **Regla**: Los inputs `type="number"` NO tienen flechitas (spinners). Valor 0 se ve vacío.
 
@@ -52,7 +71,7 @@ onChange={(e) => setMonto(parseFloat(e.target.value) || 0)}
 
 ---
 
-### 3. NAVEGACIÓN EN INPUTS — Enter y Flechas para navegar
+### 4. NAVEGACIÓN EN INPUTS — Enter y Flechas para navegar
 
 **Regla**: En formularios con múltiples inputs numéricos, puedes navegar con:
 - **Enter** o **↓** = siguiente input
@@ -77,7 +96,7 @@ onKeyDown={(e) => {
 
 ---
 
-### 4. MONEDA — Lo que se guarda es lo que se muestra
+### 5. MONEDA — Lo que se guarda es lo que se muestra
 
 **Regla**: No hay conversión automática.
 - Si se guarda `monto: 5000, moneda: 'colones'` → mostrar `₡5000`
@@ -88,7 +107,7 @@ onKeyDown={(e) => {
 
 ---
 
-### 4.5. VALIDACIONES SERVER-SIDE (en la API)
+### 5.5. VALIDACIONES SERVER-SIDE (en la API)
 
 **Regla**: Toda API que guarde datos DEBE validar que sean correctos, aunque el navegador también valide.
 
@@ -109,13 +128,13 @@ if (monto < 0) throw new Error('Monto no puede ser negativo');
 
 ## ✅ ESTÁNDARES (aplica a módulos nuevos y existentes)
 
-### 5. VALIDACIONES MÍNIMAS
+### 6. VALIDACIONES MÍNIMAS
 
 - **Montos**: Siempre positivos o cero. El campo `tipo` define si es ingreso/egreso.
 - **Campos obligatorios**: `tipo`, `cajera`, `caja`, `moneda` siempre requeridos
 - **Rango de fechas**: Inicio ≤ Fin. Si no, error.
 
-### 6. FEEDBACK AL USER
+### 7. FEEDBACK AL USER
 
 - **Éxito**: Toast verde con `✅ Mensaje`
 - **Error**: Toast rojo con `❌ Mensaje`
@@ -129,7 +148,7 @@ const showToast = (msg, type = 'info') => {
 };
 ```
 
-### 7. ESTRUCTURA DE DATOS (Movimientos)
+### 8. ESTRUCTURA DE DATOS (Movimientos)
 
 Campos obligatorios:
 - `tipo` (string: 'ingreso' | 'egreso' | etc) — **Define si sube o baja**
@@ -143,7 +162,7 @@ Campos opcionales:
 - `referencia` (string)
 - `archivo_url` (string)
 
-### 8. COLORES POR MÓDULO
+### 9. COLORES POR MÓDULO
 
 - **Clínica** (cajas): Azul `#2a78a5`
 - **Glory** (cobros): Dorado `#C8A84B`

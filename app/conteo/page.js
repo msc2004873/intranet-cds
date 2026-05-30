@@ -167,7 +167,7 @@ export default function ConteoPage() {
                 <input
                   type="number"
                   ref={(el) => (window[`inputDenom${idx}`] = el)}
-                  value={denominaciones[d] || ''}
+                  value={denominaciones[d] === 0 ? '' : (denominaciones[d] || '')}
                   onChange={(e) => handleDenomChange(d, e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === 'ArrowDown') {
