@@ -128,6 +128,18 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
           const radiusStyle = getRadiusStyle(dia, periodo);
           const esHoy = periodoActual && periodo?.num === periodoActual.num;
           const esSeleccionado = periodoSeleccionado === periodo?.num && !esHoy;
+          const esInicioPeriodo = periodo?.inicio === dia;
+          const esFinPeriodo = periodo?.fin === dia;
+
+          const getBorderStyle = () => {
+            if (!periodo) return {};
+            return {
+              borderTop: esHoy ? '3px solid #1A1714' : esSeleccionado ? '3px solid #9C9590' : '1px solid #E2DDD4',
+              borderBottom: '1px solid #E2DDD4',
+              borderLeft: esInicioPeriodo ? '1px solid #E2DDD4' : 'none',
+              borderRight: esFinPeriodo ? '1px solid #E2DDD4' : 'none',
+            };
+          };
 
           return (
             <div
@@ -135,7 +147,7 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
               onClick={() => periodo && handleSelectPeriodo(periodo)}
               style={{
                 minHeight: '28px',
-                background: periodo?.color || '#F0EDE6',
+                background: periodo ? '#fff' : '#F0EDE6',
                 textAlign: 'center',
                 cursor: periodo ? 'pointer' : 'default',
                 fontSize: '11px',
@@ -144,10 +156,11 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                transition: 'opacity 0.2s',
-                borderTop: esHoy ? '3px solid #1A1714' : esSeleccionado ? '3px solid #9C9590' : 'none',
+                transition: 'all 0.2s',
+                boxShadow: periodo ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
                 paddingTop: (esHoy || esSeleccionado) ? '2px' : '0',
-                ...radiusStyle
+                ...radiusStyle,
+                ...getBorderStyle()
               }}
               onMouseEnter={(e) => {
                 if (periodo) {
