@@ -565,6 +565,8 @@ export default function Home() {
                           const entry = entries.find(([k]) => k === field);
                           if (entry) displayFields.push(entry);
                         });
+                        // Agregar campo de Glory
+                        displayFields.push(['glory_cierre', selectedLog.data.glory_json && Array.isArray(selectedLog.data.glory_json) && selectedLog.data.glory_json.length > 0 ? 'Sí' : 'No']);
                       } else {
                         displayFields = entries.filter(([k]) => !k.startsWith('c_') && !fieldsToHide.includes(k));
                       }
@@ -580,7 +582,8 @@ export default function Home() {
                               'dolares_total': 'Dólares',
                               'tarjeta_bac': 'Tarjeta BAC',
                               'tarjeta_bn': 'Tarjeta BN',
-                              'tc': 'Tipo de Cambio'
+                              'tc': 'Tipo de Cambio',
+                              'glory_cierre': 'Cierre de Glory'
                             };
                             if (labelMap[key]) label = labelMap[key];
                             if (key === 'dolares_total' && typeof value === 'number') {
