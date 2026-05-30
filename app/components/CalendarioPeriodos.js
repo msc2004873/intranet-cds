@@ -127,9 +127,13 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
 
           const periodo = obtenerPeriodo(dia);
           const esHoy = periodoActual && periodo?.num === periodoActual.num;
-          const esSeleccionado = periodoSeleccionado === periodo?.num && !esHoy;
+          const esSeleccionado = periodoSeleccionado === periodo?.num;
+
+          // Borde: verde si es actual, rojo si está seleccionado (no actual), gris si no
           const borderColor = esHoy ? '#27AE60' : esSeleccionado ? '#E74C3C' : '#E2DDD4';
-          const bgColor = esHoy ? '#27AE60' : esSeleccionado ? '#E74C3C' : '#fff';
+
+          // Relleno: solo si está seleccionado (verde si es actual, rojo si no)
+          const bgColor = esSeleccionado ? (esHoy ? '#27AE60' : '#E74C3C') : '#fff';
           const esInicioPeriodo = periodo?.inicio === dia;
           const esFinPeriodo = periodo?.fin === dia;
 
