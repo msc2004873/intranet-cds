@@ -61,8 +61,9 @@ export default function LoginPage() {
         return;
       }
 
-      localStorage.setItem('user', JSON.stringify(data));
-      router.push('/module-selection');
+      // Las cookies se establecen en el servidor (route.js)
+      // Solo redirigir después de login exitoso
+      router.push('/');
     } catch (err) {
       setError('Error de conexión');
       setLoading(false);

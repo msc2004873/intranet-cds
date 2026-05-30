@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { cookies } from 'next/headers';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -28,12 +29,32 @@ export async function POST(req) {
       return Response.json({ error: 'Iniciales o PIN incorrectos' }, { status: 401 });
     }
 
-    return Response.json({
+    const userData = {
       id: data.id,
       nombre: data.nombre,
       iniciales: data.iniciales,
       rol: data.rol
+    };
+
+    // Establecer cookies seguras
+    const cookieStore = await cookies();
+    cookieStore.set('user', JSON.stringify(userData), {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7 // 7 días
     });
+
+    // Token simple (se puede mejorar con JWT)
+    const authToken = Buffer.from(`${data.id}:${Date.now()}`).toString('base64');
+    cookieStore.set('authToken', authToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7 // 7 días
+    });
+
+    return Response.json(userData);
   } catch (err) {
     console.error('Error login:', err);
     return Response.json({ error: 'Error al procesar solicitud' }, { status: 500 });
