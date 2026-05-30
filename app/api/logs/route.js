@@ -19,7 +19,8 @@ export async function GET(request) {
           month: '2-digit',
           day: '2-digit',
           hour: '2-digit',
-          minute: '2-digit'
+          minute: '2-digit',
+          hour12: false
         });
         const formatted = formatter.format(dateObj);
         const [fecha, hora] = formatted.split(', ');
@@ -52,7 +53,8 @@ export async function GET(request) {
           month: '2-digit',
           day: '2-digit',
           hour: '2-digit',
-          minute: '2-digit'
+          minute: '2-digit',
+          hour12: false
         });
         const formatted = formatter.format(dateObj);
         const [fecha, hora] = formatted.split(', ');
@@ -85,7 +87,8 @@ export async function GET(request) {
           month: '2-digit',
           day: '2-digit',
           hour: '2-digit',
-          minute: '2-digit'
+          minute: '2-digit',
+          hour12: false
         });
         const formatted = formatter.format(dateObj);
         const [fecha, hora] = formatted.split(', ');
@@ -118,7 +121,8 @@ export async function GET(request) {
           month: '2-digit',
           day: '2-digit',
           hour: '2-digit',
-          minute: '2-digit'
+          minute: '2-digit',
+          hour12: false
         });
         const formatted = formatter.format(fechaObj);
         const [fecha, hora] = formatted.split(', ');
