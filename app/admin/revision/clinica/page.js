@@ -13,6 +13,7 @@ export default function RevisionClinicaPage() {
   const [cierres, setCierres] = useState([]);
   const [loading, setLoading] = useState(false);
   const [cierreEnRevision, setCierreEnRevision] = useState(null);
+  const [periodoActualAlMontar, setPeriodoActualAlMontar] = useState(null);
 
   useEffect(() => {
     const hoy = new Date();
@@ -31,6 +32,7 @@ export default function RevisionClinicaPage() {
     ];
     const periodoActual = PERIODOS.find(p => diaHoy >= p.inicio && diaHoy <= p.fin);
 
+    setPeriodoActualAlMontar(periodoActual.num);
     setPeriodo({
       num: periodoActual.num,
       inicio: new Date(ano, mes, periodoActual.inicio),
@@ -62,26 +64,13 @@ export default function RevisionClinicaPage() {
     }
   }
 
-  // Detectar el período actual (el que contiene hoy)
+  // esActual es true solo si el período seleccionado es el período actual
   const hoy = new Date();
-  const diaHoy = hoy.getDate();
   const mesHoy = hoy.getMonth();
   const anoHoy = hoy.getFullYear();
 
-  // Calcular cuál es el período que contiene hoy
-  const PERIODOS_CALC = [
-    { num: 1, inicio: 1, fin: 5 },
-    { num: 2, inicio: 6, fin: 10 },
-    { num: 3, inicio: 11, fin: 15 },
-    { num: 4, inicio: 16, fin: 20 },
-    { num: 5, inicio: 21, fin: 25 },
-    { num: 6, inicio: 26, fin: 31 },
-  ];
-  const periodoActualNum = PERIODOS_CALC.find(p => diaHoy >= p.inicio && diaHoy <= p.fin)?.num;
-
-  // esActual es true solo si el período seleccionado es el período actual (hoy) Y estamos en el mes actual
   const esActual = periodo &&
-    periodo.num === periodoActualNum &&
+    periodo.num === periodoActualAlMontar &&
     periodo.inicio.getMonth() === mesHoy &&
     periodo.inicio.getFullYear() === anoHoy;
 
