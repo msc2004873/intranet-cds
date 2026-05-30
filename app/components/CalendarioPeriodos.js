@@ -131,14 +131,22 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
           const esInicioPeriodo = periodo?.inicio === dia;
           const esFinPeriodo = periodo?.fin === dia;
 
+          const getBackgroundColor = () => {
+            if (esHoy) return '#27AE60';
+            if (esSeleccionado) return '#E74C3C';
+            return '#fff';
+          };
+
           const getBorderStyle = () => {
             if (!periodo) return {};
-            const barColor = esHoy ? '#27AE60' : esSeleccionado ? '#E74C3C' : '#E2DDD4';
+            const hasHighlight = esHoy || esSeleccionado;
+            const color = esHoy ? '#27AE60' : '#E74C3C';
+
             return {
-              borderTop: esInicioPeriodo ? `3px solid ${barColor}` : 'none',
-              borderBottom: esFinPeriodo ? '1px solid #E2DDD4' : 'none',
-              borderLeft: esInicioPeriodo ? '1px solid #E2DDD4' : 'none',
-              borderRight: esFinPeriodo ? '1px solid #E2DDD4' : 'none',
+              borderTop: esInicioPeriodo && hasHighlight ? `2px solid ${color}` : '1px solid #E2DDD4',
+              borderBottom: esFinPeriodo && hasHighlight ? `2px solid ${color}` : '1px solid #E2DDD4',
+              borderLeft: hasHighlight ? `2px solid ${color}` : '1px solid #E2DDD4',
+              borderRight: hasHighlight ? `2px solid ${color}` : '1px solid #E2DDD4',
             };
           };
 
@@ -148,18 +156,17 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
               onClick={() => periodo && handleSelectPeriodo(periodo)}
               style={{
                 minHeight: '28px',
-                background: periodo ? '#fff' : '#F0EDE6',
+                background: getBackgroundColor(),
                 textAlign: 'center',
                 cursor: periodo ? 'pointer' : 'default',
                 fontSize: '11px',
                 fontWeight: '600',
-                color: '#1A1714',
+                color: (esHoy || esSeleccionado) ? '#fff' : '#1A1714',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 transition: 'all 0.2s',
-                boxShadow: periodo ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
-                paddingTop: esInicioPeriodo && (esHoy || esSeleccionado) ? '2px' : '0',
+                boxShadow: (esHoy || esSeleccionado) ? '0 2px 6px rgba(0,0,0,0.15)' : 'none',
                 ...radiusStyle,
                 ...getBorderStyle()
               }}
