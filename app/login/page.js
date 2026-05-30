@@ -62,7 +62,10 @@ export default function LoginPage() {
       }
 
       // Las cookies se establecen en el servidor (route.js)
-      // Solo redirigir después de login exitoso
+      // Guardar también en localStorage para acceso rápido en cliente
+      localStorage.setItem('user', JSON.stringify(data));
+
+      // Redirigir después de login exitoso
       router.push('/');
     } catch (err) {
       setError('Error de conexión');
