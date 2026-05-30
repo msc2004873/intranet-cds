@@ -58,12 +58,16 @@ export async function POST(request) {
     const [m, d, y] = crDate.split('/');
     const fechaHoy = `${y}-${m}-${d}`;
 
-    // Verificar si ya existe un cierre para esta caja en este día
+    // Verificar si ya existe un cierre para esta caja en este día (rango de 24h en CR)
+    const inicioHoy = `${fechaHoy}T00:00:00Z`;
+    const finHoy = `${fechaHoy}T23:59:59Z`;
+
     const { data: existingCierre } = await supabase
       .from('cierre_caja')
       .select('id')
       .eq('caja', data.caja)
-      .eq('fecha', fechaHoy)
+      .gte('fecha_hora', inicioHoy)
+      .lte('fecha_hora', finHoy)
       .limit(1);
 
     if (existingCierre && existingCierre.length > 0) {
