@@ -381,16 +381,34 @@ export default function CajeraPage() {
               <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Denominaciones al sobre</div>
             </div>
             <div style={{ padding: '20px' }}>
-              {DENOMS.map(d => {
-                const sobreDenom = (denominaciones[d] || 0) - (quedaDenominaciones[d] || 0);
-                return sobreDenom > 0 ? (
-                  <div key={d} style={{ display: 'grid', gridTemplateColumns: '100px 1fr 110px', alignItems: 'center', gap: '10px', padding: '6px 0', borderBottom: '1px solid #E2DDD4' }}>
-                    <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#6B6560', fontWeight: '500' }}>{fmt(d)}</div>
-                    <input type="number" value={sobreDenom} readOnly style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #E2DDD4', borderRadius: '8px', background: '#F0EDE6', color: '#6B6560', fontFamily: "'DM Mono', monospace" }} />
-                    <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#C8A84B', fontWeight: '600', textAlign: 'right' }}>{fmt(sobreDenom * d)}</div>
-                  </div>
-                ) : null;
-              })}
+              {(() => {
+                const montoAlSobre = totalCierre - 50000;
+                if (montoAlSobre <= 0) return <div style={{ fontSize: '12px', color: '#9C9590', padding: '10px 0' }}>Nada al sobre (fondo completo)</div>;
+
+                const denominacionesSobre = {};
+                let pendiente = montoAlSobre;
+
+                for (let i = 0; i < DENOMS.length && pendiente > 0; i++) {
+                  const d = DENOMS[i];
+                  const disponibles = denominaciones[d] || 0;
+                  const aExtraer = Math.min(disponibles, Math.floor(pendiente / d));
+                  if (aExtraer > 0) {
+                    denominacionesSobre[d] = aExtraer;
+                    pendiente -= aExtraer * d;
+                  }
+                }
+
+                return DENOMS.map(d => {
+                  const sobreDenom = denominacionesSobre[d] || 0;
+                  return sobreDenom > 0 ? (
+                    <div key={d} style={{ display: 'grid', gridTemplateColumns: '100px 1fr 110px', alignItems: 'center', gap: '10px', padding: '6px 0', borderBottom: '1px solid #E2DDD4' }}>
+                      <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#6B6560', fontWeight: '500' }}>{fmt(d)}</div>
+                      <input type="number" value={sobreDenom} readOnly style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #E2DDD4', borderRadius: '8px', background: '#F0EDE6', color: '#6B6560', fontFamily: "'DM Mono', monospace" }} />
+                      <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#C8A84B', fontWeight: '600', textAlign: 'right' }}>{fmt(sobreDenom * d)}</div>
+                    </div>
+                  ) : null;
+                });
+              })()}
               <div style={{ marginTop: '14px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#FBF6E9' }}>
                 <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Fondo en caja</span>
                 <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#C8A84B' }}>{fmt(50000)}</span>
