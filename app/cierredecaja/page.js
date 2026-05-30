@@ -554,6 +554,22 @@ export default function CajeraPage() {
                   <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total Glory</span>
                   <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#2a78a5' }}>{fmt(totalGlory)}</span>
                 </div>
+                {(() => {
+                  const totalEfectivo = gloryList.filter(item => item.metodo?.toLowerCase().includes('efectivo')).reduce((sum, item) => sum + (item.monto || 0), 0);
+                  const totalTarjeta = gloryList.filter(item => ['bac', 'bn', 'credomatic', 'davivienda'].some(m => item.metodo?.toLowerCase().includes(m))).reduce((sum, item) => sum + (item.monto || 0), 0);
+                  return (
+                    <>
+                      <div style={{ marginTop: '8px', padding: '12px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#F0EDE6' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total Efectivo</span>
+                        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '14px', fontWeight: '600', color: '#2a78a5' }}>{fmt(totalEfectivo)}</span>
+                      </div>
+                      <div style={{ marginTop: '6px', padding: '12px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#F0EDE6' }}>
+                        <span style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total Tarjeta</span>
+                        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '14px', fontWeight: '600', color: '#2a78a5' }}>{fmt(totalTarjeta)}</span>
+                      </div>
+                    </>
+                  );
+                })()}
               </div>
             )}
             {!cerrarGlory && (
