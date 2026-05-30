@@ -560,10 +560,10 @@ export default function Home() {
 
                       let displayFields = [];
                       if (selectedLog.tipo === 'Cierre de Caja') {
-                        const fieldOrder = ['dolares_total', 'tarjeta_bac', 'tarjeta_bn', 'tc'];
+                        const fieldOrder = ['cajera', 'caja', 'dolares_total', 'tarjeta_bac', 'tarjeta_bn', 'tc'];
                         fieldOrder.forEach(field => {
                           const entry = entries.find(([k]) => k === field);
-                          if (entry && entry[1] !== 0 && entry[1] !== null) displayFields.push(entry);
+                          if (entry) displayFields.push(entry);
                         });
                       } else {
                         displayFields = entries.filter(([k]) => !k.startsWith('c_') && !fieldsToHide.includes(k));
@@ -574,16 +574,21 @@ export default function Home() {
                           {displayFields.map(([key, value]) => {
                             let label = key;
                             let displayValue = value;
-                            if (key === 'dolares_total') label = 'Dólares';
-                            if (key === 'tarjeta_bac') label = 'Tarjeta BAC';
-                            if (key === 'tarjeta_bn') label = 'Tarjeta BN';
-                            if (key === 'tc') label = 'Tipo de Cambio';
+                            const labelMap = {
+                              'cajera': 'Cajera',
+                              'caja': 'Caja',
+                              'dolares_total': 'Dólares',
+                              'tarjeta_bac': 'Tarjeta BAC',
+                              'tarjeta_bn': 'Tarjeta BN',
+                              'tc': 'Tipo de Cambio'
+                            };
+                            if (labelMap[key]) label = labelMap[key];
                             if ((key === 'dolares_total' || key === 'tarjeta_bac' || key === 'tarjeta_bn') && typeof value === 'number') {
                               displayValue = '₡' + value.toLocaleString('es-CR');
                             }
                             return (
                               <tr key={key} style={{ borderBottom: '1px solid #E2DDD4' }}>
-                                <td style={{ padding: '10px 12px', fontSize: '12px', fontWeight: '600', color: '#6B6560', background: '#F0EDE6', width: '35%', textTransform: 'capitalize' }}>{label}</td>
+                                <td style={{ padding: '10px 12px', fontSize: '12px', fontWeight: '600', color: '#6B6560', background: '#F0EDE6', width: '35%' }}>{label}</td>
                                 <td style={{ padding: '10px 12px', fontSize: '12px', color: '#1A1714', fontFamily: "'DM Mono', monospace" }}>{displayValue}</td>
                               </tr>
                             );

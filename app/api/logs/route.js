@@ -75,7 +75,7 @@ export async function GET(request) {
     // 3. Cierres de Caja
     const { data: cierres, error: err3 } = await supabase
       .from('cierre_caja')
-      .select('id, cajera, caja, fecha_hora')
+      .select('*')
       .order('fecha_hora', { ascending: false });
 
     if (cierres && Array.isArray(cierres)) {
