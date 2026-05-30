@@ -117,73 +117,53 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
         ))}
       </div>
 
-      {/* Grid de días */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0' }}>
-        {dias.map((dia, idx) => {
-          if (dia === null) {
-            return <div key={`empty-${idx}`} style={{ minHeight: '28px' }} />;
+      {/* Grid de períodos */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '8px' }}>
+        {PERIODOS.map((periodo) => {
+          const esHoy = periodoActual && periodo.num === periodoActual.num;
+          const esSeleccionado = periodoSeleccionado === periodo.num && !esHoy;
+          const borderColor = esHoy ? '#27AE60' : esSeleccionado ? '#E74C3C' : '#E2DDD4';
+          const bgColor = esHoy ? '#27AE60' : esSeleccionado ? '#E74C3C' : '#fff';
+
+          const diasPeriodo = [];
+          for (let i = periodo.inicio; i <= periodo.fin; i++) {
+            diasPeriodo.push(i);
           }
-
-          const periodo = obtenerPeriodo(dia);
-          const radiusStyle = getRadiusStyle(dia, periodo);
-          const esHoy = periodoActual && periodo?.num === periodoActual.num;
-          const esSeleccionado = periodoSeleccionado === periodo?.num && !esHoy;
-          const esInicioPeriodo = periodo?.inicio === dia;
-          const esFinPeriodo = periodo?.fin === dia;
-
-          const getBackgroundColor = () => {
-            if (esHoy) return '#27AE60';
-            if (esSeleccionado) return '#E74C3C';
-            return '#fff';
-          };
-
-          const getBorderColor = () => {
-            if (esHoy) return '#27AE60';
-            if (esSeleccionado) return '#E74C3C';
-            return '#E2DDD4';
-          };
-
-          const getBorderStyle = () => {
-            if (!periodo) return {};
-            const borderColor = getBorderColor();
-            const styles = {};
-
-            if (esInicioPeriodo) {
-              styles.borderLeft = `2px solid ${borderColor}`;
-              styles.borderTop = `2px solid ${borderColor}`;
-              styles.borderBottom = `2px solid ${borderColor}`;
-            }
-            if (esFinPeriodo) {
-              styles.borderRight = `2px solid ${borderColor}`;
-              styles.borderTop = `2px solid ${borderColor}`;
-              styles.borderBottom = `2px solid ${borderColor}`;
-            }
-
-            return styles;
-          };
 
           return (
             <div
-              key={dia}
-              onClick={() => periodo && handleSelectPeriodo(periodo)}
+              key={periodo.num}
               style={{
-                minHeight: '28px',
-                background: getBackgroundColor(),
-                textAlign: 'center',
-                cursor: periodo ? 'pointer' : 'default',
-                fontSize: '11px',
-                fontWeight: '600',
-                color: (esHoy || esSeleccionado) ? '#fff' : '#1A1714',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                transition: 'all 0.2s',
-                boxShadow: (esHoy || esSeleccionado) ? '0 2px 6px rgba(0,0,0,0.15)' : 'none',
-                ...radiusStyle,
-                ...getBorderStyle()
+                gridColumn: `span ${diasPeriodo.length}`,
+                display: 'grid',
+                gridTemplateColumns: `repeat(${diasPeriodo.length}, 1fr)`,
+                gap: '0',
+                border: `2px solid ${borderColor}`,
+                borderRadius: '8px',
+                overflow: 'hidden'
               }}
             >
-              {dia}
+              {diasPeriodo.map((dia) => (
+                <div
+                  key={dia}
+                  onClick={() => handleSelectPeriodo(periodo)}
+                  style={{
+                    minHeight: '28px',
+                    background: bgColor,
+                    textAlign: 'center',
+                    cursor: 'pointer',
+                    fontSize: '11px',
+                    fontWeight: '600',
+                    color: (esHoy || esSeleccionado) ? '#fff' : '#1A1714',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {dia}
+                </div>
+              ))}
             </div>
           );
         })}
