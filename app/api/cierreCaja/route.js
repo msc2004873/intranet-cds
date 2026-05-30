@@ -64,10 +64,31 @@ export async function POST(request) {
       if (val < 0) throw new Error(`Denominación ${d} no puede ser negativa`);
     }
 
+    // Obtener fecha_hora actual en Costa Rica
+    const now = new Date();
+    const crFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Costa_Rica',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    });
+    const parts = crFormatter.formatToParts(now);
+    const year = parts.find(p => p.type === 'year')?.value;
+    const month = parts.find(p => p.type === 'month')?.value;
+    const day = parts.find(p => p.type === 'day')?.value;
+    const hour = parts.find(p => p.type === 'hour')?.value;
+    const minute = parts.find(p => p.type === 'minute')?.value;
+    const second = parts.find(p => p.type === 'second')?.value;
+    const crDate = new Date(`${year}-${month}-${day}T${hour}:${minute}:${second}Z`);
+    const fechaHoraUTC = new Date(crDate.getTime() + (6 * 60 * 60 * 1000)).toISOString();
+
     const insertData = {
       cajera: data.cajera,
       caja: data.caja,
-      fecha_hora: new Date().toISOString(),
+      fecha_hora: fechaHoraUTC,
       tc: parseFloat(data.tc) || 475,
       dolares_total: parseFloat(data.dolares) || 0,
       tarjeta_bac: parseFloat(data.tarjetaBac) || 0,
