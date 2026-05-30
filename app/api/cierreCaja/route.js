@@ -73,7 +73,8 @@ export async function POST(request) {
       day: '2-digit',
       hour: '2-digit',
       minute: '2-digit',
-      second: '2-digit'
+      second: '2-digit',
+      hour12: false
     });
     const parts = crFormatter.formatToParts(now);
     const year = parts.find(p => p.type === 'year')?.value;

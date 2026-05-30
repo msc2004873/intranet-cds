@@ -84,7 +84,8 @@ export default function ConteoPage() {
         day: '2-digit',
         hour: '2-digit',
         minute: '2-digit',
-        second: '2-digit'
+        second: '2-digit',
+        hour12: false
       });
       const parts = formatter.formatToParts(now);
       const year = parts.find(p => p.type === 'year')?.value;
