@@ -23,11 +23,16 @@ export async function POST(req) {
       }
     }
 
+    // Convertir hora CR a UTC para guardar
+    // hora viene como "YYYY-MM-DDTHH:MM:SS" en hora CR
+    const crDate = new Date(hora + 'Z'); // Parsear como si fuera UTC
+    const horaUTC = new Date(crDate.getTime() + (6 * 60 * 60 * 1000)).toISOString(); // Sumar 6 horas para convertir CR a UTC
+
     const { error } = await supabase.from('conteo_caja').insert({
       cajera,
       caja,
       fecha,
-      hora,
+      hora: horaUTC,
       dolares,
       total_colones,
       ...denoms
