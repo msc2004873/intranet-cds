@@ -19,10 +19,12 @@ export async function GET(req) {
     }
 
     if (fecha) {
-      // Filtrar por fecha usando el campo created_at
-      const fechaInicio = `${fecha}T00:00:00`;
-      const fechaFin = `${fecha}T23:59:59`;
-      query = query.gte('created_at', fechaInicio).lte('created_at', fechaFin);
+      // Convertir fecha CR (UTC-6) a rango UTC para buscar en created_at
+      // Ej: 2026-05-29 en CR = 2026-05-29T06:00:00Z a 2026-05-30T06:00:00Z en UTC
+      const fechaObj = new Date(`${fecha}T00:00:00`);
+      const fechaInicio = new Date(fechaObj.getTime() + 6 * 60 * 60 * 1000).toISOString();
+      const fechaFin = new Date(fechaObj.getTime() + 24 * 60 * 60 * 1000 + 6 * 60 * 60 * 1000).toISOString();
+      query = query.gte('created_at', fechaInicio).lt('created_at', fechaFin);
     }
 
     if (caja) {
