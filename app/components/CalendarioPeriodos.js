@@ -146,10 +146,20 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
           const getBorderStyle = () => {
             if (!periodo) return {};
             const borderColor = getBorderColor();
+            const styles = {};
 
-            return {
-              border: `2px solid ${borderColor}`,
-            };
+            if (esInicioPeriodo) {
+              styles.borderLeft = `2px solid ${borderColor}`;
+              styles.borderTop = `2px solid ${borderColor}`;
+              styles.borderBottom = `2px solid ${borderColor}`;
+            }
+            if (esFinPeriodo) {
+              styles.borderRight = `2px solid ${borderColor}`;
+              styles.borderTop = `2px solid ${borderColor}`;
+              styles.borderBottom = `2px solid ${borderColor}`;
+            }
+
+            return styles;
           };
 
           return (
