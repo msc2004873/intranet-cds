@@ -62,16 +62,28 @@ export default function RevisionClinicaPage() {
     }
   }
 
-  // Detectar si el período es el actual
+  // Detectar el período actual (el que contiene hoy)
   const hoy = new Date();
   const diaHoy = hoy.getDate();
   const mesHoy = hoy.getMonth();
   const anoHoy = hoy.getFullYear();
+
+  // Calcular cuál es el período que contiene hoy
+  const PERIODOS_CALC = [
+    { num: 1, inicio: 1, fin: 5 },
+    { num: 2, inicio: 6, fin: 10 },
+    { num: 3, inicio: 11, fin: 15 },
+    { num: 4, inicio: 16, fin: 20 },
+    { num: 5, inicio: 21, fin: 25 },
+    { num: 6, inicio: 26, fin: 31 },
+  ];
+  const periodoActualNum = PERIODOS_CALC.find(p => diaHoy >= p.inicio && diaHoy <= p.fin)?.num;
+
+  // esActual es true solo si el período seleccionado es el período actual (hoy) Y estamos en el mes actual
   const esActual = periodo &&
+    periodo.num === periodoActualNum &&
     periodo.inicio.getMonth() === mesHoy &&
-    periodo.inicio.getFullYear() === anoHoy &&
-    diaHoy >= periodo.inicio.getDate() &&
-    diaHoy <= periodo.fin.getDate();
+    periodo.inicio.getFullYear() === anoHoy;
 
   const cierresPendientes = cierres.filter(c => !c.revision_completada);
   const cierresRevisados = cierres.filter(c => c.revision_completada);
