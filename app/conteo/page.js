@@ -57,7 +57,9 @@ export default function ConteoPage() {
   const total = Object.entries(denominaciones).reduce((sum, [d, qty]) => sum + (parseInt(d) * qty), 0);
 
   const handleDenomChange = (denom, value) => {
-    const newVal = parseInt(value) || 0;
+    // Remover separador de miles si lo hay
+    const cleanValue = value.toString().replace(/,/g, '');
+    const newVal = parseInt(cleanValue) || 0;
     setDenominaciones({ ...denominaciones, [denom]: newVal });
   };
 
@@ -165,9 +167,9 @@ export default function ConteoPage() {
               <div key={d} style={{ display: 'grid', gridTemplateColumns: '100px 1fr 110px', alignItems: 'center', gap: '10px', padding: '6px 0', borderBottom: '1px solid #E2DDD4' }}>
                 <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#6B6560', fontWeight: '500' }}>{fmt(d)}</div>
                 <input
-                  type="number"
+                  type="text"
                   ref={(el) => (window[`inputDenom${idx}`] = el)}
-                  value={denominaciones[d] === 0 ? '' : (denominaciones[d] || '')}
+                  value={denominaciones[d] === 0 || denominaciones[d] === undefined ? '' : (denominaciones[d] || 0).toLocaleString('es-CR')}
                   onChange={(e) => handleDenomChange(d, e.target.value)}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' || e.key === 'ArrowDown') {
@@ -181,8 +183,7 @@ export default function ConteoPage() {
                       if (prevInput) prevInput.focus();
                     }
                   }}
-                  min="0"
-                  placeholder="0"
+                  inputMode="numeric"
                   style={{
                     width: '100%',
                     padding: '8px 10px',
@@ -208,10 +209,10 @@ export default function ConteoPage() {
             <div style={{ marginTop: '12px', display: 'flex', gap: '12px', alignItems: 'center' }}>
               <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', flex: 1 }}>Dólares</label>
               <input
-                type="number"
-                value={dolares === 0 ? '' : dolares}
-                onChange={(e) => setDolares(parseFloat(e.target.value) || 0)}
-                placeholder="0"
+                type="text"
+                value={dolares === 0 ? '' : dolares.toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
+                onChange={(e) => setDolares(parseFloat(e.target.value.replace(/,/g, '')) || 0)}
+                inputMode="decimal"
                 style={{
                   flex: 1,
                   padding: '8px 12px',

@@ -196,7 +196,9 @@ export default function CajeraPage() {
   const totalGlory = gloryList.reduce((sum, item) => sum + (item.monto || 0), 0);
 
   const handleDenomChange = (denom, value) => {
-    const newVal = parseInt(value) || 0;
+    // Remover separador de miles si lo hay
+    const cleanValue = value.toString().replace(/,/g, '');
+    const newVal = parseInt(cleanValue) || 0;
     const newDenoms = { ...denominaciones, [denom]: newVal };
     setDenominaciones(newDenoms);
 
@@ -341,9 +343,9 @@ export default function CajeraPage() {
                 <div key={d} style={{ display: 'grid', gridTemplateColumns: '100px 1fr 110px', alignItems: 'center', gap: '10px', padding: '6px 0', borderBottom: '1px solid #E2DDD4' }}>
                   <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#6B6560', fontWeight: '500' }}>{fmt(d)}</div>
                   <input
-                    type="number"
+                    type="text"
                     ref={(el) => (window[`inputCajeraDenom${idx}`] = el)}
-                    value={denominaciones[d] === 0 ? '' : (denominaciones[d] || '')}
+                    value={denominaciones[d] === 0 || denominaciones[d] === undefined ? '' : (denominaciones[d] || 0).toLocaleString('es-CR')}
                     onChange={(e) => handleDenomChange(d, e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' || e.key === 'ArrowDown') {
@@ -357,7 +359,7 @@ export default function CajeraPage() {
                         if (prevInput) prevInput.focus();
                       }
                     }}
-                    min="0"
+                    inputMode="numeric"
                     style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '15px', fontWeight: '500', textAlign: 'center', fontFamily: "'DM Mono', monospace" }}
                   />
                   <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#2a78a5', fontWeight: '600', textAlign: 'right' }}>{fmt((denominaciones[d] || 0) * d)}</div>
@@ -404,7 +406,7 @@ export default function CajeraPage() {
             <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: '1fr 80px 1fr', gap: '12px', alignItems: 'end' }}>
               <div>
                 <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total dólares ($)</label>
-                <input type="number" value={dolares === 0 ? '' : dolares} onChange={(e) => setDolares(e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} step="0.01" style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px', fontFamily: "'DM Mono', monospace" }} />
+                <input type="text" value={dolares === 0 ? '' : dolares.toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 2 })} onChange={(e) => setDolares(e.target.value === '' ? 0 : parseFloat(e.target.value.replace(/,/g, '')) || 0)} inputMode="decimal" style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px', fontFamily: "'DM Mono', monospace" }} />
               </div>
               <div style={{ padding: '10px 12px', background: '#E8F3EC', borderRadius: '8px', fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#2a78a5', fontWeight: '600', textAlign: 'center' }}>×{tc}</div>
               <div>
@@ -424,12 +426,12 @@ export default function CajeraPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ border: '1.5px solid #E2DDD4', borderRadius: '8px', padding: '14px' }}>
                   <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', color: '#6B6560', marginBottom: '8px' }}>BAC</div>
-                  <input type="number" value={tarjetaBac === 0 ? '' : tarjetaBac} onChange={(e) => setTarjetaBac(e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} style={{ width: '100%', border: 'none', padding: '0', fontSize: '20px', fontWeight: '600', fontFamily: "'DM Mono', monospace", outline: 'none' }} />
+                  <input type="text" value={tarjetaBac === 0 ? '' : tarjetaBac.toLocaleString('es-CR')} onChange={(e) => setTarjetaBac(e.target.value === '' ? 0 : parseFloat(e.target.value.replace(/,/g, '')) || 0)} inputMode="numeric" style={{ width: '100%', border: 'none', padding: '0', fontSize: '20px', fontWeight: '600', fontFamily: "'DM Mono', monospace", outline: 'none' }} />
                   <div style={{ fontSize: '12px', color: '#9C9590', marginTop: '2px' }}>colones</div>
                 </div>
                 <div style={{ border: '1.5px solid #E2DDD4', borderRadius: '8px', padding: '14px' }}>
                   <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', color: '#6B6560', marginBottom: '8px' }}>BN</div>
-                  <input type="number" value={tarjetaBn === 0 ? '' : tarjetaBn} onChange={(e) => setTarjetaBn(e.target.value === '' ? 0 : parseFloat(e.target.value) || 0)} style={{ width: '100%', border: 'none', padding: '0', fontSize: '20px', fontWeight: '600', fontFamily: "'DM Mono', monospace", outline: 'none' }} />
+                  <input type="text" value={tarjetaBn === 0 ? '' : tarjetaBn.toLocaleString('es-CR')} onChange={(e) => setTarjetaBn(e.target.value === '' ? 0 : parseFloat(e.target.value.replace(/,/g, '')) || 0)} inputMode="numeric" style={{ width: '100%', border: 'none', padding: '0', fontSize: '20px', fontWeight: '600', fontFamily: "'DM Mono', monospace", outline: 'none' }} />
                   <div style={{ fontSize: '12px', color: '#9C9590', marginTop: '2px' }}>colones</div>
                 </div>
               </div>
