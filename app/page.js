@@ -268,7 +268,7 @@ export default function Home() {
             <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#E8F3EC', color: '#2a78a5' }}>Glory</span>
           </a>
 
-          <a href="/cajera" style={buttonStyle} onMouseEnter={buttonHoverEnter} onMouseLeave={buttonHoverLeave}>
+          <a href="/cierredecaja" style={buttonStyle} onMouseEnter={buttonHoverEnter} onMouseLeave={buttonHoverLeave}>
             <div style={{ width: '56px', height: '56px', background: '#E8F3EC', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <span style={{ fontSize: '26px' }}>💰</span>
             </div>
