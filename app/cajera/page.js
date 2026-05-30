@@ -337,10 +337,29 @@ export default function CajeraPage() {
               <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Cierre de caja — denominaciones</div>
             </div>
             <div style={{ padding: '20px' }}>
-              {DENOMS.map(d => (
+              {DENOMS.map((d, idx) => (
                 <div key={d} style={{ display: 'grid', gridTemplateColumns: '100px 1fr 110px', alignItems: 'center', gap: '10px', padding: '6px 0', borderBottom: '1px solid #E2DDD4' }}>
                   <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#6B6560', fontWeight: '500' }}>{fmt(d)}</div>
-                  <input type="number" value={denominaciones[d] === 0 ? '' : (denominaciones[d] || '')} onChange={(e) => handleDenomChange(d, e.target.value)} min="0" style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '15px', fontWeight: '500', textAlign: 'center', fontFamily: "'DM Mono', monospace" }} />
+                  <input
+                    type="number"
+                    ref={(el) => (window[`inputCajeraDenom${idx}`] = el)}
+                    value={denominaciones[d] === 0 ? '' : (denominaciones[d] || '')}
+                    onChange={(e) => handleDenomChange(d, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        const nextInput = window[`inputCajeraDenom${idx + 1}`];
+                        if (nextInput) nextInput.focus();
+                      }
+                      if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        const prevInput = window[`inputCajeraDenom${idx - 1}`];
+                        if (prevInput) prevInput.focus();
+                      }
+                    }}
+                    min="0"
+                    style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '15px', fontWeight: '500', textAlign: 'center', fontFamily: "'DM Mono', monospace" }}
+                  />
                   <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#2a78a5', fontWeight: '600', textAlign: 'right' }}>{fmt((denominaciones[d] || 0) * d)}</div>
                 </div>
               ))}

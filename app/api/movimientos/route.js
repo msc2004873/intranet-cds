@@ -54,6 +54,15 @@ export async function POST(request) {
     const caja = formData.get('caja');
     const archivo = formData.get('archivo');
 
+    // Validaciones
+    if (!tipo || tipo === '') throw new Error('Falta tipo');
+    if (!cajera || cajera === '') throw new Error('Falta cajera');
+    if (!caja || caja === '') throw new Error('Falta caja');
+    if (!moneda || !['colones', 'usd'].includes(moneda)) throw new Error('Moneda inválida (debe ser colones o usd)');
+
+    const montoNum = parseFloat(monto);
+    if (isNaN(montoNum) || montoNum < 0) throw new Error('Monto debe ser número positivo');
+
     let archivoUrl = null;
 
     // Guardar archivo si existe

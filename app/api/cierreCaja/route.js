@@ -42,11 +42,26 @@ export async function POST(request) {
   try {
     const data = await request.json();
 
-    if (!data.cajera || !data.caja) {
-      return Response.json(
-        { error: 'Faltan campos obligatorios: cajera y caja' },
-        { status: 400 }
-      );
+    // Validaciones
+    if (!data.cajera || data.cajera === '') throw new Error('Falta cajera');
+    if (!data.caja || data.caja === '') throw new Error('Falta caja');
+
+    const dolares = parseFloat(data.dolares) || 0;
+    const tarjetaBac = parseFloat(data.tarjetaBac) || 0;
+    const tarjetaBn = parseFloat(data.tarjetaBn) || 0;
+
+    if (dolares < 0) throw new Error('dolares no puede ser negativo');
+    if (tarjetaBac < 0) throw new Error('tarjeta BAC no puede ser negativa');
+    if (tarjetaBn < 0) throw new Error('tarjeta BN no puede ser negativa');
+
+    // Validar denominaciones
+    const denoms = [
+      'denom20000', 'denom10000', 'denom5000', 'denom2000', 'denom1000',
+      'denom500', 'denom100', 'denom50', 'denom25', 'denom10', 'denom5'
+    ];
+    for (const d of denoms) {
+      const val = parseInt(data[d]) || 0;
+      if (val < 0) throw new Error(`Denominación ${d} no puede ser negativa`);
     }
 
     const insertData = {
