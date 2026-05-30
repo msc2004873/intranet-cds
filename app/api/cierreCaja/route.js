@@ -46,6 +46,51 @@ export async function POST(request) {
     if (!data.cajera || data.cajera === '') throw new Error('Falta cajera');
     if (!data.caja || data.caja === '') throw new Error('Falta caja');
 
+    // Obtener fecha actual en Costa Rica para verificar si ya existe cierre
+    const now = new Date();
+    const crFormatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: 'America/Costa_Rica',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    });
+    const crDate = crFormatter.format(now);
+    const [m, d, y] = crDate.split('/');
+    const fechaHoy = `${y}-${m}-${d}`;
+
+    // Verificar si ya existe un cierre para esta caja en este día
+    const { data: existingCierre } = await supabase
+      .from('cierre_caja')
+      .select('id')
+      .eq('caja', data.caja)
+      .eq('fecha', fechaHoy)
+      .limit(1);
+
+    if (existingCierre && existingCierre.length > 0) {
+      return Response.json(
+        { error: `La ${data.caja} ya fue cerrada hoy. Solo se permite un cierre por día.` },
+        { status: 400 }
+      );
+    }
+
+    // Verificar si ya existe un cierre de Glory para hoy (solo si glory_json está poblado)
+    if (data.gloryList && data.gloryList.length > 0) {
+      const { data: existingGlory } = await supabase
+        .from('cierre_caja')
+        .select('id')
+        .gte('fecha_hora', `${fechaHoy}T00:00:00Z`)
+        .lte('fecha_hora', `${fechaHoy}T23:59:59Z`)
+        .not('glory_json', 'is', null)
+        .limit(1);
+
+      if (existingGlory && existingGlory.length > 0) {
+        return Response.json(
+          { error: 'El cierre de Glory ya fue realizado hoy. Solo se permite un cierre por día.' },
+          { status: 400 }
+        );
+      }
+    }
+
     const dolares = parseFloat(data.dolares) || 0;
     const tarjetaBac = parseFloat(data.tarjetaBac) || 0;
     const tarjetaBn = parseFloat(data.tarjetaBn) || 0;
