@@ -125,8 +125,8 @@ export async function POST(request) {
       hour12: false
     });
     const crDateTime = crFormatter2.format(now);
-    const [crDate, crTime] = crDateTime.split(', ');
-    const [m2, d2, y2] = crDate.split('/');
+    const [crDateWithTime, crTime] = crDateTime.split(', ');
+    const [m2, d2, y2] = crDateWithTime.split('/');
     const [h, min, s] = crTime.split(':');
 
     const tempDate = new Date(Date.UTC(parseInt(y2), parseInt(m2) - 1, parseInt(d2), parseInt(h), parseInt(min), parseInt(s)));
