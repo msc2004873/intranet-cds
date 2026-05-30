@@ -359,6 +359,7 @@ export default function CajeraPage() {
                         if (prevInput) prevInput.focus();
                       }
                     }}
+                    placeholder="0"
                     inputMode="numeric"
                     style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '15px', fontWeight: '500', textAlign: 'center', fontFamily: "'DM Mono', monospace" }}
                   />
