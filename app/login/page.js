@@ -66,7 +66,7 @@ export default function LoginPage() {
       localStorage.setItem('user', JSON.stringify(data));
 
       // Redirigir después de login exitoso
-      router.push('/');
+      router.push('/module-selection');
     } catch (err) {
       setError('Error de conexión');
       setLoading(false);
