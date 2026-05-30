@@ -49,6 +49,17 @@ export default function RevisionClinicaPage() {
     }
   }
 
+  // Detectar si el período es el actual
+  const hoy = new Date();
+  const diaHoy = hoy.getDate();
+  const mesHoy = hoy.getMonth();
+  const anoHoy = hoy.getFullYear();
+  const esActual = periodo &&
+    periodo.inicio.getMonth() === mesHoy &&
+    periodo.inicio.getFullYear() === anoHoy &&
+    diaHoy >= periodo.inicio.getDate() &&
+    diaHoy <= periodo.fin.getDate();
+
   const cierresPendientes = cierres.filter(c => !c.revision_completada);
   const cierresRevisados = cierres.filter(c => c.revision_completada);
 
@@ -77,11 +88,17 @@ export default function RevisionClinicaPage() {
         {/* Período y caja */}
         {periodo && (
           <>
-            <div style={{ background: '#E8F3EC', border: '1px solid #2a78a5', borderRadius: '12px', padding: '16px', marginBottom: '24px' }}>
+            <div style={{
+              background: esActual ? '#E8F3EC' : '#FDE8E8',
+              border: `1px solid ${esActual ? '#27AE60' : '#E74C3C'}`,
+              borderRadius: '12px',
+              padding: '16px',
+              marginBottom: '24px'
+            }}>
               <div style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', marginBottom: '6px' }}>
                 Período seleccionado
               </div>
-              <div style={{ fontSize: '16px', fontWeight: '700', color: '#2a78a5' }}>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: esActual ? '#27AE60' : '#E74C3C' }}>
                 P{periodo.num}: {periodo.inicio.toLocaleDateString('es-CR')} — {periodo.fin.toLocaleDateString('es-CR')}
               </div>
             </div>
