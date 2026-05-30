@@ -6,6 +6,20 @@ import Header from '../components/Header';
 const DENOMS = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 25, 10, 5];
 const fmt = n => '₡' + Math.round(n).toLocaleString('es-CR');
 
+const getFechaCostaRica = () => {
+  const formatter = new Intl.DateTimeFormat('es-CR', {
+    timeZone: 'America/Costa_Rica',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  const parts = formatter.formatToParts(new Date());
+  const year = parts.find(p => p.type === 'year').value;
+  const month = parts.find(p => p.type === 'month').value;
+  const day = parts.find(p => p.type === 'day').value;
+  return `${year}-${month}-${day}`;
+};
+
 export default function CajeraPage() {
   const [cajera, setCajera] = useState('');
   const [caja, setCaja] = useState('');
@@ -38,7 +52,7 @@ export default function CajeraPage() {
     setQuedaDenominaciones(init);
 
     // Setear fecha actual
-    setFecha(new Date().toISOString().split('T')[0]);
+    setFecha(getFechaCostaRica());
 
     // Pre-llenar cajera desde localStorage
     const userData = localStorage.getItem('user');
@@ -83,7 +97,7 @@ export default function CajeraPage() {
 
   async function loadSinpeDelDia() {
     try {
-      const hoy = new Date().toISOString().split('T')[0];
+      const hoy = getFechaCostaRica();
       const cajaParam = caja ? `&caja=${encodeURIComponent(caja)}` : '';
       const res = await fetch(`/api/movimientos?tipo=SINPE&fecha=${hoy}${cajaParam}`);
       const data = await res.json();
@@ -106,7 +120,7 @@ export default function CajeraPage() {
 
   async function loadGloryDelDia() {
     try {
-      const hoy = new Date().toISOString().split('T')[0];
+      const hoy = getFechaCostaRica();
       const res = await fetch(`/api/cobros-glory?cobrado=true&fecha=${hoy}`);
       const data = await res.json();
       if (Array.isArray(data)) {
@@ -126,7 +140,7 @@ export default function CajeraPage() {
 
   async function loadDepositosDelDia() {
     try {
-      const hoy = new Date().toISOString().split('T')[0];
+      const hoy = getFechaCostaRica();
       const cajaParam = caja ? `&caja=${encodeURIComponent(caja)}` : '';
       const res = await fetch(`/api/movimientos?tipo=TRANSFERENCIA&fecha=${hoy}${cajaParam}`);
       const data = await res.json();
@@ -149,7 +163,7 @@ export default function CajeraPage() {
 
   async function loadSalidasDelDia() {
     try {
-      const hoy = new Date().toISOString().split('T')[0];
+      const hoy = getFechaCostaRica();
       const cajaParam = caja ? `&caja=${encodeURIComponent(caja)}` : '';
       const res = await fetch(`/api/movimientos?tipo=SALIDA&fecha=${hoy}${cajaParam}`);
       const data = await res.json();
