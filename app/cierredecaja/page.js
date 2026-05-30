@@ -332,6 +332,8 @@ export default function CajeraPage() {
             </div>
           </div>
 
+          {caja ? (
+            <>
           {/* SECCIÓN 2: Cierre de caja */}
           <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
@@ -373,23 +375,26 @@ export default function CajeraPage() {
             </div>
           </div>
 
-          {/* SECCIÓN 3: Queda en caja */}
+          {/* SECCIÓN 3: Denominaciones al sobre */}
           <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
               <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>3</div>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Queda en caja — denominaciones</div>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Denominaciones al sobre</div>
             </div>
             <div style={{ padding: '20px' }}>
-              {DENOMS.map(d => (
-                <div key={d} style={{ display: 'grid', gridTemplateColumns: '100px 1fr 110px', alignItems: 'center', gap: '10px', padding: '6px 0', borderBottom: '1px solid #E2DDD4' }}>
-                  <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#6B6560', fontWeight: '500' }}>{fmt(d)}</div>
-                  <input type="number" value={quedaDenominaciones[d] || 0} readOnly style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #E2DDD4', borderRadius: '8px', background: '#F0EDE6', color: '#6B6560', fontFamily: "'DM Mono', monospace" }} />
-                  <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#C8A84B', fontWeight: '600', textAlign: 'right' }}>{fmt((quedaDenominaciones[d] || 0) * d)}</div>
-                </div>
-              ))}
+              {DENOMS.map(d => {
+                const sobreDenom = (denominaciones[d] || 0) - (quedaDenominaciones[d] || 0);
+                return (
+                  <div key={d} style={{ display: 'grid', gridTemplateColumns: '100px 1fr 110px', alignItems: 'center', gap: '10px', padding: '6px 0', borderBottom: '1px solid #E2DDD4' }}>
+                    <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#6B6560', fontWeight: '500' }}>{fmt(d)}</div>
+                    <input type="number" value={sobreDenom || 0} readOnly style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #E2DDD4', borderRadius: '8px', background: '#F0EDE6', color: '#6B6560', fontFamily: "'DM Mono', monospace" }} />
+                    <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#C8A84B', fontWeight: '600', textAlign: 'right' }}>{fmt((sobreDenom || 0) * d)}</div>
+                  </div>
+                );
+              })}
               <div style={{ marginTop: '14px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#FBF6E9' }}>
-                <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total queda en caja</span>
-                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#C8A84B' }}>{fmt(totalQueda)}</span>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total al sobre</span>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#C8A84B' }}>{fmt(totalSobre)}</span>
               </div>
               <div style={{ marginTop: '8px', padding: '16px 20px', background: '#2a78a5', color: 'white', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span style={{ fontSize: '12px', fontWeight: '600' }}>💰 Colones al sobre</span>
@@ -557,6 +562,12 @@ export default function CajeraPage() {
             {loading ? 'Guardando...' : 'Enviar cierre de caja'}
           </button>
         </form>
+            </>
+          ) : (
+            <div style={{ background: '#fff', border: '1.5px solid #E2DDD4', borderRadius: '12px', padding: '40px 20px', textAlign: 'center', marginTop: '24px' }}>
+              <div style={{ fontSize: '16px', color: '#6B6560', fontWeight: '600' }}>Selecciona una caja para continuar</div>
+            </div>
+          )}
       </div>
 
       {/* Toast */}
