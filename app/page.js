@@ -138,7 +138,9 @@ export default function Home() {
       'SINPE': { icon: '/sinpe-icon.svg', color: '#2a78a5', bg: '#E8F3EC' },
       'TRANSFERENCIA': { icon: '/transferencia-icon.svg', color: '#8B6914', bg: '#FBF6E9' },
       'SALIDA': { icon: '/salida-icon.svg', color: '#C0392B', bg: '#FDEDEC' },
-      'Cobro Glory': { icon: '/cobro-icon.svg', color: '#2a78a5', bg: '#E8F3EC' }
+      'Cobro Glory': { icon: '/cobro-icon.svg', color: '#2a78a5', bg: '#E8F3EC' },
+      'Cierre de Caja': { icon: '/cierre-icon.svg', color: '#27AE60', bg: '#E8F5F1' },
+      'Conteo de Caja': { icon: '/conteo-icon.svg', color: '#C8A84B', bg: '#FBF6E9' }
     };
     const config = tiposMap[tipo] || { icon: '/home-icon.svg', color: '#6B6560', bg: '#F0EDE6' };
     return config;
@@ -561,7 +563,7 @@ export default function Home() {
                         const fieldOrder = ['dolares_total', 'tarjeta_bac', 'tarjeta_bn', 'tc'];
                         fieldOrder.forEach(field => {
                           const entry = entries.find(([k]) => k === field);
-                          if (entry) displayFields.push(entry);
+                          if (entry && entry[1] !== 0 && entry[1] !== null) displayFields.push(entry);
                         });
                       } else {
                         displayFields = entries.filter(([k]) => !k.startsWith('c_') && !fieldsToHide.includes(k));
