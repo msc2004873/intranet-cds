@@ -45,6 +45,8 @@ export async function POST(request) {
     // Validaciones
     if (!data.cajera || data.cajera === '') throw new Error('Falta cajera');
     if (!data.caja || data.caja === '') throw new Error('Falta caja');
+    if (!data.fecha || data.fecha === '') throw new Error('Falta fecha');
+    if (!data.hora || data.hora === '') throw new Error('Falta hora');
 
     const dolares = parseFloat(data.dolares) || 0;
     const tarjetaBac = parseFloat(data.tarjetaBac) || 0;
@@ -64,10 +66,17 @@ export async function POST(request) {
       if (val < 0) throw new Error(`Denominación ${d} no puede ser negativa`);
     }
 
+    // Construir fecha_hora desde fecha (YYYY-MM-DD) y hora (HH:MM) en Costa Rica time
+    // El usuario entró una hora en CR (UTC-6), necesitamos convertirla a UTC para storage
+    const [hours, minutes] = data.hora.split(':');
+    const fechaUTC = new Date(`${data.fecha}T00:00:00Z`);
+    fechaUTC.setUTCHours(parseInt(hours) + 6, parseInt(minutes), 0, 0);
+    const fechaHoraUTC = fechaUTC.toISOString();
+
     const insertData = {
       cajera: data.cajera,
       caja: data.caja,
-      fecha_hora: new Date().toISOString(),
+      fecha_hora: fechaHoraUTC,
       tc: parseFloat(data.tc) || 475,
       dolares_total: parseFloat(data.dolares) || 0,
       tarjeta_bac: parseFloat(data.tarjetaBac) || 0,
