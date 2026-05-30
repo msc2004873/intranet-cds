@@ -16,8 +16,15 @@ export default function Header({ title, subtitle, showLogout = false, showModule
     }
   }, []);
 
-  const handleBack = () => {
+  const handleBack = async () => {
     if (showLogout) {
+      try {
+        // Llamar al endpoint de logout
+        await fetch('/api/auth/logout', { method: 'POST' });
+      } catch (err) {
+        console.error('Error en logout:', err);
+      }
+      // Limpiar localStorage y redirigir
       localStorage.removeItem('user');
       router.push('/login');
     } else {
