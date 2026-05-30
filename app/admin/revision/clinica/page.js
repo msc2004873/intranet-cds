@@ -16,12 +16,25 @@ export default function RevisionClinicaPage() {
 
   useEffect(() => {
     const hoy = new Date();
+    const diaHoy = hoy.getDate();
     const ano = hoy.getFullYear();
     const mes = hoy.getMonth();
+
+    // Determinar qué período contiene hoy
+    const PERIODOS = [
+      { num: 1, inicio: 1, fin: 5 },
+      { num: 2, inicio: 6, fin: 10 },
+      { num: 3, inicio: 11, fin: 15 },
+      { num: 4, inicio: 16, fin: 20 },
+      { num: 5, inicio: 21, fin: 25 },
+      { num: 6, inicio: 26, fin: 31 },
+    ];
+    const periodoActual = PERIODOS.find(p => diaHoy >= p.inicio && diaHoy <= p.fin);
+
     setPeriodo({
-      num: 1,
-      inicio: new Date(ano, mes, 1),
-      fin: new Date(ano, mes, 5),
+      num: periodoActual.num,
+      inicio: new Date(ano, mes, periodoActual.inicio),
+      fin: new Date(ano, mes, periodoActual.fin),
     });
   }, []);
 
