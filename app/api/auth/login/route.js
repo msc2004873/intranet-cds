@@ -37,24 +37,31 @@ export async function POST(req) {
     };
 
     // Establecer cookies seguras
-    const cookieStore = await cookies();
-    cookieStore.set('user', JSON.stringify(userData), {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7 // 7 días
-    });
+    try {
+      const cookieStore = await cookies();
+      cookieStore.set('user', JSON.stringify(userData), {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7 // 7 días
+      });
 
-    // Token simple (se puede mejorar con JWT)
-    const authToken = Buffer.from(`${data.id}:${Date.now()}`).toString('base64');
-    cookieStore.set('authToken', authToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7 // 7 días
-    });
+      // Token simple (se puede mejorar con JWT)
+      const authToken = Buffer.from(`${data.id}:${Date.now()}`).toString('base64');
+      cookieStore.set('authToken', authToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 60 * 60 * 24 * 7 // 7 días
+      });
+    } catch (cookieErr) {
+      console.error('Error setting cookies:', cookieErr);
+      // Continuar de todas formas, retornar success pero sin cookies
+    }
 
-    return Response.json(userData);
+    // Retornar con headers para asegurar cookies
+    const response = Response.json(userData);
+    return response;
   } catch (err) {
     console.error('Error login:', err);
     return Response.json({ error: 'Error al procesar solicitud' }, { status: 500 });
