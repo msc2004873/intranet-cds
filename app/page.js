@@ -368,7 +368,7 @@ export default function Home() {
                           onMouseEnter={(e) => e.currentTarget.style.background = '#1f5780'}
                           onMouseLeave={(e) => e.currentTarget.style.background = '#2a78a5'}
                         >
-                          🔍 Ver
+                          Ver
                         </button>
                       </td>
                     </tr>
@@ -554,22 +554,42 @@ export default function Home() {
                     {selectedLog.data && (() => {
                       const entries = Object.entries(selectedLog.data);
                       const denomFields = entries.filter(([k]) => k.startsWith('c_'));
-                      const otherFields = entries.filter(([k]) => !k.startsWith('c_') && !['id', 'created_at', 'updated_at'].includes(k));
+                      const fieldsToHide = ['id', 'created_at', 'updated_at', 'fecha_hora'];
+
+                      let displayFields = [];
+                      if (selectedLog.tipo === 'Cierre de Caja') {
+                        const fieldOrder = ['dolares_total', 'tarjeta_bac', 'tarjeta_bn', 'tc'];
+                        fieldOrder.forEach(field => {
+                          const entry = entries.find(([k]) => k === field);
+                          if (entry) displayFields.push(entry);
+                        });
+                      } else {
+                        displayFields = entries.filter(([k]) => !k.startsWith('c_') && !fieldsToHide.includes(k));
+                      }
 
                       return (
                         <>
-                          {otherFields.map(([key, value]) => (
-                            <tr key={key} style={{ borderBottom: '1px solid #E2DDD4' }}>
-                              <td style={{ padding: '10px 12px', fontSize: '12px', fontWeight: '600', color: '#6B6560', background: '#F0EDE6', width: '35%', textTransform: 'capitalize' }}>{key}</td>
-                              <td style={{ padding: '10px 12px', fontSize: '12px', color: '#1A1714', fontFamily: "'DM Mono', monospace", wordBreak: 'break-all' }}>
-                                {typeof value === 'string' || typeof value === 'number' ? value : JSON.stringify(value)}
-                              </td>
-                            </tr>
-                          ))}
+                          {displayFields.map(([key, value]) => {
+                            let label = key;
+                            let displayValue = value;
+                            if (key === 'dolares_total') label = 'Dólares';
+                            if (key === 'tarjeta_bac') label = 'Tarjeta BAC';
+                            if (key === 'tarjeta_bn') label = 'Tarjeta BN';
+                            if (key === 'tc') label = 'Tipo de Cambio';
+                            if ((key === 'dolares_total' || key === 'tarjeta_bac' || key === 'tarjeta_bn') && typeof value === 'number') {
+                              displayValue = '₡' + value.toLocaleString('es-CR');
+                            }
+                            return (
+                              <tr key={key} style={{ borderBottom: '1px solid #E2DDD4' }}>
+                                <td style={{ padding: '10px 12px', fontSize: '12px', fontWeight: '600', color: '#6B6560', background: '#F0EDE6', width: '35%', textTransform: 'capitalize' }}>{label}</td>
+                                <td style={{ padding: '10px 12px', fontSize: '12px', color: '#1A1714', fontFamily: "'DM Mono', monospace" }}>{displayValue}</td>
+                              </tr>
+                            );
+                          })}
                           {denomFields.length > 0 && (
                             <>
                               <tr style={{ borderBottom: '1px solid #E2DDD4', background: '#E8F3EC' }}>
-                                <td colSpan="2" style={{ padding: '10px 12px', fontSize: '12px', fontWeight: '600', color: '#2a78a5' }}>📊 Denominaciones</td>
+                                <td colSpan="2" style={{ padding: '10px 12px', fontSize: '12px', fontWeight: '600', color: '#2a78a5' }}>Denominaciones</td>
                               </tr>
                               {denomFields.map(([key, value]) => {
                                 const denom = key.replace('c_', '');
