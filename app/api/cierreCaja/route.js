@@ -110,8 +110,7 @@ export async function POST(request) {
     }
 
     // Obtener fecha_hora actual en Costa Rica
-    const now = new Date();
-    const crFormatter = new Intl.DateTimeFormat('en-US', {
+    const crFormatter2 = new Intl.DateTimeFormat('en-US', {
       timeZone: 'America/Costa_Rica',
       year: 'numeric',
       month: '2-digit',
@@ -121,12 +120,12 @@ export async function POST(request) {
       second: '2-digit',
       hour12: false
     });
-    const crDateTime = crFormatter.format(now);
+    const crDateTime = crFormatter2.format(now);
     const [crDate, crTime] = crDateTime.split(', ');
-    const [m, d, y] = crDate.split('/');
+    const [m2, d2, y2] = crDate.split('/');
     const [h, min, s] = crTime.split(':');
 
-    const tempDate = new Date(Date.UTC(parseInt(y), parseInt(m) - 1, parseInt(d), parseInt(h), parseInt(min), parseInt(s)));
+    const tempDate = new Date(Date.UTC(parseInt(y2), parseInt(m2) - 1, parseInt(d2), parseInt(h), parseInt(min), parseInt(s)));
     const fechaHoraUTC = new Date(tempDate.getTime() + (6 * 60 * 60 * 1000)).toISOString();
 
     const insertData = {
