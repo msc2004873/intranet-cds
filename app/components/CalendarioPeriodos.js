@@ -118,7 +118,7 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
       </div>
 
       {/* Grid de días con períodos agrupados */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '6px 0' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '3px 4px' }}>
         {/* Espacios vacíos al inicio */}
         {dias.map((dia, idx) => {
           if (dia === null) {
