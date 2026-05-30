@@ -118,7 +118,7 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
       </div>
 
       {/* Grid de días con períodos agrupados */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '3px 4px' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '3px 0' }}>
         {/* Espacios vacíos al inicio */}
         {dias.map((dia, idx) => {
           if (dia === null) {
@@ -155,7 +155,8 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
                 borderLeft: esInicioPeriodo ? `2px solid ${borderColor}` : 'none',
                 borderRight: esFinPeriodo ? `2px solid ${borderColor}` : 'none',
                 borderRadius: esInicioPeriodo ? '8px 0 0 8px' : esFinPeriodo ? '0 8px 8px 0' : '0',
-                boxShadow: (esHoy || esSeleccionado) ? '0 2px 6px rgba(0,0,0,0.15)' : 'none'
+                boxShadow: (esHoy || esSeleccionado) ? '0 2px 6px rgba(0,0,0,0.15)' : 'none',
+                marginRight: esFinPeriodo ? '4px' : '0'
               }}
             >
               {dia}
