@@ -452,7 +452,7 @@ export default function CobroGloryPage() {
     }
 
     try {
-      const esTarjeta = selectMetodo === 'Tarjeta BAC' || selectMetodo === 'Tarjeta BN';
+      const esTarjeta = selectMetodo === 'Tarjeta BAC';
       const montoFinal = esTarjeta ? parseFloat(inputMonto) * 1.13 : parseFloat(inputMonto);
       const idsAActualizar = Array.isArray(pacienteEnModal.id) ? pacienteEnModal.id : [pacienteEnModal.id];
 
@@ -854,7 +854,6 @@ export default function CobroGloryPage() {
                   <option value="">Seleccionar...</option>
                   <option value="Efectivo">Efectivo</option>
                   <option value="Tarjeta BAC">Tarjeta BAC</option>
-                  <option value="Tarjeta BN">Tarjeta BN</option>
                   <option value="SINPE">SINPE</option>
                   <option value="Transferencia">Transferencia</option>
                 </select>
@@ -869,7 +868,7 @@ export default function CobroGloryPage() {
                     <span style={{ color: '#6B6560' }}>Subtotal:</span>
                     <span style={{ fontWeight: '600', color: '#1A1714' }}>₡{parseFloat(inputMonto).toLocaleString('es-CR')}</span>
                   </div>
-                  {(selectMetodo === 'Tarjeta BAC' || selectMetodo === 'Tarjeta BN') && (
+                  {selectMetodo === 'Tarjeta BAC' && (
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '13px' }}>
                       <span style={{ color: '#6B6560' }}>Comisión (13%):</span>
                       <span style={{ fontWeight: '600', color: '#E67E22' }}>₡{(parseFloat(inputMonto) * 0.13).toLocaleString('es-CR', { maximumFractionDigits: 0 })}</span>
@@ -877,7 +876,7 @@ export default function CobroGloryPage() {
                   )}
                   <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '8px', borderTop: '1px solid #E2DDD4', fontSize: '14px' }}>
                     <span style={{ color: '#1A1714', fontWeight: '600' }}>Total:</span>
-                    <span style={{ fontWeight: '700', color: '#2a78a5', fontSize: '16px' }}>₡{((selectMetodo === 'Tarjeta BAC' || selectMetodo === 'Tarjeta BN') ? parseFloat(inputMonto) * 1.13 : parseFloat(inputMonto)).toLocaleString('es-CR', { maximumFractionDigits: 0 })}</span>
+                    <span style={{ fontWeight: '700', color: '#2a78a5', fontSize: '16px' }}>₡{(selectMetodo === 'Tarjeta BAC' ? parseFloat(inputMonto) * 1.13 : parseFloat(inputMonto)).toLocaleString('es-CR', { maximumFractionDigits: 0 })}</span>
                   </div>
                 </div>
               )}
