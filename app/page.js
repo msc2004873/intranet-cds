@@ -3,6 +3,20 @@
 import { useEffect, useState } from 'react';
 import Header from './components/Header';
 
+const getFechaCostaRica = () => {
+  const formatter = new Intl.DateTimeFormat('es-CR', {
+    timeZone: 'America/Costa_Rica',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  });
+  const parts = formatter.formatToParts(new Date());
+  const year = parts.find(p => p.type === 'year').value;
+  const month = parts.find(p => p.type === 'month').value;
+  const day = parts.find(p => p.type === 'day').value;
+  return `${year}-${month}-${day}`;
+};
+
 const buttonStyle = {
   background: '#FFFFFF',
   border: '1.5px solid #E2DDD4',
@@ -36,7 +50,7 @@ export default function Home() {
   const [logs, setLogs] = useState([]);
   const [selectedLog, setSelectedLog] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(getFechaCostaRica());
   const [periodo, setPeriodo] = useState(null);
   const [esPrimerDia, setEsPrimerDia] = useState(false);
   const [tcActual, setTcActual] = useState(null);
