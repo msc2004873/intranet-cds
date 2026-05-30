@@ -66,7 +66,7 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
     if (esInicio && esFin) return { borderRadius: '6px' };
     if (esInicio) return { borderRadius: '6px 0 0 6px' };
     if (esFin) return { borderRadius: '0 6px 6px 0' };
-    return { borderRadius: '0px' };
+    return {};
   };
 
   return (
@@ -133,9 +133,10 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
 
           const getBorderStyle = () => {
             if (!periodo) return {};
+            const barColor = esHoy ? '#27AE60' : esSeleccionado ? '#E74C3C' : '#E2DDD4';
             return {
-              borderTop: esHoy ? '3px solid #1A1714' : esSeleccionado ? '3px solid #9C9590' : '1px solid #E2DDD4',
-              borderBottom: '1px solid #E2DDD4',
+              borderTop: esInicioPeriodo ? `3px solid ${barColor}` : 'none',
+              borderBottom: esFinPeriodo ? '1px solid #E2DDD4' : 'none',
               borderLeft: esInicioPeriodo ? '1px solid #E2DDD4' : 'none',
               borderRight: esFinPeriodo ? '1px solid #E2DDD4' : 'none',
             };
@@ -158,7 +159,7 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
                 justifyContent: 'center',
                 transition: 'all 0.2s',
                 boxShadow: periodo ? '0 2px 4px rgba(0,0,0,0.1)' : 'none',
-                paddingTop: (esHoy || esSeleccionado) ? '2px' : '0',
+                paddingTop: esInicioPeriodo && (esHoy || esSeleccionado) ? '2px' : '0',
                 ...radiusStyle,
                 ...getBorderStyle()
               }}
