@@ -17,14 +17,23 @@ const obtenerPeriodo = (dia) => {
 
 export default function CalendarioPeriodos({ onSelectPeriodo }) {
   const [mesOffset, setMesOffset] = useState(0);
+  const [periodoSeleccionado, setPeriodoSeleccionado] = useState(null);
 
   const hoy = new Date();
-  const fechaActual = new Date(hoy.getFullYear(), hoy.getMonth() + mesOffset, 1);
+  const diaHoy = hoy.getDate();
+  const mesHoy = hoy.getMonth();
+  const anoHoy = hoy.getFullYear();
+
+  const fechaActual = new Date(anoHoy, mesHoy + mesOffset, 1);
   const ano = fechaActual.getFullYear();
   const mes = fechaActual.getMonth();
   const ultimoDiaMes = new Date(ano, mes + 1, 0).getDate();
   const primerDia = new Date(ano, mes, 1).getDay();
   const primerDiaLunes = (primerDia === 0 ? 6 : primerDia - 1);
+
+  // Detectar período actual (solo si es el mes actual)
+  const esMessActual = mesOffset === 0 && ano === anoHoy;
+  const periodoActual = esMessActual ? obtenerPeriodo(diaHoy) : null;
 
   const nombreMes = fechaActual.toLocaleDateString('es-CR', { month: 'long', year: 'numeric' });
   const diasSemana = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
@@ -38,6 +47,7 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
   }
 
   const handleSelectPeriodo = (periodo) => {
+    setPeriodoSeleccionado(periodo.num);
     const inicio = new Date(ano, mes, periodo.inicio);
     const fin = new Date(ano, mes, periodo.fin);
     onSelectPeriodo({
@@ -116,6 +126,8 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
 
           const periodo = obtenerPeriodo(dia);
           const radiusStyle = getRadiusStyle(dia, periodo);
+          const esHoy = periodoActual && periodo?.num === periodoActual.num;
+          const esSeleccionado = periodoSeleccionado === periodo?.num && !esHoy;
 
           return (
             <div
@@ -133,6 +145,8 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
                 alignItems: 'center',
                 justifyContent: 'center',
                 transition: 'opacity 0.2s',
+                borderTop: esHoy ? '3px solid #1A1714' : esSeleccionado ? '3px solid #9C9590' : 'none',
+                paddingTop: (esHoy || esSeleccionado) ? '2px' : '0',
                 ...radiusStyle
               }}
               onMouseEnter={(e) => {
