@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 const PERIODOS = [
   { num: 1, inicio: 1, fin: 5, color: '#FF6B6B' },
