@@ -357,6 +357,8 @@ export default function CobroGloryPage() {
           </div>
         </div>
 
+        {caja ? (
+          <>
         {/* SECCIÓN 1: Ingresar paciente */}
         <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
@@ -576,6 +578,12 @@ export default function CobroGloryPage() {
             )}
           </div>
         </div>
+          </>
+        ) : (
+          <div style={{ background: '#fff', border: '1.5px solid #E2DDD4', borderRadius: '12px', padding: '40px 20px', textAlign: 'center', marginTop: '24px' }}>
+            <div style={{ fontSize: '16px', color: '#6B6560', fontWeight: '600' }}>Selecciona una caja para continuar</div>
+          </div>
+        )}
 
       </div>
 

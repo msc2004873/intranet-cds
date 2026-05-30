@@ -163,6 +163,8 @@ export default function ConteoPage() {
           </div>
         </div>
 
+        {caja ? (
+          <>
         {/* Fecha y Hora */}
         <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', padding: '16px 20px', textAlign: 'center' }}>
           <div style={{ fontSize: '14px', fontWeight: '600', color: '#6B6560' }}>📅 Conteo de caja del <span style={{ color: '#2a78a5' }}>{fechaHoraFormato || 'cargando...'}</span></div>
@@ -299,6 +301,12 @@ export default function ConteoPage() {
             {loading ? '⏳ Guardando...' : '✓ Guardar conteo'}
           </button>
         </div>
+          </>
+        ) : (
+          <div style={{ background: '#fff', border: '1.5px solid #E2DDD4', borderRadius: '12px', padding: '40px 20px', textAlign: 'center', marginTop: '24px' }}>
+            <div style={{ fontSize: '16px', color: '#6B6560', fontWeight: '600' }}>Selecciona una caja para continuar</div>
+          </div>
+        )}
       </div>
 
       {/* Toast */}
