@@ -583,7 +583,9 @@ export default function Home() {
                               'tc': 'Tipo de Cambio'
                             };
                             if (labelMap[key]) label = labelMap[key];
-                            if ((key === 'dolares_total' || key === 'tarjeta_bac' || key === 'tarjeta_bn') && typeof value === 'number') {
+                            if (key === 'dolares_total' && typeof value === 'number') {
+                              displayValue = 'US$' + value.toLocaleString('es-CR');
+                            } else if ((key === 'tarjeta_bac' || key === 'tarjeta_bn') && typeof value === 'number') {
                               displayValue = '₡' + value.toLocaleString('es-CR');
                             }
                             return (
