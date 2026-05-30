@@ -148,10 +148,7 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
             const borderColor = getBorderColor();
 
             return {
-              borderTop: esInicioPeriodo ? `2px solid ${borderColor}` : 'none',
-              borderBottom: esFinPeriodo ? `2px solid ${borderColor}` : 'none',
-              borderLeft: esInicioPeriodo ? `2px solid ${borderColor}` : 'none',
-              borderRight: esFinPeriodo ? `2px solid ${borderColor}` : 'none',
+              border: `2px solid ${borderColor}`,
             };
           };
 
