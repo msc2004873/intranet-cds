@@ -216,9 +216,22 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
                     {label}
                   </div>
                   <input
+                    ref={(el) => (window[`inputDenom${idx}`] = el)}
                     type="text"
-                    value={denominaciones[denom] === 0 || denominaciones[denom] === undefined ? '' : (denominaciones[denom] || 0).toLocaleString('es-CR')}
+                    value={valor === 0 ? '' : valor.toLocaleString('es-CR')}
                     onChange={(e) => handleDenomChange(denom, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        const nextInput = window[`inputDenom${idx + 1}`];
+                        if (nextInput) nextInput.focus();
+                      }
+                      if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        const prevInput = window[`inputDenom${idx - 1}`];
+                        if (prevInput) prevInput.focus();
+                      }
+                    }}
                     placeholder="0"
                     inputMode="numeric"
                     style={{
