@@ -37,6 +37,7 @@ export default function FormularioRevision({ cierre, onVolver, onGuardar }) {
   const [transfRevisadas, setTransfRevisadas] = useState([]);
   const [salidEvaluadas, setSalidEvaluadas] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     cargarDetalles();
@@ -55,6 +56,11 @@ export default function FormularioRevision({ cierre, onVolver, onGuardar }) {
       console.error('Error cargando detalles:', err);
     }
   }
+
+  const showToast = (msg, type = 'info') => {
+    setToast({ msg, type });
+    setTimeout(() => setToast(null), 3000);
+  };
 
   async function guardarRevision() {
     setLoading(true);
@@ -82,11 +88,14 @@ export default function FormularioRevision({ cierre, onVolver, onGuardar }) {
       });
 
       if (res.ok) {
-        onGuardar();
+        showToast('✅ Revisión guardada correctamente', 'success');
+        setTimeout(() => onGuardar(), 500);
+      } else {
+        showToast('❌ Error al guardar la revisión', 'error');
       }
     } catch (err) {
       console.error('Error guardando revisión:', err);
-      alert('Error al guardar la revisión');
+      showToast('❌ Error de conexión', 'error');
     } finally {
       setLoading(false);
     }
@@ -95,6 +104,13 @@ export default function FormularioRevision({ cierre, onVolver, onGuardar }) {
   const totalEnCaja = Object.entries(denominaciones).reduce((sum, [denom, cant]) => {
     return sum + (parseInt(denom) * parsearMiles(cant));
   }, 0);
+
+  const totalTarjetas = parsearMiles(tarjetas.bac) + parsearMiles(tarjetas.bn);
+  const totalDolares = parsearMiles(dolares) * 475;
+  const totalSinpe = sinpeRevisado.reduce((sum, s) => sum + parsearMiles(s.monto_revisado), 0);
+  const totalTransf = transfRevisadas.reduce((sum, t) => sum + parsearMiles(t.monto_revisado), 0);
+  const totalSalidas = salidEvaluadas.reduce((sum, s) => sum + s.monto, 0);
+  const granTotal = totalEnCaja + totalTarjetas + totalDolares + totalSinpe + totalTransf + totalSalidas;
 
   const fmt = n => '₡' + formatearMiles(Math.round(n));
 
@@ -275,9 +291,9 @@ export default function FormularioRevision({ cierre, onVolver, onGuardar }) {
         </div>
 
         {/* 4. SINPE */}
-        {sinpeRevisado.length > 0 && (
-          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px' }}>
-            <div style={{ background: '#F0EDE6', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px' }}>
+          <div style={{ background: '#F0EDE6', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{ background: '#2a78a5', color: 'white', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px' }}>
                 4
               </div>
@@ -285,8 +301,13 @@ export default function FormularioRevision({ cierre, onVolver, onGuardar }) {
                 SINPE
               </div>
             </div>
-            <div style={{ padding: '16px' }}>
-              {sinpeRevisado.map((sinpe, i) => (
+            <div style={{ fontSize: '12px', fontWeight: '600', color: '#2a78a5', fontFamily: "'DM Mono', monospace" }}>
+              {fmt(totalSinpe)}
+            </div>
+          </div>
+          <div style={{ padding: '16px' }}>
+            {sinpeRevisado.length > 0 ? (
+              sinpeRevisado.map((sinpe, i) => (
                 <div key={i} style={{ marginBottom: i < sinpeRevisado.length - 1 ? '16px' : '0', paddingBottom: '16px', borderBottom: i < sinpeRevisado.length - 1 ? '1px solid #E2DDD4' : 'none' }}>
                   {sinpe.archivo_url && (
                     <img src={sinpe.archivo_url} alt="SINPE" style={{ width: '100%', maxHeight: '120px', objectFit: 'cover', borderRadius: '6px', marginBottom: '8px' }} />
@@ -311,15 +332,19 @@ export default function FormularioRevision({ cierre, onVolver, onGuardar }) {
                     placeholder="0"
                   />
                 </div>
-              ))}
-            </div>
+              ))
+            ) : (
+              <div style={{ padding: '16px', textAlign: 'center', color: '#9C9590', fontSize: '12px' }}>
+                No se registraron SINPE — ₡0
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
         {/* 5. Transferencias */}
-        {transfRevisadas.length > 0 && (
-          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px' }}>
-            <div style={{ background: '#F0EDE6', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px' }}>
+          <div style={{ background: '#F0EDE6', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{ background: '#2a78a5', color: 'white', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px' }}>
                 5
               </div>
@@ -327,8 +352,13 @@ export default function FormularioRevision({ cierre, onVolver, onGuardar }) {
                 Transferencias
               </div>
             </div>
-            <div style={{ padding: '16px' }}>
-              {transfRevisadas.map((transf, i) => (
+            <div style={{ fontSize: '12px', fontWeight: '600', color: '#2a78a5', fontFamily: "'DM Mono', monospace" }}>
+              {fmt(totalTransf)}
+            </div>
+          </div>
+          <div style={{ padding: '16px' }}>
+            {transfRevisadas.length > 0 ? (
+              transfRevisadas.map((transf, i) => (
                 <div key={i} style={{ marginBottom: i < transfRevisadas.length - 1 ? '16px' : '0', paddingBottom: '16px', borderBottom: i < transfRevisadas.length - 1 ? '1px solid #E2DDD4' : 'none' }}>
                   {transf.archivo_url && (
                     <img src={transf.archivo_url} alt="Transferencia" style={{ width: '100%', maxHeight: '120px', objectFit: 'cover', borderRadius: '6px', marginBottom: '8px' }} />
@@ -353,15 +383,19 @@ export default function FormularioRevision({ cierre, onVolver, onGuardar }) {
                     placeholder="0"
                   />
                 </div>
-              ))}
-            </div>
+              ))
+            ) : (
+              <div style={{ padding: '16px', textAlign: 'center', color: '#9C9590', fontSize: '12px' }}>
+                No se registraron Transferencias — ₡0
+              </div>
+            )}
           </div>
-        )}
+        </div>
 
         {/* 6. Salidas de Caja */}
-        {salidEvaluadas.length > 0 && (
-          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px' }}>
-            <div style={{ background: '#F0EDE6', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px' }}>
+          <div style={{ background: '#F0EDE6', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
               <div style={{ background: '#2a78a5', color: 'white', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px' }}>
                 6
               </div>
@@ -369,8 +403,13 @@ export default function FormularioRevision({ cierre, onVolver, onGuardar }) {
                 Salidas de Caja
               </div>
             </div>
-            <div style={{ padding: '16px' }}>
-              {salidEvaluadas.map((salida, i) => (
+            <div style={{ fontSize: '12px', fontWeight: '600', color: '#2a78a5', fontFamily: "'DM Mono', monospace" }}>
+              {fmt(totalSalidas)}
+            </div>
+          </div>
+          <div style={{ padding: '16px' }}>
+            {salidEvaluadas.length > 0 ? (
+              salidEvaluadas.map((salida, i) => (
                 <div key={i} style={{ marginBottom: i < salidEvaluadas.length - 1 ? '16px' : '0', paddingBottom: '16px', borderBottom: i < salidEvaluadas.length - 1 ? '1px solid #E2DDD4' : 'none' }}>
                   {salida.archivo_url && (
                     <img src={salida.archivo_url} alt="Salida" style={{ width: '100%', maxHeight: '120px', objectFit: 'cover', borderRadius: '6px', marginBottom: '8px' }} />
@@ -405,10 +444,46 @@ export default function FormularioRevision({ cierre, onVolver, onGuardar }) {
                     {salida.aprobado ? '✅ Aprobada' : '⬜ Aprobar'}
                   </button>
                 </div>
-              ))}
+              ))
+            ) : (
+              <div style={{ padding: '16px', textAlign: 'center', color: '#9C9590', fontSize: '12px' }}>
+                No se registraron Salidas — ₡0
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Resumen */}
+        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px' }}>
+          <div style={{ background: '#F0EDE6', padding: '14px 16px', fontSize: '13px', fontWeight: '700', color: '#1A1714' }}>
+            📊 Resumen de Revisión
+          </div>
+          <div style={{ padding: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+              <div style={{ fontSize: '12px', color: '#6B6560' }}>En caja</div>
+              <div style={{ fontSize: '12px', fontWeight: '600', color: '#1A1714', textAlign: 'right', fontFamily: "'DM Mono', monospace" }}>{fmt(totalEnCaja)}</div>
+
+              <div style={{ fontSize: '12px', color: '#6B6560' }}>Tarjetas</div>
+              <div style={{ fontSize: '12px', fontWeight: '600', color: '#1A1714', textAlign: 'right', fontFamily: "'DM Mono', monospace" }}>{fmt(totalTarjetas)}</div>
+
+              <div style={{ fontSize: '12px', color: '#6B6560' }}>Dólares (USD)</div>
+              <div style={{ fontSize: '12px', fontWeight: '600', color: '#1A1714', textAlign: 'right', fontFamily: "'DM Mono', monospace" }}>{fmt(totalDolares)}</div>
+
+              <div style={{ fontSize: '12px', color: '#6B6560' }}>SINPE</div>
+              <div style={{ fontSize: '12px', fontWeight: '600', color: '#1A1714', textAlign: 'right', fontFamily: "'DM Mono', monospace" }}>{fmt(totalSinpe)}</div>
+
+              <div style={{ fontSize: '12px', color: '#6B6560' }}>Transferencias</div>
+              <div style={{ fontSize: '12px', fontWeight: '600', color: '#1A1714', textAlign: 'right', fontFamily: "'DM Mono', monospace" }}>{fmt(totalTransf)}</div>
+
+              <div style={{ fontSize: '12px', color: '#6B6560' }}>Salidas</div>
+              <div style={{ fontSize: '12px', fontWeight: '600', color: '#1A1714', textAlign: 'right', fontFamily: "'DM Mono', monospace" }}>{fmt(totalSalidas)}</div>
+            </div>
+            <div style={{ borderTop: '2px solid #E2DDD4', paddingTop: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ fontSize: '13px', fontWeight: '700', color: '#2a78a5' }}>TOTAL GENERAL</div>
+              <div style={{ fontSize: '13px', fontWeight: '700', color: '#2a78a5', textAlign: 'right', fontFamily: "'DM Mono', monospace" }}>{fmt(granTotal)}</div>
             </div>
           </div>
-        )}
+        </div>
 
         {/* Botones */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '24px', marginBottom: '24px' }}>
@@ -444,6 +519,28 @@ export default function FormularioRevision({ cierre, onVolver, onGuardar }) {
             {loading ? '⏳ Guardando...' : '✓ Guardar conteo'}
           </button>
         </div>
+
+        {/* Toast */}
+        {toast && (
+          <div style={{
+            position: 'fixed',
+            bottom: '20px',
+            right: '20px',
+            background: toast.type === 'success' ? '#E8F3EC' : toast.type === 'error' ? '#FDEDEC' : '#F0EDE6',
+            border: `1.5px solid ${toast.type === 'success' ? '#27AE60' : toast.type === 'error' ? '#E74C3C' : '#E2DDD4'}`,
+            borderRadius: '8px',
+            padding: '14px 16px',
+            color: toast.type === 'success' ? '#27AE60' : toast.type === 'error' ? '#C0392B' : '#6B6560',
+            fontSize: '13px',
+            fontWeight: '600',
+            maxWidth: '300px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+            zIndex: 9999,
+            animation: 'slideIn 0.3s ease-out'
+          }}>
+            {toast.msg}
+          </div>
+        )}
       </div>
     </div>
   );
