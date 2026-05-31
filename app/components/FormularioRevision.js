@@ -160,353 +160,318 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
       <div style={{ flex: 1, maxWidth: '720px', margin: '0 auto', padding: '24px 16px', width: '100%', overflowY: 'auto' }}>
 
         {/* Info de Revisión */}
-        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px' }}>
-          <div style={{ background: '#F0EDE6', padding: '14px 16px', fontSize: '13px', fontWeight: '700', color: '#1A1714' }}>
-            📋 Info de Revisión
+        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
+            <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>ℹ</div>
+            <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Información de revisión</div>
           </div>
-          <div style={{ padding: '16px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <div>
-                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
-                  Cajera
-                </label>
-                <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714' }}>
-                  {cierre?.cajera || '—'}
-                </div>
+          <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Cajera</label>
+              <div style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px', background: '#F0EDE6', color: '#1A1714', fontWeight: '600' }}>
+                {cierre?.cajera || '—'}
               </div>
-              <div>
-                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
-                  Revisa
-                </label>
-                <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714' }}>
-                  {usuarioActual?.nombre || '—'}
-                </div>
+            </div>
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Revisa</label>
+              <div style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px', background: '#F0EDE6', color: '#1A1714', fontWeight: '600' }}>
+                {usuarioActual?.nombre || '—'}
               </div>
-              <div>
-                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
-                  Fecha
-                </label>
-                <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714', fontFamily: "'DM Mono', monospace" }}>
-                  {cierre?.fecha_hora ? new Date(cierre.fecha_hora).toLocaleDateString('es-CR') : '—'}
-                </div>
-              </div>
-              <div>
-                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
-                  Período
-                </label>
-                <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714' }}>
-                  P{periodo?.num || '—'}
-                </div>
-              </div>
-              <div>
-                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
-                  Hora cierre
-                </label>
-                <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714', fontFamily: "'DM Mono', monospace" }}>
-                  {cierre?.fecha_hora ? new Date(cierre.fecha_hora).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }) : '—'}
-                </div>
-              </div>
-              <div>
-                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
-                  TC Período
-                </label>
-                <div style={{ fontSize: '13px', fontWeight: '600', color: '#2a78a5' }}>
-                  ₡{tipoCambio}
-                </div>
-              </div>
+            </div>
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Fecha</label>
+              <input type="text" value={cierre?.fecha_hora ? new Date(cierre.fecha_hora).toLocaleDateString('es-CR') : '—'} readOnly style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', background: '#F0EDE6', color: '#6B6560', fontFamily: "'DM Mono', monospace" }} />
+            </div>
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Período</label>
+              <input type="text" value={`P${periodo?.num || '—'}`} readOnly style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', background: '#F0EDE6', color: '#6B6560' }} />
+            </div>
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Hora cierre</label>
+              <input type="text" value={cierre?.fecha_hora ? new Date(cierre.fecha_hora).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }) : '—'} readOnly style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', background: '#F0EDE6', color: '#6B6560', fontFamily: "'DM Mono', monospace" }} />
+            </div>
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>TC Período</label>
+              <input type="number" value={tipoCambio} readOnly style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', background: '#F0EDE6', color: '#6B6560', fontSize: '14px', fontFamily: "'DM Mono', monospace", fontWeight: '600' }} />
             </div>
           </div>
         </div>
 
         {/* 1. Denominaciones */}
-        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px' }}>
-          <div style={{ background: '#F0EDE6', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ background: '#2a78a5', color: 'white', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px' }}>
-              1
-            </div>
-            <div style={{ fontSize: '13px', fontWeight: '700', color: '#1A1714' }}>
-              Cierre de caja — denominaciones
-            </div>
+        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
+            <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>1</div>
+            <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Cierre de caja — denominaciones</div>
           </div>
 
-          <div style={{ padding: '16px' }}>
-            {[20000, 10000, 5000, 2000, 1000, 500, 100, 50, 25, 10, 5].map(denom => {
+          <div style={{ padding: '20px' }}>
+            {[20000, 10000, 5000, 2000, 1000, 500, 100, 50, 25, 10, 5].map((denom, idx) => {
               const valor = parsearMiles(denominaciones[denom]);
               const subtotal = parseInt(denom) * valor;
               const label = denom >= 1000 ? `₡${(denom / 1000).toFixed(0)}k` : `₡${denom}`;
 
               return (
-                <div key={denom} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '12px 0', borderBottom: '1px solid #E2DDD4' }}>
-                  <label style={{ fontSize: '13px', fontWeight: '500', color: '#6B6560', minWidth: '60px' }}>
+                <div key={denom} style={{ display: 'grid', gridTemplateColumns: '100px 1fr 110px', alignItems: 'center', gap: '10px', padding: '6px 0', borderBottom: '1px solid #E2DDD4' }}>
+                  <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#6B6560', fontWeight: '500' }}>
                     {label}
-                  </label>
+                  </div>
                   <input
                     type="text"
-                    value={denominaciones[denom]}
+                    value={denominaciones[denom] === 0 || denominaciones[denom] === undefined ? '' : (denominaciones[denom] || 0).toLocaleString('es-CR')}
                     onChange={(e) => handleDenomChange(denom, e.target.value)}
-                    style={{
-                      width: '120px',
-                      padding: '8px 12px',
-                      border: '1px solid #E2DDD4',
-                      borderRadius: '6px',
-                      fontSize: '12px',
-                      fontFamily: "'DM Mono', monospace",
-                      textAlign: 'center',
-                      background: '#fff',
-                    }}
                     placeholder="0"
+                    inputMode="numeric"
+                    style={{
+                      width: '100%',
+                      padding: '8px 10px',
+                      border: '1.5px solid #E2DDD4',
+                      borderRadius: '8px',
+                      fontSize: '15px',
+                      fontWeight: '500',
+                      textAlign: 'center',
+                      fontFamily: "'DM Mono', monospace"
+                    }}
                   />
-                  <div style={{ width: '70px', textAlign: 'right', fontSize: '12px', fontWeight: '600', color: '#C8A84B', fontFamily: "'DM Mono', monospace" }}>
+                  <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#2a78a5', fontWeight: '600', textAlign: 'right' }}>
                     {fmt(subtotal)}
                   </div>
                 </div>
               );
             })}
 
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 0', marginTop: '8px', fontWeight: '700', color: '#2a78a5', fontSize: '14px' }}>
-              <span>TOTAL EN CAJA</span>
-              <span style={{ fontFamily: "'DM Mono', monospace" }}>{fmt(totalEnCaja)}</span>
+            <div style={{ marginTop: '14px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#E8F3EC' }}>
+              <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total en caja</span>
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#2a78a5' }}>{fmt(totalEnCaja)}</span>
             </div>
           </div>
         </div>
 
         {/* 2. Dólares */}
-        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px' }}>
-          <div style={{ background: '#F0EDE6', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ background: '#2a78a5', color: 'white', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px' }}>
-              2
-            </div>
-            <div style={{ fontSize: '13px', fontWeight: '700', color: '#1A1714' }}>
-              Dólares
-            </div>
+        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
+            <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>2</div>
+            <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Dólares</div>
           </div>
-          <div style={{ padding: '16px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
-              <div>
-                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
-                  Total dólares ($)
-                </label>
-                <input
-                  type="text"
-                  value={dolares}
-                  onChange={(e) => handleDolaresChange(e.target.value)}
-                  style={{
-                    width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #E2DDD4',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    fontFamily: "'DM Mono', monospace",
-                  }}
-                  placeholder="0"
-                />
-              </div>
-              <div style={{ display: 'flex', alignItems: 'flex-end', gap: '8px' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', display: 'block', marginBottom: '6px', textTransform: 'uppercase' }}>
-                    Equivalente en colones
-                  </label>
-                  <div style={{ padding: '8px 12px', background: '#E8F3EC', borderRadius: '6px', fontSize: '12px', fontWeight: '600', color: '#2a78a5' }}>
-                    ×{tipoCambio}
-                  </div>
-                </div>
-                <div style={{ fontSize: '13px', fontWeight: '700', color: '#2a78a5', fontFamily: "'DM Mono', monospace", marginBottom: '0px' }}>
-                  {fmt(parsearMiles(dolares) * tipoCambio)}
-                </div>
+          <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: '1fr 80px 1fr', gap: '12px', alignItems: 'end' }}>
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total dólares ($)</label>
+              <input
+                type="text"
+                value={dolares === 0 ? '' : dolares.toLocaleString('es-CR')}
+                onChange={(e) => handleDolaresChange(e.target.value)}
+                placeholder="0"
+                inputMode="decimal"
+                style={{
+                  width: '100%',
+                  padding: '10px 12px',
+                  border: '1.5px solid #E2DDD4',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontFamily: "'DM Mono', monospace",
+                }}
+              />
+            </div>
+            <div style={{ padding: '10px 12px', background: '#E8F3EC', borderRadius: '8px', fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#2a78a5', fontWeight: '600', textAlign: 'center' }}>
+              ×{tipoCambio}
+            </div>
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Equivalente en colones</label>
+              <div style={{ padding: '10px 12px', background: '#E8F3EC', borderRadius: '8px', fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#2a78a5', fontWeight: '600' }}>
+                {fmt(parsearMiles(dolares) * tipoCambio)}
               </div>
             </div>
           </div>
         </div>
 
         {/* 3. Tarjetas */}
-        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px' }}>
-          <div style={{ background: '#F0EDE6', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <div style={{ background: '#2a78a5', color: 'white', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px' }}>
-              3
-            </div>
-            <div style={{ fontSize: '13px', fontWeight: '700', color: '#1A1714' }}>
-              Tarjetas
-            </div>
+        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
+            <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>3</div>
+            <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Tarjetas</div>
           </div>
-          <div style={{ padding: '16px' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
-              <div>
-                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', display: 'block', marginBottom: '6px' }}>BAC</label>
+          <div style={{ padding: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+              <div style={{ border: '1.5px solid #E2DDD4', borderRadius: '8px', padding: '14px' }}>
+                <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', color: '#6B6560', marginBottom: '8px' }}>BAC</div>
                 <input
                   type="text"
-                  value={tarjetas.bac}
+                  value={tarjetas.bac === 0 ? '' : tarjetas.bac.toLocaleString('es-CR')}
                   onChange={(e) => handleTarjetaChange('bac', e.target.value)}
+                  placeholder="0"
+                  inputMode="numeric"
                   style={{
                     width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #E2DDD4',
-                    borderRadius: '6px',
-                    fontSize: '12px',
+                    border: 'none',
+                    padding: '0',
+                    fontSize: '20px',
+                    fontWeight: '600',
                     fontFamily: "'DM Mono', monospace",
+                    outline: 'none'
                   }}
-                  placeholder="0"
                 />
-                <div style={{ fontSize: '10px', color: '#9C9590', marginTop: '4px' }}>colones</div>
+                <div style={{ fontSize: '12px', color: '#9C9590', marginTop: '2px' }}>colones</div>
               </div>
-              <div>
-                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', display: 'block', marginBottom: '6px' }}>BN</label>
+              <div style={{ border: '1.5px solid #E2DDD4', borderRadius: '8px', padding: '14px' }}>
+                <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', color: '#6B6560', marginBottom: '8px' }}>BN</div>
                 <input
                   type="text"
-                  value={tarjetas.bn}
+                  value={tarjetas.bn === 0 ? '' : tarjetas.bn.toLocaleString('es-CR')}
                   onChange={(e) => handleTarjetaChange('bn', e.target.value)}
+                  placeholder="0"
+                  inputMode="numeric"
                   style={{
                     width: '100%',
-                    padding: '8px 12px',
-                    border: '1px solid #E2DDD4',
-                    borderRadius: '6px',
-                    fontSize: '12px',
+                    border: 'none',
+                    padding: '0',
+                    fontSize: '20px',
+                    fontWeight: '600',
                     fontFamily: "'DM Mono', monospace",
+                    outline: 'none'
                   }}
-                  placeholder="0"
                 />
-                <div style={{ fontSize: '10px', color: '#9C9590', marginTop: '4px' }}>colones</div>
+                <div style={{ fontSize: '12px', color: '#9C9590', marginTop: '2px' }}>colones</div>
               </div>
             </div>
-            <div style={{ padding: '12px', background: '#E8F3EC', borderRadius: '6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <div style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total tarjetas</div>
-              <div style={{ fontSize: '13px', fontWeight: '700', color: '#2a78a5', fontFamily: "'DM Mono', monospace" }}>
+            <div style={{ padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#E8F3EC' }}>
+              <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total tarjetas</span>
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#2a78a5' }}>
                 {fmt(parsearMiles(tarjetas.bac) + parsearMiles(tarjetas.bn))}
-              </div>
+              </span>
             </div>
           </div>
         </div>
 
         {/* 4. SINPE */}
-        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px' }}>
-          <div style={{ background: '#F0EDE6', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ background: '#2a78a5', color: 'white', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px' }}>
-                4
-              </div>
-              <div style={{ fontSize: '13px', fontWeight: '700', color: '#1A1714' }}>
-                SINPE
-              </div>
+        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'space-between', background: '#F0EDE6' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>4</div>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>SINPE Móvil</div>
             </div>
             <div style={{ fontSize: '12px', fontWeight: '600', color: '#2a78a5', fontFamily: "'DM Mono', monospace" }}>
               {fmt(totalSinpe)}
             </div>
           </div>
-          <div style={{ padding: '16px' }}>
+          <div style={{ padding: '20px' }}>
             {sinpeRevisado.length > 0 ? (
               sinpeRevisado.map((sinpe, i) => (
-                <div key={i} style={{ marginBottom: i < sinpeRevisado.length - 1 ? '16px' : '0', paddingBottom: '16px', borderBottom: i < sinpeRevisado.length - 1 ? '1px solid #E2DDD4' : 'none' }}>
+                <div key={i} style={{ marginBottom: i < sinpeRevisado.length - 1 ? '16px' : '0' }}>
                   {sinpe.archivo_url && (
                     <img src={sinpe.archivo_url} alt="SINPE" style={{ width: '100%', maxHeight: '120px', objectFit: 'cover', borderRadius: '6px', marginBottom: '8px' }} />
                   )}
-                  <div style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', marginBottom: '6px' }}>Ref: {sinpe.referencia}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: '#F7F5F0', borderRadius: '6px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '13px', color: '#6B6560' }}>Ref: {sinpe.referencia}</span>
+                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '600', color: '#2a78a5' }}>{fmt(parsearMiles(sinpe.monto_revisado))}</span>
+                  </div>
                   <input
                     type="text"
-                    value={sinpe.monto_revisado}
+                    value={sinpe.monto_revisado === 0 ? '' : sinpe.monto_revisado.toLocaleString('es-CR')}
                     onChange={(e) => {
                       const updated = [...sinpeRevisado];
                       updated[i].monto_revisado = formatearMiles(parsearMiles(e.target.value));
                       setSinpeRevisado(updated);
                     }}
+                    placeholder="0"
+                    inputMode="numeric"
                     style={{
                       width: '100%',
-                      padding: '8px 12px',
-                      border: '1px solid #E2DDD4',
-                      borderRadius: '6px',
-                      fontSize: '12px',
+                      padding: '10px 12px',
+                      border: '1.5px solid #E2DDD4',
+                      borderRadius: '8px',
+                      fontSize: '14px',
                       fontFamily: "'DM Mono', monospace",
                     }}
-                    placeholder="0"
                   />
                 </div>
               ))
             ) : (
-              <div style={{ padding: '16px', textAlign: 'center', color: '#9C9590', fontSize: '12px' }}>
+              <div style={{ padding: '20px', textAlign: 'center', color: '#9C9590', fontSize: '12px' }}>
                 No se registraron SINPE — ₡0
               </div>
             )}
+            <div style={{ marginTop: '12px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#E8F3EC' }}>
+              <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total SINPE</span>
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#2a78a5' }}>{fmt(totalSinpe)}</span>
+            </div>
           </div>
         </div>
 
         {/* 5. Transferencias */}
-        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px' }}>
-          <div style={{ background: '#F0EDE6', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ background: '#2a78a5', color: 'white', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px' }}>
-                5
-              </div>
-              <div style={{ fontSize: '13px', fontWeight: '700', color: '#1A1714' }}>
-                Transferencias
-              </div>
+        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'space-between', background: '#F0EDE6' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>5</div>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Transferencias</div>
             </div>
             <div style={{ fontSize: '12px', fontWeight: '600', color: '#2a78a5', fontFamily: "'DM Mono', monospace" }}>
               {fmt(totalTransf)}
             </div>
           </div>
-          <div style={{ padding: '16px' }}>
+          <div style={{ padding: '20px' }}>
             {transfRevisadas.length > 0 ? (
               transfRevisadas.map((transf, i) => (
-                <div key={i} style={{ marginBottom: i < transfRevisadas.length - 1 ? '16px' : '0', paddingBottom: '16px', borderBottom: i < transfRevisadas.length - 1 ? '1px solid #E2DDD4' : 'none' }}>
+                <div key={i} style={{ marginBottom: i < transfRevisadas.length - 1 ? '16px' : '0' }}>
                   {transf.archivo_url && (
                     <img src={transf.archivo_url} alt="Transferencia" style={{ width: '100%', maxHeight: '120px', objectFit: 'cover', borderRadius: '6px', marginBottom: '8px' }} />
                   )}
-                  <div style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', marginBottom: '6px' }}>Descripción: {transf.descripcion}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: '#F7F5F0', borderRadius: '6px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '13px', color: '#6B6560' }}>{transf.descripcion || 'Transferencia'}</span>
+                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '600', color: '#2a78a5' }}>{fmt(parsearMiles(transf.monto_revisado))}</span>
+                  </div>
                   <input
                     type="text"
-                    value={transf.monto_revisado}
+                    value={transf.monto_revisado === 0 ? '' : transf.monto_revisado.toLocaleString('es-CR')}
                     onChange={(e) => {
                       const updated = [...transfRevisadas];
                       updated[i].monto_revisado = formatearMiles(parsearMiles(e.target.value));
                       setTransfRevisadas(updated);
                     }}
+                    placeholder="0"
+                    inputMode="numeric"
                     style={{
                       width: '100%',
-                      padding: '8px 12px',
-                      border: '1px solid #E2DDD4',
-                      borderRadius: '6px',
-                      fontSize: '12px',
+                      padding: '10px 12px',
+                      border: '1.5px solid #E2DDD4',
+                      borderRadius: '8px',
+                      fontSize: '14px',
                       fontFamily: "'DM Mono', monospace",
                     }}
-                    placeholder="0"
                   />
                 </div>
               ))
             ) : (
-              <div style={{ padding: '16px', textAlign: 'center', color: '#9C9590', fontSize: '12px' }}>
+              <div style={{ padding: '20px', textAlign: 'center', color: '#9C9590', fontSize: '12px' }}>
                 No se registraron Transferencias — ₡0
               </div>
             )}
+            <div style={{ marginTop: '12px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#E8F3EC' }}>
+              <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total transferencias</span>
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#2a78a5' }}>{fmt(totalTransf)}</span>
+            </div>
           </div>
         </div>
 
         {/* 6. Salidas de Caja */}
-        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px' }}>
-          <div style={{ background: '#F0EDE6', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: '12px', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ background: '#2a78a5', color: 'white', width: '32px', height: '32px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '700', fontSize: '14px' }}>
-                6
-              </div>
-              <div style={{ fontSize: '13px', fontWeight: '700', color: '#1A1714' }}>
-                Salidas de Caja
-              </div>
+        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'space-between', background: '#F0EDE6' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>6</div>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Salidas de caja</div>
             </div>
             <div style={{ fontSize: '12px', fontWeight: '600', color: '#2a78a5', fontFamily: "'DM Mono', monospace" }}>
               {fmt(totalSalidas)}
             </div>
           </div>
-          <div style={{ padding: '16px' }}>
+          <div style={{ padding: '20px' }}>
             {salidEvaluadas.length > 0 ? (
               salidEvaluadas.map((salida, i) => (
-                <div key={i} style={{ marginBottom: i < salidEvaluadas.length - 1 ? '16px' : '0', paddingBottom: '16px', borderBottom: i < salidEvaluadas.length - 1 ? '1px solid #E2DDD4' : 'none' }}>
+                <div key={i} style={{ marginBottom: i < salidEvaluadas.length - 1 ? '16px' : '0' }}>
                   {salida.archivo_url && (
                     <img src={salida.archivo_url} alt="Salida" style={{ width: '100%', maxHeight: '120px', objectFit: 'cover', borderRadius: '6px', marginBottom: '8px' }} />
                   )}
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '8px' }}>
-                    <div>
-                      <div style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560' }}>{salida.descripcion}</div>
-                      <div style={{ fontSize: '13px', fontWeight: '700', color: '#1A1714', marginTop: '4px', fontFamily: "'DM Mono', monospace" }}>
-                        ₡{formatearMiles(Math.round(salida.monto))}
-                      </div>
-                    </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: '#FDEDEC', borderRadius: '6px', marginBottom: '8px' }}>
+                    <span style={{ fontSize: '13px', color: '#6B6560' }}>{salida.descripcion || 'Salida'}</span>
+                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '600', color: '#C0392B' }}>-{fmt(salida.monto)}</span>
                   </div>
                   <button
                     onClick={() => {
@@ -519,8 +484,8 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
                       padding: '8px',
                       background: salida.aprobado ? '#2a78a5' : '#F0EDE6',
                       color: salida.aprobado ? 'white' : '#6B6560',
-                      border: '1px solid ' + (salida.aprobado ? '#2a78a5' : '#E2DDD4'),
-                      borderRadius: '6px',
+                      border: '1.5px solid ' + (salida.aprobado ? '#2a78a5' : '#E2DDD4'),
+                      borderRadius: '8px',
                       fontSize: '12px',
                       fontWeight: '600',
                       cursor: 'pointer',
@@ -532,19 +497,24 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
                 </div>
               ))
             ) : (
-              <div style={{ padding: '16px', textAlign: 'center', color: '#9C9590', fontSize: '12px' }}>
+              <div style={{ padding: '20px', textAlign: 'center', color: '#9C9590', fontSize: '12px' }}>
                 No se registraron Salidas — ₡0
               </div>
             )}
+            <div style={{ marginTop: '12px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#FDEDEC' }}>
+              <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total salidas</span>
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#C0392B' }}>{fmt(totalSalidas)}</span>
+            </div>
           </div>
         </div>
 
         {/* Resumen */}
-        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px' }}>
-          <div style={{ background: '#F0EDE6', padding: '14px 16px', fontSize: '13px', fontWeight: '700', color: '#1A1714' }}>
-            📊 Resumen de Revisión
+        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
+            <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '600' }}>✓</div>
+            <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Resumen de revisión</div>
           </div>
-          <div style={{ padding: '16px' }}>
+          <div style={{ padding: '20px' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
               <div style={{ fontSize: '12px', color: '#6B6560' }}>En caja</div>
               <div style={{ fontSize: '12px', fontWeight: '600', color: '#1A1714', textAlign: 'right', fontFamily: "'DM Mono', monospace" }}>{fmt(totalEnCaja)}</div>
@@ -572,37 +542,43 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
         </div>
 
         {/* Botones */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '24px', marginBottom: '24px' }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '16px', marginBottom: '24px' }}>
           <button
             onClick={onVolver}
             style={{
-              padding: '12px',
+              padding: '16px',
               background: '#F0EDE6',
               color: '#6B6560',
               border: '1.5px solid #E2DDD4',
-              borderRadius: '8px',
-              fontSize: '14px',
+              borderRadius: '12px',
+              fontSize: '16px',
               fontWeight: '600',
-              cursor: 'pointer'
+              cursor: 'pointer',
+              transition: 'background 0.2s'
             }}
+            onMouseEnter={(e) => e.target.style.background = '#E2DDD4'}
+            onMouseLeave={(e) => e.target.style.background = '#F0EDE6'}
           >
-            ✕ Limpiar
+            ✕ Volver
           </button>
           <button
             onClick={guardarRevision}
             disabled={loading}
             style={{
-              padding: '12px',
+              padding: '16px',
               background: loading ? '#ccc' : '#2a78a5',
               color: 'white',
               border: 'none',
-              borderRadius: '8px',
-              fontSize: '14px',
+              borderRadius: '12px',
+              fontSize: '16px',
               fontWeight: '600',
-              cursor: loading ? 'default' : 'pointer'
+              cursor: loading ? 'default' : 'pointer',
+              transition: 'background 0.2s'
             }}
+            onMouseEnter={(e) => !loading && (e.target.style.background = '#1f5780')}
+            onMouseLeave={(e) => !loading && (e.target.style.background = '#2a78a5')}
           >
-            {loading ? '⏳ Guardando...' : '✓ Guardar conteo'}
+            {loading ? '⏳ Guardando...' : '✓ Guardar revisión'}
           </button>
         </div>
 
