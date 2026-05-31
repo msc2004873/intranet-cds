@@ -16,16 +16,16 @@ export async function GET(req) {
     }
 
     const fechaObj = new Date(fecha);
-    const year = fechaObj.getFullYear();
-    const month = fechaObj.getMonth() + 1;
-    const num_periodo = parseInt(periodo);
+    const ano = fechaObj.getFullYear();
+    const mes = fechaObj.getMonth() + 1;
+    const periodo_num = parseInt(periodo);
 
     const { data, error } = await supabase
       .from('periodos_tipo_cambio')
       .select('tipo_cambio, tipo_cambio_ajustado')
-      .eq('year', year)
-      .eq('month', month)
-      .eq('num_periodo', num_periodo)
+      .eq('ano', ano)
+      .eq('mes', mes)
+      .eq('periodo_num', periodo_num)
       .single();
 
     if (error || !data) {
