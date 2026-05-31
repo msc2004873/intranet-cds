@@ -9,6 +9,7 @@ const formatearMiles = (num) => {
 };
 
 const parsearMiles = (str) => {
+  if (typeof str === 'number') return Math.round(str);
   return parseInt(str.replace(/\s/g, '')) || 0;
 };
 
@@ -86,13 +87,13 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
           const salidasApi = await salidaRes.json();
 
           if (Array.isArray(sinpesApi) && sinpesApi.length > 0) {
-            setSinpeRevisado(sinpesApi.map(s => ({ ...s, monto_revisado: s.monto || '', aprobado: false })));
+            setSinpeRevisado(sinpesApi.map(s => ({ ...s, monto_revisado: formatearMiles(s.monto || 0), aprobado: false })));
           } else {
             setSinpeRevisado(sinpesDb.map(s => ({ ...s, monto_revisado: '', aprobado: false })));
           }
 
           if (Array.isArray(transfsApi) && transfsApi.length > 0) {
-            setTransfRevisadas(transfsApi.map(t => ({ ...t, monto_revisado: t.monto || '', aprobado: false })));
+            setTransfRevisadas(transfsApi.map(t => ({ ...t, monto_revisado: formatearMiles(t.monto || 0), aprobado: false })));
           } else {
             setTransfRevisadas(transfsDb.map(t => ({ ...t, monto_revisado: '', aprobado: false })));
           }
