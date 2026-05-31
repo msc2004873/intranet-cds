@@ -58,13 +58,57 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
 
   async function cargarDetalles() {
     try {
-      const sinpes = cierre?.sinpe_json ? JSON.parse(cierre.sinpe_json) : [];
-      const transfs = cierre?.depositos_json ? JSON.parse(cierre.depositos_json) : [];
-      const salidas = cierre?.salidas_json ? JSON.parse(cierre.salidas_json) : [];
+      // Cargar desde JSON guardado en el cierre (puede venir como array o string)
+      const sinpesDb = cierre?.sinpe_json
+        ? (typeof cierre.sinpe_json === 'string' ? JSON.parse(cierre.sinpe_json) : cierre.sinpe_json)
+        : [];
+      const transfsDb = cierre?.depositos_json
+        ? (typeof cierre.depositos_json === 'string' ? JSON.parse(cierre.depositos_json) : cierre.depositos_json)
+        : [];
+      const salidasDb = cierre?.salidas_json
+        ? (typeof cierre.salidas_json === 'string' ? JSON.parse(cierre.salidas_json) : cierre.salidas_json)
+        : [];
 
-      setSinpeRevisado(sinpes.map(s => ({ ...s, monto_revisado: '', aprobado: false })));
-      setTransfRevisadas(transfs.map(t => ({ ...t, monto_revisado: '', aprobado: false })));
-      setSalidEvaluadas(salidas.map(s => ({ ...s, aprobado: false })));
+      // Luego cargar desde movimientos para capturar lo que llegó después del cierre
+      if (cierre?.fecha_hora) {
+        const fecha = new Date(cierre.fecha_hora).toISOString().split('T')[0];
+        const cajaParam = cierre.caja ? `&caja=${encodeURIComponent(cierre.caja)}` : '';
+
+        try {
+          const [sinpeRes, transfRes, salidaRes] = await Promise.all([
+            fetch(`/api/movimientos?tipo=SINPE&fecha=${fecha}${cajaParam}`),
+            fetch(`/api/movimientos?tipo=TRANSFERENCIA&fecha=${fecha}${cajaParam}`),
+            fetch(`/api/movimientos?tipo=SALIDA&fecha=${fecha}${cajaParam}`)
+          ]);
+
+          const sinpesApi = await sinpeRes.json();
+          const transfsApi = await transfRes.json();
+          const salidasApi = await salidaRes.json();
+
+          if (Array.isArray(sinpesApi) && sinpesApi.length > 0) {
+            setSinpeRevisado(sinpesApi.map(s => ({ ...s, monto_revisado: s.monto || '', aprobado: false })));
+          } else {
+            setSinpeRevisado(sinpesDb.map(s => ({ ...s, monto_revisado: '', aprobado: false })));
+          }
+
+          if (Array.isArray(transfsApi) && transfsApi.length > 0) {
+            setTransfRevisadas(transfsApi.map(t => ({ ...t, monto_revisado: t.monto || '', aprobado: false })));
+          } else {
+            setTransfRevisadas(transfsDb.map(t => ({ ...t, monto_revisado: '', aprobado: false })));
+          }
+
+          if (Array.isArray(salidasApi) && salidasApi.length > 0) {
+            setSalidEvaluadas(salidasApi.map(s => ({ ...s, aprobado: false })));
+          } else {
+            setSalidEvaluadas(salidasDb.map(s => ({ ...s, aprobado: false })));
+          }
+        } catch (apiErr) {
+          console.error('Error cargando desde API, usando JSON guardado:', apiErr);
+          setSinpeRevisado(sinpesDb.map(s => ({ ...s, monto_revisado: '', aprobado: false })));
+          setTransfRevisadas(transfsDb.map(t => ({ ...t, monto_revisado: '', aprobado: false })));
+          setSalidEvaluadas(salidasDb.map(s => ({ ...s, aprobado: false })));
+        }
+      }
     } catch (err) {
       console.error('Error cargando detalles:', err);
     }
