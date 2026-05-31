@@ -178,12 +178,12 @@ export default function RevisionClinicaPage() {
                 <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden' }}>
                   {cierresPendientes.map((cierre, i) => (
                     <div key={cierre.id} style={{ padding: '16px 20px', borderBottom: i < cierresPendientes.length - 1 ? '1px solid #E2DDD4' : 'none' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <div>
-                          <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714' }}>{cierre.cajera || 'Sin datos'}</div>
-                          <div style={{ fontSize: '11px', color: '#9C9590' }}>
-                            {cierre.fecha_hora ? new Date(cierre.fecha_hora).toLocaleDateString('es-CR') + ' — ' + new Date(cierre.fecha_hora).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }) : 'Fecha inválida'}
-                          </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+                        <div style={{ fontSize: '16px', fontWeight: '700', color: '#1A1714', flex: 1 }}>
+                          {cierre.cajera || 'Sin datos'}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#9C9590', whiteSpace: 'nowrap' }}>
+                          {cierre.fecha_hora ? new Date(cierre.fecha_hora).toLocaleDateString('es-CR') + ' — ' + new Date(cierre.fecha_hora).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }) : 'Fecha inválida'}
                         </div>
                         <button
                           onClick={() => setCierreEnRevision(cierre)}
@@ -196,7 +196,8 @@ export default function RevisionClinicaPage() {
                             fontSize: '12px',
                             fontWeight: '600',
                             cursor: 'pointer',
-                            transition: 'all 0.2s'
+                            transition: 'all 0.2s',
+                            whiteSpace: 'nowrap'
                           }}
                           onMouseEnter={(e) => e.currentTarget.style.background = '#1f5a7d'}
                           onMouseLeave={(e) => e.currentTarget.style.background = '#2a78a5'}
@@ -219,9 +220,11 @@ export default function RevisionClinicaPage() {
                 <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden' }}>
                   {cierresRevisados.map((cierre, i) => (
                     <div key={cierre.id} style={{ padding: '16px 20px', borderBottom: i < cierresRevisados.length - 1 ? '1px solid #E2DDD4' : 'none', opacity: 0.6 }}>
-                      <div>
-                        <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714' }}>{cierre.cajera || 'Sin datos'}</div>
-                        <div style={{ fontSize: '11px', color: '#9C9590' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
+                        <div style={{ fontSize: '16px', fontWeight: '700', color: '#1A1714', flex: 1 }}>
+                          {cierre.cajera || 'Sin datos'}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#9C9590', whiteSpace: 'nowrap' }}>
                           {cierre.fecha_hora ? new Date(cierre.fecha_hora).toLocaleDateString('es-CR') + ' — ' + new Date(cierre.fecha_hora).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }) : 'Fecha inválida'}
                         </div>
                       </div>
