@@ -39,11 +39,22 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
   const [tipoCambio, setTipoCambio] = useState(475);
+  const [usuarioActual, setUsuarioActual] = useState(null);
 
   useEffect(() => {
     cargarDetalles();
     cargarTipoCambio();
+    cargarUsuario();
   }, [cierre?.id, periodo?.num]);
+
+  function cargarUsuario() {
+    try {
+      const user = JSON.parse(localStorage.getItem('user') || '{}');
+      setUsuarioActual(user);
+    } catch (err) {
+      console.error('Error cargando usuario:', err);
+    }
+  }
 
   async function cargarDetalles() {
     try {
@@ -147,6 +158,65 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
       <Header title="Revisión de Cierre" subtitle={`${cierre?.cajera} — ${new Date(cierre?.fecha_hora).toLocaleDateString('es-CR')}`} showLogout={false} />
 
       <div style={{ flex: 1, maxWidth: '720px', margin: '0 auto', padding: '24px 16px', width: '100%', overflowY: 'auto' }}>
+
+        {/* Info de Revisión */}
+        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px' }}>
+          <div style={{ background: '#F0EDE6', padding: '14px 16px', fontSize: '13px', fontWeight: '700', color: '#1A1714' }}>
+            📋 Info de Revisión
+          </div>
+          <div style={{ padding: '16px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
+                  Cajera
+                </label>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714' }}>
+                  {cierre?.cajera || '—'}
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
+                  Revisa
+                </label>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714' }}>
+                  {usuarioActual?.nombre || '—'}
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
+                  Fecha
+                </label>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714', fontFamily: "'DM Mono', monospace" }}>
+                  {cierre?.fecha_hora ? new Date(cierre.fecha_hora).toLocaleDateString('es-CR') : '—'}
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
+                  Período
+                </label>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714' }}>
+                  P{periodo?.num || '—'}
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
+                  Hora cierre
+                </label>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714', fontFamily: "'DM Mono', monospace" }}>
+                  {cierre?.fecha_hora ? new Date(cierre.fecha_hora).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }) : '—'}
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', display: 'block', marginBottom: '4px', textTransform: 'uppercase' }}>
+                  TC Período
+                </label>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#2a78a5' }}>
+                  ₡{tipoCambio}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         {/* 1. Denominaciones */}
         <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden', marginBottom: '24px' }}>
