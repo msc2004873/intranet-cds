@@ -12,7 +12,7 @@ const parsearMiles = (str) => {
   return parseInt(str.replace(/\s/g, '')) || 0;
 };
 
-export default function FormularioRevision({ cierre, onVolver, onGuardar }) {
+export default function FormularioRevision({ cierre, periodo, onVolver, onGuardar }) {
   const [denominaciones, setDenominaciones] = useState({
     20000: '',
     10000: '',
@@ -38,10 +38,12 @@ export default function FormularioRevision({ cierre, onVolver, onGuardar }) {
   const [salidEvaluadas, setSalidEvaluadas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
+  const [tipoCambio, setTipoCambio] = useState(475);
 
   useEffect(() => {
     cargarDetalles();
-  }, [cierre?.id]);
+    cargarTipoCambio();
+  }, [cierre?.id, periodo?.num]);
 
   async function cargarDetalles() {
     try {
@@ -54,6 +56,20 @@ export default function FormularioRevision({ cierre, onVolver, onGuardar }) {
       setSalidEvaluadas(salidas.map(s => ({ ...s, aprobado: false })));
     } catch (err) {
       console.error('Error cargando detalles:', err);
+    }
+  }
+
+  async function cargarTipoCambio() {
+    if (!periodo || !cierre?.fecha_hora) return;
+
+    try {
+      const fecha = new Date(cierre.fecha_hora).toISOString().split('T')[0];
+      const res = await fetch(`/api/periodos/get-tc?fecha=${fecha}&periodo=${periodo.num}`);
+      const data = await res.json();
+      setTipoCambio(data.tipo_cambio || 475);
+    } catch (err) {
+      console.error('Error cargando TC:', err);
+      setTipoCambio(475);
     }
   }
 
@@ -106,7 +122,7 @@ export default function FormularioRevision({ cierre, onVolver, onGuardar }) {
   }, 0);
 
   const totalTarjetas = parsearMiles(tarjetas.bac) + parsearMiles(tarjetas.bn);
-  const totalDolares = parsearMiles(dolares) * 475;
+  const totalDolares = parsearMiles(dolares) * tipoCambio;
   const totalSinpe = sinpeRevisado.reduce((sum, s) => sum + parsearMiles(s.monto_revisado), 0);
   const totalTransf = transfRevisadas.reduce((sum, t) => sum + parsearMiles(t.monto_revisado), 0);
   const totalSalidas = salidEvaluadas.reduce((sum, s) => sum + s.monto, 0);
@@ -221,11 +237,11 @@ export default function FormularioRevision({ cierre, onVolver, onGuardar }) {
                     Equivalente en colones
                   </label>
                   <div style={{ padding: '8px 12px', background: '#E8F3EC', borderRadius: '6px', fontSize: '12px', fontWeight: '600', color: '#2a78a5' }}>
-                    ×475
+                    ×{tipoCambio}
                   </div>
                 </div>
                 <div style={{ fontSize: '13px', fontWeight: '700', color: '#2a78a5', fontFamily: "'DM Mono', monospace", marginBottom: '0px' }}>
-                  {fmt(parsearMiles(dolares) * 475)}
+                  {fmt(parsearMiles(dolares) * tipoCambio)}
                 </div>
               </div>
             </div>

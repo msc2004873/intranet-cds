@@ -95,6 +95,7 @@ export default function RevisionClinicaPage() {
     return (
       <FormularioRevision
         cierre={cierreEnRevision}
+        periodo={periodo}
         onVolver={() => setCierreEnRevision(null)}
         onGuardar={() => {
           setCierreEnRevision(null);
