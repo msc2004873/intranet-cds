@@ -6,12 +6,21 @@ import Header from '../../../components/Header';
 import CalendarioPeriodos from '../../../components/CalendarioPeriodos';
 import FormularioRevision from '../../../components/FormularioRevision';
 
+const calcularTotalEnCaja = (cierre) => {
+  if (!cierre) return 0;
+  return cierre.c_20000 * 20000 + cierre.c_10000 * 10000 + cierre.c_5000 * 5000 +
+         cierre.c_2000 * 2000 + cierre.c_1000 * 1000 + cierre.c_500 * 500 +
+         cierre.c_100 * 100 + cierre.c_50 * 50 + cierre.c_25 * 25 +
+         cierre.c_10 * 10 + cierre.c_5 * 5;
+};
+
 export default function RevisionClinicaPage() {
   const [periodo, setPeriodo] = useState(null);
   const [caja, setCaja] = useState('Caja 1 (clínica)');
   const [cajas] = useState(['Caja 1 (clínica)', 'Caja 2']);
   const [cierres, setCierres] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [cierreEnRevision, setCierreEnRevision] = useState(null);
   const [periodoActualAlMontar, setPeriodoActualAlMontar] = useState(null);
 
@@ -50,15 +59,20 @@ export default function RevisionClinicaPage() {
     if (!periodo) return;
 
     setLoading(true);
+    setError(null);
     try {
       const inicio = periodo.inicio.toISOString().split('T')[0];
       const fin = periodo.fin.toISOString().split('T')[0];
 
       const res = await fetch(`/api/cierreCaja?fecha=${inicio}&hasta=${fin}&caja=${encodeURIComponent(caja)}`);
+      if (!res.ok) {
+        throw new Error('Error al cargar cierres del API');
+      }
       const data = await res.json();
       setCierres(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error cargando cierres:', err);
+      setError('No se pudieron cargar los cierres. Intenta de nuevo.');
     } finally {
       setLoading(false);
     }
@@ -149,6 +163,10 @@ export default function RevisionClinicaPage() {
         {/* Cierres */}
         {loading ? (
           <div style={{ textAlign: 'center', padding: '40px', color: '#9C9590' }}>⏳ Cargando...</div>
+        ) : error ? (
+          <div style={{ background: '#FDEDEC', border: '1.5px solid #E74C3C', borderRadius: '12px', padding: '20px', color: '#C0392B', marginBottom: '24px' }}>
+            <div style={{ fontSize: '14px', fontWeight: '600' }}>❌ {error}</div>
+          </div>
         ) : (
           <>
             {/* Pendientes */}
@@ -158,41 +176,36 @@ export default function RevisionClinicaPage() {
                   ⏳ Pendientes ({cierresPendientes.length})
                 </div>
                 <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden' }}>
-                  {cierresPendientes.map((cierre, i) => {
-                    const totalEnCaja = cierre.c_20000 * 20000 + cierre.c_10000 * 10000 + cierre.c_5000 * 5000 + cierre.c_2000 * 2000 + cierre.c_1000 * 1000 + cierre.c_500 * 500 + cierre.c_100 * 100 + cierre.c_50 * 50 + cierre.c_25 * 25 + cierre.c_10 * 10 + cierre.c_5 * 5;
-
-                    return (
-                      <div key={cierre.id} style={{ padding: '16px 20px', borderBottom: i < cierresPendientes.length - 1 ? '1px solid #E2DDD4' : 'none' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                          <div>
-                            <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714' }}>{cierre.cajera}</div>
-                            <div style={{ fontSize: '11px', color: '#9C9590' }}>
-                              {new Date(cierre.fecha_hora).toLocaleDateString('es-CR')} — {new Date(cierre.fecha_hora).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' })}
-                            </div>
+                  {cierresPendientes.map((cierre, i) => (
+                    <div key={cierre.id} style={{ padding: '16px 20px', borderBottom: i < cierresPendientes.length - 1 ? '1px solid #E2DDD4' : 'none' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                        <div>
+                          <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714' }}>{cierre.cajera || 'Sin datos'}</div>
+                          <div style={{ fontSize: '11px', color: '#9C9590' }}>
+                            {cierre.fecha_hora ? new Date(cierre.fecha_hora).toLocaleDateString('es-CR') + ' — ' + new Date(cierre.fecha_hora).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }) : 'Fecha inválida'}
                           </div>
-                          <button
-                            onClick={() => setCierreEnRevision(cierre)}
-                            style={{
-                              padding: '8px 16px',
-                              background: '#2a78a5',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '6px',
-                              fontSize: '12px',
-                              fontWeight: '600',
-                              cursor: 'pointer'
-                            }}
-                          >
-                            Revisar
-                          </button>
                         </div>
-                        <div style={{ fontSize: '11px', color: '#6B6560', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                          <div>💵 En caja: {fmt(totalEnCaja)}</div>
-                          <div>🏧 Tarjetas: {fmt(cierre.tarjeta_bac + cierre.tarjeta_bn)}</div>
-                        </div>
+                        <button
+                          onClick={() => setCierreEnRevision(cierre)}
+                          style={{
+                            padding: '8px 16px',
+                            background: '#2a78a5',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = '#1f5a7d'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = '#2a78a5'}
+                        >
+                          Revisar
+                        </button>
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -204,26 +217,16 @@ export default function RevisionClinicaPage() {
                   ✅ Revisados ({cierresRevisados.length})
                 </div>
                 <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden' }}>
-                  {cierresRevisados.map((cierre, i) => {
-                    const totalEnCaja = cierre.c_20000 * 20000 + cierre.c_10000 * 10000 + cierre.c_5000 * 5000 + cierre.c_2000 * 2000 + cierre.c_1000 * 1000 + cierre.c_500 * 500 + cierre.c_100 * 100 + cierre.c_50 * 50 + cierre.c_25 * 25 + cierre.c_10 * 10 + cierre.c_5 * 5;
-
-                    return (
-                      <div key={cierre.id} style={{ padding: '16px 20px', borderBottom: i < cierresRevisados.length - 1 ? '1px solid #E2DDD4' : 'none', opacity: 0.6 }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                          <div>
-                            <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714' }}>{cierre.cajera}</div>
-                            <div style={{ fontSize: '11px', color: '#9C9590' }}>
-                              {new Date(cierre.fecha_hora).toLocaleDateString('es-CR')} — {new Date(cierre.fecha_hora).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' })}
-                            </div>
-                          </div>
-                          <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: '13px', fontWeight: '600', color: '#2a78a5', fontFamily: "'DM Mono', monospace" }}>{fmt(totalEnCaja)}</div>
-                            <div style={{ fontSize: '11px', color: '#9C9590' }}>Total en caja</div>
-                          </div>
+                  {cierresRevisados.map((cierre, i) => (
+                    <div key={cierre.id} style={{ padding: '16px 20px', borderBottom: i < cierresRevisados.length - 1 ? '1px solid #E2DDD4' : 'none', opacity: 0.6 }}>
+                      <div>
+                        <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714' }}>{cierre.cajera || 'Sin datos'}</div>
+                        <div style={{ fontSize: '11px', color: '#9C9590' }}>
+                          {cierre.fecha_hora ? new Date(cierre.fecha_hora).toLocaleDateString('es-CR') + ' — ' + new Date(cierre.fecha_hora).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }) : 'Fecha inválida'}
                         </div>
                       </div>
-                    );
-                  })}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
