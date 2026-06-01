@@ -333,203 +333,11 @@ export default function CajeraPage() {
 
         {caja ? (
           <form onSubmit={handleSubmit}>
-          {/* SECCIÓN 2: Cierre de caja */}
-          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
-              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>2</div>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Cierre de caja — denominaciones</div>
-            </div>
-            <div style={{ padding: '20px' }}>
-              {DENOMS.map((d, idx) => (
-                <div key={d} style={{ display: 'grid', gridTemplateColumns: '100px 1fr 110px', alignItems: 'center', gap: '10px', padding: '6px 0', borderBottom: '1px solid #E2DDD4' }}>
-                  <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#6B6560', fontWeight: '500' }}>{fmt(d)}</div>
-                  <input
-                    type="text"
-                    ref={(el) => (window[`inputCajeraDenom${idx}`] = el)}
-                    value={denominaciones[d] === 0 || denominaciones[d] === undefined ? '' : (denominaciones[d] || 0).toLocaleString('es-CR')}
-                    onChange={(e) => handleDenomChange(d, e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter' || e.key === 'ArrowDown') {
-                        e.preventDefault();
-                        const nextInput = window[`inputCajeraDenom${idx + 1}`];
-                        if (nextInput) nextInput.focus();
-                      }
-                      if (e.key === 'ArrowUp') {
-                        e.preventDefault();
-                        const prevInput = window[`inputCajeraDenom${idx - 1}`];
-                        if (prevInput) prevInput.focus();
-                      }
-                    }}
-                    placeholder="0"
-                    inputMode="numeric"
-                    style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '15px', fontWeight: '500', textAlign: 'center', fontFamily: "'DM Mono', monospace" }}
-                  />
-                  <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#2a78a5', fontWeight: '600', textAlign: 'right' }}>{fmt((denominaciones[d] || 0) * d)}</div>
-                </div>
-              ))}
-              <div style={{ marginTop: '14px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#E8F3EC' }}>
-                <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total en caja</span>
-                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#2a78a5' }}>{fmt(totalCierre)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* SECCIÓN 3: Denominaciones al sobre */}
-          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
-              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>3</div>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Denominaciones al sobre</div>
-            </div>
-            <div style={{ padding: '20px' }}>
-              {(() => {
-                const montoAlSobre = totalCierre - 50000;
-                if (montoAlSobre <= 0) return <div style={{ fontSize: '12px', color: '#9C9590', padding: '10px 0' }}>Nada al sobre (fondo completo)</div>;
-
-                const denominacionesSobre = {};
-                let pendiente = montoAlSobre;
-
-                for (let i = 0; i < DENOMS.length && pendiente > 0; i++) {
-                  const d = DENOMS[i];
-                  const disponibles = denominaciones[d] || 0;
-                  const aExtraer = Math.min(disponibles, Math.floor(pendiente / d));
-                  if (aExtraer > 0) {
-                    denominacionesSobre[d] = aExtraer;
-                    pendiente -= aExtraer * d;
-                  }
-                }
-
-                return DENOMS.map(d => {
-                  const sobreDenom = denominacionesSobre[d] || 0;
-                  return sobreDenom > 0 ? (
-                    <div key={d} style={{ display: 'grid', gridTemplateColumns: '100px 1fr 110px', alignItems: 'center', gap: '10px', padding: '6px 0', borderBottom: '1px solid #E2DDD4' }}>
-                      <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#6B6560', fontWeight: '500' }}>{fmt(d)}</div>
-                      <input type="number" value={sobreDenom} readOnly style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #E2DDD4', borderRadius: '8px', background: '#F0EDE6', color: '#6B6560', fontFamily: "'DM Mono', monospace" }} />
-                      <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#C8A84B', fontWeight: '600', textAlign: 'right' }}>{fmt(sobreDenom * d)}</div>
-                    </div>
-                  ) : null;
-                });
-              })()}
-              <div style={{ marginTop: '14px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#FBF6E9' }}>
-                <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Fondo en caja</span>
-                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#C8A84B' }}>{fmt(50000)}</span>
-              </div>
-              <div style={{ marginTop: '8px', padding: '16px 20px', background: '#2a78a5', color: 'white', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '12px', fontWeight: '600' }}>💰 Total al sobre</span>
-                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '22px', fontWeight: '600' }}>{fmt(totalSobre)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* SECCIÓN 4: Dólares */}
-          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
-              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>4</div>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Dólares</div>
-            </div>
-            <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: '1fr 80px 1fr', gap: '12px', alignItems: 'end' }}>
-              <div>
-                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total dólares ($)</label>
-                <input type="text" value={dolares === 0 ? '' : dolares.toLocaleString('es-CR')} onChange={(e) => setDolares(e.target.value === '' ? 0 : parseFloat(e.target.value.replace(/\s/g, '')) || 0)} placeholder="0" inputMode="decimal" style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px', fontFamily: "'DM Mono', monospace" }} />
-              </div>
-              <div style={{ padding: '10px 12px', background: '#E8F3EC', borderRadius: '8px', fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#2a78a5', fontWeight: '600', textAlign: 'center' }}>×{tc}</div>
-              <div>
-                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Equivalente en colones</label>
-                <div style={{ padding: '10px 12px', background: '#E8F3EC', borderRadius: '8px', fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#2a78a5', fontWeight: '600' }}>{fmt(dolaresEnColones)}</div>
-              </div>
-            </div>
-          </div>
-
-          {/* SECCIÓN 5: Tarjetas */}
-          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
-              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>5</div>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Tarjetas</div>
-            </div>
-            <div style={{ padding: '20px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
-                <div style={{ border: '1.5px solid #E2DDD4', borderRadius: '8px', padding: '14px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', color: '#6B6560', marginBottom: '8px' }}>BAC</div>
-                  <input type="text" value={tarjetaBac === 0 ? '' : tarjetaBac.toLocaleString('es-CR')} onChange={(e) => setTarjetaBac(e.target.value === '' ? 0 : parseFloat(e.target.value.replace(/\s/g, '')) || 0)} placeholder="0" inputMode="numeric" style={{ width: '100%', border: 'none', padding: '0', fontSize: '20px', fontWeight: '600', fontFamily: "'DM Mono', monospace", outline: 'none' }} />
-                  <div style={{ fontSize: '12px', color: '#9C9590', marginTop: '2px' }}>colones</div>
-                </div>
-                <div style={{ border: '1.5px solid #E2DDD4', borderRadius: '8px', padding: '14px' }}>
-                  <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', color: '#6B6560', marginBottom: '8px' }}>BN</div>
-                  <input type="text" value={tarjetaBn === 0 ? '' : tarjetaBn.toLocaleString('es-CR')} onChange={(e) => setTarjetaBn(e.target.value === '' ? 0 : parseFloat(e.target.value.replace(/\s/g, '')) || 0)} placeholder="0" inputMode="numeric" style={{ width: '100%', border: 'none', padding: '0', fontSize: '20px', fontWeight: '600', fontFamily: "'DM Mono', monospace", outline: 'none' }} />
-                  <div style={{ fontSize: '12px', color: '#9C9590', marginTop: '2px' }}>colones</div>
-                </div>
-              </div>
-              <div style={{ padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#E8F3EC' }}>
-                <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total tarjetas</span>
-                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#2a78a5' }}>{fmt(totalTarjetas)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* SECCIÓN 6: SINPE */}
-          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
-              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>6</div>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>SINPE Móvil</div>
-            </div>
-            <div style={{ padding: '20px' }}>
-              {sinpeList.map((item) => (
-                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: '#F7F5F0', borderRadius: '6px', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '13px', color: '#6B6560' }}>Ref: {item.referencia}</span>
-                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '600', color: '#2a78a5' }}>{fmt(item.monto)}</span>
-                </div>
-              ))}
-              <div style={{ marginTop: '12px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#E8F3EC' }}>
-                <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total SINPE</span>
-                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#2a78a5' }}>{fmt(totalSinpe)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* SECCIÓN 7: Depósitos */}
-          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
-              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>7</div>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Depósitos</div>
-            </div>
-            <div style={{ padding: '20px' }}>
-              {depositoList.map((item) => (
-                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: '#F7F5F0', borderRadius: '6px', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '13px', color: '#6B6560' }}>{item.nombre || 'Transferencia'}</span>
-                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '600', color: '#2a78a5' }}>{fmt(item.monto)}</span>
-                </div>
-              ))}
-              <div style={{ marginTop: '12px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#E8F3EC' }}>
-                <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total depósitos</span>
-                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#2a78a5' }}>{fmt(totalDepositos)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* SECCIÓN 8: Salidas */}
-          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
-              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>8</div>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Salidas de caja</div>
-            </div>
-            <div style={{ padding: '20px' }}>
-              {salidaList.map((item) => (
-                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: '#FDEDEC', borderRadius: '6px', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '13px', color: '#6B6560' }}>{item.descripcion || 'Salida'}</span>
-                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '600', color: '#C0392B' }}>-{fmt(item.monto)}</span>
-                </div>
-              ))}
-              <div style={{ marginTop: '12px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#FDEDEC' }}>
-                <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total salidas</span>
-                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#C0392B' }}>{fmt(totalSalidas)}</span>
-              </div>
-            </div>
-          </div>
-
-          {/* SECCIÓN 9: Glory */}
+          {/* SECCIÓN 2: Glory */}
           <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
             <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: '#F0EDE6' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>9</div>
+                <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>2</div>
                 <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Glory — Groomer</div>
               </div>
               <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '12px', fontWeight: '600', color: '#6B6560', cursor: 'pointer' }}>
@@ -577,6 +385,198 @@ export default function CajeraPage() {
                 Cierre de Glory deshabilitado para esta sesión
               </div>
             )}
+          </div>
+
+          {/* SECCIÓN 3: Cierre de caja */}
+          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
+              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>3</div>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Cierre de caja — denominaciones</div>
+            </div>
+            <div style={{ padding: '20px' }}>
+              {DENOMS.map((d, idx) => (
+                <div key={d} style={{ display: 'grid', gridTemplateColumns: '100px 1fr 110px', alignItems: 'center', gap: '10px', padding: '6px 0', borderBottom: '1px solid #E2DDD4' }}>
+                  <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#6B6560', fontWeight: '500' }}>{fmt(d)}</div>
+                  <input
+                    type="text"
+                    ref={(el) => (window[`inputCajeraDenom${idx}`] = el)}
+                    value={denominaciones[d] === 0 || denominaciones[d] === undefined ? '' : (denominaciones[d] || 0).toLocaleString('es-CR')}
+                    onChange={(e) => handleDenomChange(d, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        const nextInput = window[`inputCajeraDenom${idx + 1}`];
+                        if (nextInput) nextInput.focus();
+                      }
+                      if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        const prevInput = window[`inputCajeraDenom${idx - 1}`];
+                        if (prevInput) prevInput.focus();
+                      }
+                    }}
+                    placeholder="0"
+                    inputMode="numeric"
+                    style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '15px', fontWeight: '500', textAlign: 'center', fontFamily: "'DM Mono', monospace" }}
+                  />
+                  <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#2a78a5', fontWeight: '600', textAlign: 'right' }}>{fmt((denominaciones[d] || 0) * d)}</div>
+                </div>
+              ))}
+              <div style={{ marginTop: '14px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#E8F3EC' }}>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total en caja</span>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#2a78a5' }}>{fmt(totalCierre)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* SECCIÓN 4: Denominaciones al sobre */}
+          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
+              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>4</div>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Denominaciones al sobre</div>
+            </div>
+            <div style={{ padding: '20px' }}>
+              {(() => {
+                const montoAlSobre = totalCierre - 50000;
+                if (montoAlSobre <= 0) return <div style={{ fontSize: '12px', color: '#9C9590', padding: '10px 0' }}>Nada al sobre (fondo completo)</div>;
+
+                const denominacionesSobre = {};
+                let pendiente = montoAlSobre;
+
+                for (let i = 0; i < DENOMS.length && pendiente > 0; i++) {
+                  const d = DENOMS[i];
+                  const disponibles = denominaciones[d] || 0;
+                  const aExtraer = Math.min(disponibles, Math.floor(pendiente / d));
+                  if (aExtraer > 0) {
+                    denominacionesSobre[d] = aExtraer;
+                    pendiente -= aExtraer * d;
+                  }
+                }
+
+                return DENOMS.map(d => {
+                  const sobreDenom = denominacionesSobre[d] || 0;
+                  return sobreDenom > 0 ? (
+                    <div key={d} style={{ display: 'grid', gridTemplateColumns: '100px 1fr 110px', alignItems: 'center', gap: '10px', padding: '6px 0', borderBottom: '1px solid #E2DDD4' }}>
+                      <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#6B6560', fontWeight: '500' }}>{fmt(d)}</div>
+                      <input type="number" value={sobreDenom} readOnly style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #E2DDD4', borderRadius: '8px', background: '#F0EDE6', color: '#6B6560', fontFamily: "'DM Mono', monospace" }} />
+                      <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#C8A84B', fontWeight: '600', textAlign: 'right' }}>{fmt(sobreDenom * d)}</div>
+                    </div>
+                  ) : null;
+                });
+              })()}
+              <div style={{ marginTop: '14px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#FBF6E9' }}>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Fondo en caja</span>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#C8A84B' }}>{fmt(50000)}</span>
+              </div>
+              <div style={{ marginTop: '8px', padding: '16px 20px', background: '#2a78a5', color: 'white', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', fontWeight: '600' }}>💰 Total al sobre</span>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '22px', fontWeight: '600' }}>{fmt(totalSobre)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* SECCIÓN 5: Dólares */}
+          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
+              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>5</div>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Dólares</div>
+            </div>
+            <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: '1fr 80px 1fr', gap: '12px', alignItems: 'end' }}>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total dólares ($)</label>
+                <input type="text" value={dolares === 0 ? '' : dolares.toLocaleString('es-CR')} onChange={(e) => setDolares(e.target.value === '' ? 0 : parseFloat(e.target.value.replace(/\s/g, '')) || 0)} placeholder="0" inputMode="decimal" style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px', fontFamily: "'DM Mono', monospace" }} />
+              </div>
+              <div style={{ padding: '10px 12px', background: '#E8F3EC', borderRadius: '8px', fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#2a78a5', fontWeight: '600', textAlign: 'center' }}>×{tc}</div>
+              <div>
+                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Equivalente en colones</label>
+                <div style={{ padding: '10px 12px', background: '#E8F3EC', borderRadius: '8px', fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#2a78a5', fontWeight: '600' }}>{fmt(dolaresEnColones)}</div>
+              </div>
+            </div>
+          </div>
+
+          {/* SECCIÓN 6: Tarjetas */}
+          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
+              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>6</div>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Tarjetas</div>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
+                <div style={{ border: '1.5px solid #E2DDD4', borderRadius: '8px', padding: '14px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', color: '#6B6560', marginBottom: '8px' }}>BAC</div>
+                  <input type="text" value={tarjetaBac === 0 ? '' : tarjetaBac.toLocaleString('es-CR')} onChange={(e) => setTarjetaBac(e.target.value === '' ? 0 : parseFloat(e.target.value.replace(/\s/g, '')) || 0)} placeholder="0" inputMode="numeric" style={{ width: '100%', border: 'none', padding: '0', fontSize: '20px', fontWeight: '600', fontFamily: "'DM Mono', monospace", outline: 'none' }} />
+                  <div style={{ fontSize: '12px', color: '#9C9590', marginTop: '2px' }}>colones</div>
+                </div>
+                <div style={{ border: '1.5px solid #E2DDD4', borderRadius: '8px', padding: '14px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', color: '#6B6560', marginBottom: '8px' }}>BN</div>
+                  <input type="text" value={tarjetaBn === 0 ? '' : tarjetaBn.toLocaleString('es-CR')} onChange={(e) => setTarjetaBn(e.target.value === '' ? 0 : parseFloat(e.target.value.replace(/\s/g, '')) || 0)} placeholder="0" inputMode="numeric" style={{ width: '100%', border: 'none', padding: '0', fontSize: '20px', fontWeight: '600', fontFamily: "'DM Mono', monospace", outline: 'none' }} />
+                  <div style={{ fontSize: '12px', color: '#9C9590', marginTop: '2px' }}>colones</div>
+                </div>
+              </div>
+              <div style={{ padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#E8F3EC' }}>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total tarjetas</span>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#2a78a5' }}>{fmt(totalTarjetas)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* SECCIÓN 7: SINPE */}
+          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
+              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>7</div>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>SINPE Móvil</div>
+            </div>
+            <div style={{ padding: '20px' }}>
+              {sinpeList.map((item) => (
+                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: '#F7F5F0', borderRadius: '6px', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '13px', color: '#6B6560' }}>Ref: {item.referencia}</span>
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '600', color: '#2a78a5' }}>{fmt(item.monto)}</span>
+                </div>
+              ))}
+              <div style={{ marginTop: '12px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#E8F3EC' }}>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total SINPE</span>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#2a78a5' }}>{fmt(totalSinpe)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* SECCIÓN 8: Depósitos */}
+          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
+              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>8</div>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Depósitos</div>
+            </div>
+            <div style={{ padding: '20px' }}>
+              {depositoList.map((item) => (
+                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: '#F7F5F0', borderRadius: '6px', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '13px', color: '#6B6560' }}>{item.nombre || 'Transferencia'}</span>
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '600', color: '#2a78a5' }}>{fmt(item.monto)}</span>
+                </div>
+              ))}
+              <div style={{ marginTop: '12px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#E8F3EC' }}>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total depósitos</span>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#2a78a5' }}>{fmt(totalDepositos)}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* SECCIÓN 9: Salidas */}
+          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
+              <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>9</div>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Salidas de caja</div>
+            </div>
+            <div style={{ padding: '20px' }}>
+              {salidaList.map((item) => (
+                <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: '#FDEDEC', borderRadius: '6px', marginBottom: '8px' }}>
+                  <span style={{ fontSize: '13px', color: '#6B6560' }}>{item.descripcion || 'Salida'}</span>
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '600', color: '#C0392B' }}>-{fmt(item.monto)}</span>
+                </div>
+              ))}
+              <div style={{ marginTop: '12px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#FDEDEC' }}>
+                <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total salidas</span>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#C0392B' }}>{fmt(totalSalidas)}</span>
+              </div>
+            </div>
           </div>
 
           {/* SECCIÓN 10: Comentarios */}
