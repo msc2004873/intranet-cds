@@ -40,6 +40,7 @@ export default function CajeraPage() {
   const [salidaList, setSalidaList] = useState([{ id: 1, descripcion: '', monto: 0 }]);
   const [gloryList, setGloryList] = useState([{ id: 1, metodo: '', monto: 0 }]);
   const [cerrarGlory, setCerrarGlory] = useState(false);
+  const [cierreExistente, setCierreExistente] = useState(null);
   let sinpeCount = 1, depCount = 1, salidaCount = 1, gloryCount = 1;
 
   // Inicializar denominaciones
@@ -77,11 +78,40 @@ export default function CajeraPage() {
   // Recargar movimientos cuando cambia la caja
   useEffect(() => {
     if (caja) {
+      verificarCierreExistente();
       loadSinpeDelDia();
       loadDepositosDelDia();
       loadSalidasDelDia();
     }
   }, [caja]);
+
+  async function verificarCierreExistente() {
+    try {
+      const hoy = getFechaCostaRica();
+      const res = await fetch(`/api/cierreCaja?fecha=${hoy}&caja=${encodeURIComponent(caja)}`);
+      const cierres = await res.json();
+
+      if (cierres && cierres.length > 0) {
+        const cierre = cierres[0];
+        setCierreExistente(cierre);
+        // Cargar datos del cierre anterior
+        if (cierre.denominaciones_sobre) {
+          const denoms = typeof cierre.denominaciones_sobre === 'string'
+            ? JSON.parse(cierre.denominaciones_sobre)
+            : cierre.denominaciones_sobre;
+          setQuedaDenominaciones(denoms);
+        }
+        setTarjetaBac(cierre.tarjeta_bac || 0);
+        setTarjetaBn(cierre.tarjeta_bn || 0);
+        setDolares(cierre.dolares_total || 0);
+      } else {
+        setCierreExistente(null);
+      }
+    } catch (err) {
+      console.error('Error verificando cierre:', err);
+      setCierreExistente(null);
+    }
+  }
 
   async function fetchTipoCambioPeriodo() {
     try {
@@ -334,7 +364,21 @@ export default function CajeraPage() {
           </div>
         </div>
 
-        {caja ? (
+        {cierreExistente && (
+          <div style={{ background: '#E8F3EC', border: '2px solid #27AE60', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <div style={{ fontSize: '20px' }}>✅</div>
+              <div>
+                <div style={{ fontSize: '14px', fontWeight: '700', color: '#27AE60' }}>Cierre ya realizado hoy</div>
+                <div style={{ fontSize: '12px', color: '#6B6560', marginTop: '2px' }}>
+                  Registrado a las {new Date(cierreExistente.fecha_hora).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' })}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {caja && !cierreExistente ? (
           <form onSubmit={handleSubmit}>
           {/* SECCIÓN 2: Glory */}
           <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
@@ -598,11 +642,39 @@ export default function CajeraPage() {
             {loading ? 'Guardando...' : 'Enviar cierre de caja'}
           </button>
         </form>
-          ) : (
-            <div style={{ background: '#fff', border: '1.5px solid #E2DDD4', borderRadius: '12px', padding: '40px 20px', textAlign: 'center', marginTop: '24px' }}>
-              <div style={{ fontSize: '16px', color: '#6B6560', fontWeight: '600' }}>Selecciona una caja para continuar</div>
+        ) : null}
+
+        {cierreExistente && (
+          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', background: '#F0EDE6' }}>
+              <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Datos del cierre registrado</div>
             </div>
-          )}
+            <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', marginBottom: '4px' }}>Dólares</div>
+                <div style={{ fontSize: '16px', fontWeight: '700', color: '#2a78a5' }}>{fmt(cierreExistente.dolares_total || 0)}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', marginBottom: '4px' }}>Tarjeta BAC</div>
+                <div style={{ fontSize: '16px', fontWeight: '700', color: '#2a78a5' }}>{fmt(cierreExistente.tarjeta_bac || 0)}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', marginBottom: '4px' }}>Tarjeta BN</div>
+                <div style={{ fontSize: '16px', fontWeight: '700', color: '#2a78a5' }}>{fmt(cierreExistente.tarjeta_bn || 0)}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', marginBottom: '4px' }}>TC</div>
+                <div style={{ fontSize: '16px', fontWeight: '700', color: '#2a78a5' }}>₡{cierreExistente.tc}</div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {!caja && (
+          <div style={{ background: '#fff', border: '1.5px solid #E2DDD4', borderRadius: '12px', padding: '40px 20px', textAlign: 'center', marginTop: '24px' }}>
+            <div style={{ fontSize: '16px', color: '#6B6560', fontWeight: '600' }}>Selecciona una caja para continuar</div>
+          </div>
+        )}
       </div>
 
       {/* Toast */}
