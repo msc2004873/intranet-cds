@@ -59,15 +59,16 @@ export async function POST(request) {
     const fechaHoy = `${y}-${m}-${d}`;
 
     // Verificar si ya existe un cierre para esta caja en este día (rango de 24h en CR)
-    const inicioHoy = `${fechaHoy}T00:00:00Z`;
-    const finHoy = `${fechaHoy}T23:59:59Z`;
+    // CR is UTC-6, so CR day starts at UTC 06:00 and ends at UTC 05:59:59 next day
+    const crDayStart = new Date(Date.UTC(parseInt(y), parseInt(m) - 1, parseInt(d), 6, 0, 0)).toISOString();
+    const crDayEnd = new Date(Date.UTC(parseInt(y), parseInt(m) - 1, parseInt(d), 6, 0, 0) + (24 * 60 * 60 * 1000) - 1000).toISOString();
 
     const { data: existingCierre } = await supabase
       .from('cierre_caja')
       .select('id')
       .eq('caja', data.caja)
-      .gte('fecha_hora', inicioHoy)
-      .lte('fecha_hora', finHoy)
+      .gte('fecha_hora', crDayStart)
+      .lte('fecha_hora', crDayEnd)
       .limit(1);
 
     if (existingCierre && existingCierre.length > 0) {
@@ -82,8 +83,8 @@ export async function POST(request) {
       const { data: existingGlory } = await supabase
         .from('cierre_caja')
         .select('id')
-        .gte('fecha_hora', `${fechaHoy}T00:00:00Z`)
-        .lte('fecha_hora', `${fechaHoy}T23:59:59Z`)
+        .gte('fecha_hora', crDayStart)
+        .lte('fecha_hora', crDayEnd)
         .not('glory_json', 'is', null)
         .limit(1);
 
