@@ -47,6 +47,7 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
   const [tipoCambio, setTipoCambio] = useState(475);
   const [usuarioActual, setUsuarioActual] = useState(null);
   const [imagenPopup, setImagenPopup] = useState(null);
+  const [resumenComparacion, setResumenComparacion] = useState(null);
 
   useEffect(() => {
     cargarDetalles();
@@ -103,21 +104,21 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
           const salidasApi = await salidaRes.json();
 
           if (Array.isArray(sinpesApi) && sinpesApi.length > 0) {
-            setSinpeRevisado(sinpesApi.map(s => ({ ...s, monto_revisado: formatearMiles(s.monto || 0), aprobado: false, rechazado: false })));
+            setSinpeRevisado(sinpesApi.map(s => ({ ...s, monto_revisado: '', aprobado: false, rechazado: false })));
           } else {
             setSinpeRevisado(sinpesDb.map(s => ({ ...s, monto_revisado: '', aprobado: false, rechazado: false })));
           }
 
           if (Array.isArray(transfsApi) && transfsApi.length > 0) {
-            setTransfRevisadas(transfsApi.map(t => ({ ...t, monto_revisado: formatearMiles(t.monto || 0), aprobado: false, rechazado: false })));
+            setTransfRevisadas(transfsApi.map(t => ({ ...t, monto_revisado: '', aprobado: false, rechazado: false })));
           } else {
             setTransfRevisadas(transfsDb.map(t => ({ ...t, monto_revisado: '', aprobado: false, rechazado: false })));
           }
 
           if (Array.isArray(salidasApi) && salidasApi.length > 0) {
-            setSalidEvaluadas(salidasApi.map(s => ({ ...s, aprobado: false, rechazado: false })));
+            setSalidEvaluadas(salidasApi.map(s => ({ ...s, monto_revisado: '', aprobado: false, rechazado: false })));
           } else {
-            setSalidEvaluadas(salidasDb.map(s => ({ ...s, aprobado: false, rechazado: false })));
+            setSalidEvaluadas(salidasDb.map(s => ({ ...s, monto_revisado: '', aprobado: false, rechazado: false })));
           }
         } catch (apiErr) {
           console.error('Error cargando desde API, usando JSON guardado:', apiErr);
@@ -177,7 +178,40 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
 
       if (res.ok) {
         showToast('✅ Revisión guardada correctamente', 'success');
-        setTimeout(() => onGuardar(), 500);
+
+        // Generar resumen de comparación
+        const resumen = {
+          sinpe: sinpeRevisado.map(s => ({
+            referencia: s.referencia,
+            monto_cajera: parsearMiles(s.monto || 0),
+            monto_revisado: parsearMiles(s.monto_revisado),
+            coincide: parsearMiles(s.monto || 0) === parsearMiles(s.monto_revisado),
+            aprobado: s.aprobado,
+            rechazado: s.rechazado,
+            moneda: s.moneda
+          })),
+          transferencias: transfRevisadas.map(t => ({
+            descripcion: t.descripcion,
+            monto_cajera: parsearMiles(t.monto || 0),
+            monto_revisado: parsearMiles(t.monto_revisado),
+            coincide: parsearMiles(t.monto || 0) === parsearMiles(t.monto_revisado),
+            aprobado: t.aprobado,
+            rechazado: t.rechazado,
+            moneda: t.moneda
+          })),
+          salidas: salidEvaluadas.map(s => ({
+            descripcion: s.descripcion,
+            monto_cajera: parsearMiles(s.monto || 0),
+            monto_revisado: parsearMiles(s.monto_revisado),
+            coincide: parsearMiles(s.monto || 0) === parsearMiles(s.monto_revisado),
+            aprobado: s.aprobado,
+            rechazado: s.rechazado,
+            moneda: s.moneda
+          }))
+        };
+
+        setResumenComparacion(resumen);
+        // No llamar a onGuardar() aquí - dejar que el usuario cierre el resumen primero
       } else {
         showToast('❌ Error al guardar la revisión', 'error');
       }
@@ -244,8 +278,8 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
               <input type="text" value={cierre?.fecha_hora ? new Date(cierre.fecha_hora).toLocaleDateString('es-CR') : '—'} readOnly style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', background: '#F0EDE6', color: '#6B6560', fontFamily: "'DM Mono', monospace" }} />
             </div>
             <div>
-              <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Período</label>
-              <input type="text" value={`P${periodo?.num || '—'}`} readOnly style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', background: '#F0EDE6', color: '#6B6560' }} />
+              <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Caja</label>
+              <input type="text" value={cierre?.caja || '—'} readOnly style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', background: '#F0EDE6', color: '#6B6560' }} />
             </div>
             <div>
               <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Hora cierre</label>
@@ -438,10 +472,15 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
                       <div style={{ height: '110px', background: '#F7F5F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: '#C8C4BC' }}>📄</div>
                     )}
                     <div style={{ padding: '8px 10px' }}>
-                      <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '14px', fontWeight: '700', color: '#2a78a5' }}>
-                        {fmtMonto(parsearMiles(sinpe.monto_revisado), sinpe.moneda)}
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#9C9590', marginTop: '2px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                      <input
+                        type="text"
+                        value={sinpe.monto_revisado === 0 ? '' : sinpe.monto_revisado.toLocaleString('es-CR')}
+                        onChange={(e) => { const u = [...sinpeRevisado]; u[i] = { ...u[i], monto_revisado: parseFloat(e.target.value.replace(/\s/g, '')) || 0 }; setSinpeRevisado(u); }}
+                        placeholder="Escribir monto visto"
+                        inputMode="numeric"
+                        style={{ width: '100%', padding: '6px 8px', border: '1px solid #E2DDD4', borderRadius: '6px', fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '600', textAlign: 'center', marginBottom: '4px' }}
+                      />
+                      <div style={{ fontSize: '11px', color: '#9C9590', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                         {sinpe.referencia || '—'}
                       </div>
                     </div>
@@ -493,10 +532,15 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
                       <div style={{ height: '110px', background: '#F7F5F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: '#C8C4BC' }}>📄</div>
                     )}
                     <div style={{ padding: '8px 10px' }}>
-                      <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '14px', fontWeight: '700', color: '#2a78a5' }}>
-                        {fmtMonto(parsearMiles(transf.monto_revisado), transf.moneda)}
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#9C9590', marginTop: '2px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                      <input
+                        type="text"
+                        value={transf.monto_revisado === 0 ? '' : transf.monto_revisado.toLocaleString('es-CR')}
+                        onChange={(e) => { const u = [...transfRevisadas]; u[i] = { ...u[i], monto_revisado: parseFloat(e.target.value.replace(/\s/g, '')) || 0 }; setTransfRevisadas(u); }}
+                        placeholder="Escribir monto visto"
+                        inputMode="numeric"
+                        style={{ width: '100%', padding: '6px 8px', border: '1px solid #E2DDD4', borderRadius: '6px', fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '600', textAlign: 'center', marginBottom: '4px' }}
+                      />
+                      <div style={{ fontSize: '11px', color: '#9C9590', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                         {transf.descripcion || '—'}
                       </div>
                     </div>
@@ -548,10 +592,15 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
                       <div style={{ height: '110px', background: '#F7F5F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: '#C8C4BC' }}>📄</div>
                     )}
                     <div style={{ padding: '8px 10px' }}>
-                      <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '14px', fontWeight: '700', color: '#C0392B' }}>
-                        -{fmtMonto(parsearMiles(salida.monto), salida.moneda)}
-                      </div>
-                      <div style={{ fontSize: '11px', color: '#9C9590', marginTop: '2px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                      <input
+                        type="text"
+                        value={salida.monto_revisado === 0 ? '' : salida.monto_revisado.toLocaleString('es-CR')}
+                        onChange={(e) => { const u = [...salidEvaluadas]; u[i] = { ...u[i], monto_revisado: parseFloat(e.target.value.replace(/\s/g, '')) || 0 }; setSalidEvaluadas(u); }}
+                        placeholder="Escribir monto visto"
+                        inputMode="numeric"
+                        style={{ width: '100%', padding: '6px 8px', border: '1px solid #E2DDD4', borderRadius: '6px', fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '600', textAlign: 'center', marginBottom: '4px' }}
+                      />
+                      <div style={{ fontSize: '11px', color: '#9C9590', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                         {salida.descripcion || '—'}
                       </div>
                     </div>
@@ -698,6 +747,132 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
               style={{ maxWidth: '100%', maxHeight: '90vh', objectFit: 'contain', borderRadius: '8px' }}
               onClick={(e) => e.stopPropagation()}
             />
+          </div>
+        )}
+
+        {/* Modal de comparación de montos */}
+        {resumenComparacion && (
+          <div style={{
+            position: 'fixed',
+            inset: 0,
+            background: 'rgba(0,0,0,0.7)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9997,
+            padding: '20px'
+          }}>
+            <div style={{
+              background: 'white',
+              borderRadius: '12px',
+              maxWidth: '600px',
+              width: '100%',
+              maxHeight: '85vh',
+              overflowY: 'auto',
+              padding: '24px'
+            }}>
+              <div style={{ fontSize: '18px', fontWeight: '700', color: '#1A1714', marginBottom: '20px', textAlign: 'center' }}>
+                Comparación de montos
+              </div>
+
+              {resumenComparacion.sinpe.length > 0 && (
+                <>
+                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#2a78a5', marginBottom: '10px' }}>SINPE</div>
+                  {resumenComparacion.sinpe.map((item, idx) => (
+                    <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '10px', marginBottom: '10px', background: item.coincide ? '#E8F3EC' : '#FDEDEC', borderRadius: '8px', borderLeft: `3px solid ${item.coincide ? '#27AE60' : '#E74C3C'}` }}>
+                      <div style={{ fontSize: '11px', color: '#6B6560' }}>
+                        <div style={{ fontWeight: '600', color: '#1A1714' }}>Ref: {item.referencia}</div>
+                        <div>Cajera: {fmtMonto(item.monto_cajera, item.moneda)}</div>
+                        <div>Revisado: {fmtMonto(item.monto_revisado, item.moneda)}</div>
+                      </div>
+                      <div style={{ fontSize: '11px', textAlign: 'right', color: '#6B6560', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                        <div style={{ fontWeight: '600', color: item.coincide ? '#27AE60' : '#E74C3C', fontSize: '12px' }}>
+                          {item.coincide ? '✓ Coincide' : '✗ Diferencia'}
+                        </div>
+                        {!item.coincide && (
+                          <div style={{ color: '#E74C3C', fontWeight: '600' }}>
+                            Δ {fmtMonto(Math.abs(item.monto_revisado - item.monto_cajera), item.moneda)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {resumenComparacion.transferencias.length > 0 && (
+                <>
+                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#2a78a5', marginBottom: '10px', marginTop: '15px' }}>TRANSFERENCIAS</div>
+                  {resumenComparacion.transferencias.map((item, idx) => (
+                    <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '10px', marginBottom: '10px', background: item.coincide ? '#E8F3EC' : '#FDEDEC', borderRadius: '8px', borderLeft: `3px solid ${item.coincide ? '#27AE60' : '#E74C3C'}` }}>
+                      <div style={{ fontSize: '11px', color: '#6B6560' }}>
+                        <div style={{ fontWeight: '600', color: '#1A1714' }}>Desc: {item.descripcion}</div>
+                        <div>Cajera: {fmtMonto(item.monto_cajera, item.moneda)}</div>
+                        <div>Revisado: {fmtMonto(item.monto_revisado, item.moneda)}</div>
+                      </div>
+                      <div style={{ fontSize: '11px', textAlign: 'right', color: '#6B6560', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                        <div style={{ fontWeight: '600', color: item.coincide ? '#27AE60' : '#E74C3C', fontSize: '12px' }}>
+                          {item.coincide ? '✓ Coincide' : '✗ Diferencia'}
+                        </div>
+                        {!item.coincide && (
+                          <div style={{ color: '#E74C3C', fontWeight: '600' }}>
+                            Δ {fmtMonto(Math.abs(item.monto_revisado - item.monto_cajera), item.moneda)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              {resumenComparacion.salidas.length > 0 && (
+                <>
+                  <div style={{ fontSize: '13px', fontWeight: '600', color: '#C0392B', marginBottom: '10px', marginTop: '15px' }}>SALIDAS</div>
+                  {resumenComparacion.salidas.map((item, idx) => (
+                    <div key={idx} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', padding: '10px', marginBottom: '10px', background: item.coincide ? '#E8F3EC' : '#FDEDEC', borderRadius: '8px', borderLeft: `3px solid ${item.coincide ? '#27AE60' : '#E74C3C'}` }}>
+                      <div style={{ fontSize: '11px', color: '#6B6560' }}>
+                        <div style={{ fontWeight: '600', color: '#1A1714' }}>Desc: {item.descripcion}</div>
+                        <div>Cajera: {fmtMonto(item.monto_cajera, item.moneda)}</div>
+                        <div>Revisado: {fmtMonto(item.monto_revisado, item.moneda)}</div>
+                      </div>
+                      <div style={{ fontSize: '11px', textAlign: 'right', color: '#6B6560', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                        <div style={{ fontWeight: '600', color: item.coincide ? '#27AE60' : '#E74C3C', fontSize: '12px' }}>
+                          {item.coincide ? '✓ Coincide' : '✗ Diferencia'}
+                        </div>
+                        {!item.coincide && (
+                          <div style={{ color: '#E74C3C', fontWeight: '600' }}>
+                            Δ {fmtMonto(Math.abs(item.monto_revisado - item.monto_cajera), item.moneda)}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+
+              <button
+                onClick={() => {
+                  setResumenComparacion(null);
+                  setTimeout(() => onGuardar(), 300);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  background: '#2a78a5',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  marginTop: '20px'
+                }}
+                onMouseEnter={(e) => e.target.style.background = '#1f5780'}
+                onMouseLeave={(e) => e.target.style.background = '#2a78a5'}
+              >
+                ✓ Listo
+              </button>
+            </div>
           </div>
         )}
       </div>
