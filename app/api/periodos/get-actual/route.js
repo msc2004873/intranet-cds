@@ -63,20 +63,30 @@ export async function GET(request) {
     const fechaInicio = new Date(anoNum, mesNum - 1, inicio).toISOString().split('T')[0];
     const fechaFin = new Date(anoNum, mesNum - 1, fin).toISOString().split('T')[0];
 
-    // Guardar en BD el TC actual del período (solo si es primer día)
+    // Guardar en BD el TC actual del período (solo si es primer día y NO existe)
     if (esPrimerDia) {
       try {
-        await supabase
+        const { data: existe } = await supabase
           .from('periodos_tipo_cambio')
-          .upsert({
-            ano: anoNum,
-            mes: mesNum,
-            periodo_num: periodoNum,
-            tipo_cambio: tcAPI.venta,
-            tipo_cambio_ajustado: tcAPI.compra,
-            fecha_inicio: fechaInicio,
-            fecha_fin: fechaFin,
-          }, { onConflict: 'ano,mes,periodo_num' });
+          .select('id')
+          .eq('ano', anoNum)
+          .eq('mes', mesNum)
+          .eq('periodo_num', periodoNum)
+          .single();
+
+        if (!existe) {
+          await supabase
+            .from('periodos_tipo_cambio')
+            .insert({
+              ano: anoNum,
+              mes: mesNum,
+              periodo_num: periodoNum,
+              tipo_cambio: tcAPI.venta,
+              tipo_cambio_ajustado: tcAPI.compra,
+              fecha_inicio: fechaInicio,
+              fecha_fin: fechaFin,
+            });
+        }
       } catch (err) {
         console.log('Error guardando TC en BD:', err.message);
       }
