@@ -268,7 +268,10 @@ export default function CajeraPage() {
         sinpeList,
         depositoList,
         salidaList,
-        ...Object.fromEntries(DENOMS.map(d => [`denom${d}`, denominaciones[d] || 0]))
+        // Conteo de denominaciones (para conteo_caja)
+        ...Object.fromEntries(DENOMS.map(d => [`denom${d}`, denominaciones[d] || 0])),
+        // Denominaciones al sobre (para cierre_caja)
+        ...Object.fromEntries(DENOMS.map(d => [`sobre${d}`, quedaDenominaciones[d] || 0]))
       };
 
       if (cerrarGlory) {

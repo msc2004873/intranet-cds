@@ -132,6 +132,17 @@ export async function POST(request) {
     const tempDate = new Date(Date.UTC(parseInt(y2), parseInt(m2) - 1, parseInt(d2), parseInt(h), parseInt(min), parseInt(s)));
     const fechaHoraUTC = new Date(tempDate.getTime() + (6 * 60 * 60 * 1000)).toISOString();
 
+    // Build denominaciones_sobre JSONB
+    // quedaDenominaciones (sobre${d}) = what stays in cash
+    // denominacionesSobre = what goes to safe = total - queda
+    const denominacionesSobre = {};
+    const DENOMS = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 25, 10, 5];
+    DENOMS.forEach(d => {
+      const conteo = parseInt(data[`denom${d}`]) || 0;
+      const queda = parseInt(data[`sobre${d}`]) || 0;
+      denominacionesSobre[d.toString()] = conteo - queda;
+    });
+
     const insertData = {
       cajera: data.cajera,
       caja: data.caja,
@@ -140,6 +151,32 @@ export async function POST(request) {
       dolares_total: parseFloat(data.dolares) || 0,
       tarjeta_bac: parseFloat(data.tarjetaBac) || 0,
       tarjeta_bn: parseFloat(data.tarjetaBn) || 0,
+      denominaciones_sobre: denominacionesSobre,
+      sinpe_json: data.sinpeList || null,
+      depositos_json: data.depositoList || null,
+      salidas_json: data.salidaList || null,
+      glory_json: data.gloryList || null
+    };
+
+    const { data: result, error: cierreError } = await supabase
+      .from('cierre_caja')
+      .insert([insertData])
+      .select();
+
+    if (cierreError) {
+      console.error('Supabase error:', cierreError);
+      return Response.json(
+        { error: cierreError.message },
+        { status: 400 }
+      );
+    }
+
+    // Now insert the denomination count into conteo_caja
+    const conteoData = {
+      cajera: data.cajera,
+      caja: data.caja,
+      fecha: fecha.split('T')[0], // Extract date part
+      hora: fechaHoraUTC,
       c_20000: parseInt(data.denom20000) || 0,
       c_10000: parseInt(data.denom10000) || 0,
       c_5000: parseInt(data.denom5000) || 0,
@@ -151,23 +188,17 @@ export async function POST(request) {
       c_25: parseInt(data.denom25) || 0,
       c_10: parseInt(data.denom10) || 0,
       c_5: parseInt(data.denom5) || 0,
-      sinpe_json: data.sinpeList || null,
-      depositos_json: data.depositoList || null,
-      salidas_json: data.salidaList || null,
-      glory_json: data.gloryList || null
+      dolares: parseFloat(data.dolares) || 0,
+      total_colones: 0 // Will be calculated by frontend/user
     };
 
-    const { data: result, error } = await supabase
-      .from('cierre_caja')
-      .insert([insertData])
-      .select();
+    const { error: conteoError } = await supabase
+      .from('conteo_caja')
+      .insert([conteoData]);
 
-    if (error) {
-      console.error('Supabase error:', error);
-      return Response.json(
-        { error: error.message },
-        { status: 400 }
-      );
+    if (conteoError) {
+      console.error('Error inserting conteo:', conteoError);
+      // Continue anyway, the cierre was saved
     }
 
     return Response.json(result[0], { status: 201 });
