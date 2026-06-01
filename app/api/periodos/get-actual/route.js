@@ -2,14 +2,13 @@ import supabase from '../../../../lib/supabase-server.js';
 
 async function obtenerTipoCambioAPI() {
   try {
-    const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+    const res = await fetch('https://api.hacienda.go.cr/indicadores/tc/dolar');
     const data = await res.json();
-    if (data.rates && data.rates.CRC) {
-      const tcBruto = Math.round(data.rates.CRC);
-      return tcBruto - 10;
+    if (data.venta && data.venta.valor) {
+      return Math.round(data.venta.valor);
     }
   } catch (err) {
-    console.error('Error obteniendo TC de API:', err);
+    console.error('Error obteniendo TC de API Hacienda:', err);
   }
   return 475;
 }
