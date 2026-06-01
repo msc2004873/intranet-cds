@@ -167,24 +167,6 @@ export default function Home() {
         background: '#F7F5F0',
         color: '#1A1714',
       }}>
-        {/* Notificación roja si es primer día */}
-        {esPrimerDia && (
-          <div style={{
-            background: '#DC2626',
-            color: 'white',
-            padding: '16px 24px',
-            borderRadius: '12px',
-            textAlign: 'center',
-            boxShadow: '0 4px 12px rgba(220,38,38,0.3)',
-            fontSize: '18px',
-            fontWeight: '700',
-            letterSpacing: '0.5px',
-            animation: 'pulse 2s infinite',
-          }}>
-            ⚠️ CAMBIAR TIPO DE CAMBIO
-          </div>
-        )}
-
         {/* TC del período */}
         <div style={{
           display: 'flex',
