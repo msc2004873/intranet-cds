@@ -77,8 +77,7 @@ export async function GET(request) {
         periodo_num: i,
         fecha_inicio: `${inicio} de ${mesStr}`,
         fecha_fin: `${fin} de ${mesStr}`,
-        tipo_cambio: tc ? tc.tipo_cambio : null,
-        tipo_cambio_ajustado: tc ? tc.tipo_cambio_ajustado : null,
+        tipo_cambio: tc ? tc.tipo_cambio_ajustado : null,
         esFuturo,
         fecha_registro: tc ? tc.fecha_registro : null,
       });
