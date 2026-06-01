@@ -14,14 +14,23 @@ export async function GET(req) {
       );
     }
 
-    const fechaInicio = `${fecha}T00:00:00`;
-    const fechaFin = hasta ? `${hasta}T23:59:59` : `${fecha}T23:59:59`;
+    // Convert CR date to UTC range (CR is UTC-6, so CR day starts at UTC 06:00)
+    const [y, m, d] = fecha.split('-');
+    const crDayStart = new Date(Date.UTC(parseInt(y), parseInt(m) - 1, parseInt(d), 6, 0, 0)).toISOString();
+
+    let crDayEnd;
+    if (hasta) {
+      const [y2, m2, d2] = hasta.split('-');
+      crDayEnd = new Date(Date.UTC(parseInt(y2), parseInt(m2) - 1, parseInt(d2), 6, 0, 0) + (24 * 60 * 60 * 1000) - 1000).toISOString();
+    } else {
+      crDayEnd = new Date(Date.UTC(parseInt(y), parseInt(m) - 1, parseInt(d), 6, 0, 0) + (24 * 60 * 60 * 1000) - 1000).toISOString();
+    }
 
     let query = supabase
       .from('cierre_caja')
       .select('*')
-      .gte('fecha_hora', fechaInicio)
-      .lte('fecha_hora', fechaFin);
+      .gte('fecha_hora', crDayStart)
+      .lte('fecha_hora', crDayEnd);
 
     if (caja) {
       query = query.eq('caja', caja);
