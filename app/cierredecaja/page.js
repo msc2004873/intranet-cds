@@ -117,10 +117,10 @@ export default function CajeraPage() {
     try {
       const res = await fetch('/api/periodos/get-actual');
       const data = await res.json();
-      setTc(data.tipoCambio);
+      setTc(data.tipoCambioAjustado);
     } catch (err) {
       console.log('No se pudo cargar TC del período');
-      setTc(475); // Default
+      setTc(455); // Default
     }
   }
 

@@ -4,16 +4,17 @@ async function obtenerTipoCambioAPI() {
   try {
     const res = await fetch('https://api.hacienda.go.cr/indicadores/tc/dolar');
     const data = await res.json();
-    if (data.venta && data.venta.valor && data.compra && data.compra.valor) {
+    if (data.compra && data.compra.valor) {
+      const compra = Math.round(data.compra.valor);
       return {
-        venta: Math.round(data.venta.valor),
-        compra: Math.round(data.compra.valor) - 10,
+        compra: compra,
+        compraAjustada: compra - 10,
       };
     }
   } catch (err) {
     console.error('Error obteniendo TC de API Hacienda:', err);
   }
-  return { venta: 475, compra: 455 };
+  return { compra: 465, compraAjustada: 455 };
 }
 
 export async function GET(request) {
@@ -96,8 +97,8 @@ export async function GET(request) {
         const { error } = await supabase
           .from('periodos_tipo_cambio')
           .update({
-            tipo_cambio: tcAPI.venta,
-            tipo_cambio_ajustado: tcAPI.compra,
+            tipo_cambio: tcAPI.compra,
+            tipo_cambio_ajustado: tcAPI.compraAjustada,
           })
           .eq('ano', anoActual)
           .eq('mes', mesActual)
@@ -112,7 +113,7 @@ export async function GET(request) {
         }
 
         resultado.insertados = 1;
-        resultado.mensaje = `TC guardado: ${tcAPI.venta} (ajustado: ${tcAPI.compra})`;
+        resultado.mensaje = `TC guardado: ${tcAPI.compra} (ajustado: ${tcAPI.compraAjustada})`;
       } else {
         resultado.mensaje = `TC ya existe y está bloqueado`;
       }
