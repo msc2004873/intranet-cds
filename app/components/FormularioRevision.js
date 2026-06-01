@@ -139,10 +139,10 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
       const fecha = new Date(cierre.fecha_hora).toISOString().split('T')[0];
       const res = await fetch(`/api/periodos/get-tc?fecha=${fecha}&periodo=${periodo.num}`);
       const data = await res.json();
-      setTipoCambio(data.tipo_cambio_ajustado || 455);
+      setTipoCambio(data.tipo_cambio || 475);
     } catch (err) {
       console.error('Error cargando TC:', err);
-      setTipoCambio(455);
+      setTipoCambio(475);
     }
   }
 
