@@ -4,13 +4,16 @@ async function obtenerTipoCambioAPI() {
   try {
     const res = await fetch('https://api.hacienda.go.cr/indicadores/tc/dolar');
     const data = await res.json();
-    if (data.venta && data.venta.valor) {
-      return Math.round(data.venta.valor);
+    if (data.venta && data.venta.valor && data.compra && data.compra.valor) {
+      return {
+        venta: Math.round(data.venta.valor),
+        compra: Math.round(data.compra.valor) - 10,
+      };
     }
   } catch (err) {
     console.error('Error obteniendo TC de API Hacienda:', err);
   }
-  return 475;
+  return { venta: 475, compra: 455 };
 }
 
 export async function GET(request) {
@@ -51,7 +54,7 @@ export async function GET(request) {
     }
 
     // Obtener TC de la API
-    const tipoCambio = await obtenerTipoCambioAPI();
+    const tcAPI = await obtenerTipoCambioAPI();
 
     // Generar fechas para el período actual
     const ultimoDiaDelMes = new Date(anoNum, mesNum, 0).getDate();
@@ -63,17 +66,14 @@ export async function GET(request) {
     // Guardar en BD el TC actual del período (solo si es primer día)
     if (esPrimerDia) {
       try {
-        const tcReal = tipoCambio + 10;
-        const tcAjustado = tipoCambio;
-
         await supabase
           .from('periodos_tipo_cambio')
           .upsert({
             ano: anoNum,
             mes: mesNum,
             periodo_num: periodoNum,
-            tipo_cambio: tcReal,
-            tipo_cambio_ajustado: tcAjustado,
+            tipo_cambio: tcAPI.venta,
+            tipo_cambio_ajustado: tcAPI.compra,
             fecha_inicio: fechaInicio,
             fecha_fin: fechaFin,
           }, { onConflict: 'ano,mes,periodo_num' });
@@ -85,17 +85,19 @@ export async function GET(request) {
     // Obtener el TC del período actual de BD
     const { data: periodoData } = await supabase
       .from('periodos_tipo_cambio')
-      .select('tipo_cambio_ajustado')
+      .select('tipo_cambio, tipo_cambio_ajustado')
       .eq('ano', anoNum)
       .eq('mes', mesNum)
       .eq('periodo_num', periodoNum)
       .single();
 
-    const tcActual = periodoData?.tipo_cambio_ajustado || tipoCambio;
+    const tcActual = periodoData?.tipo_cambio || tcAPI.venta;
+    const tcAjustadoActual = periodoData?.tipo_cambio_ajustado || tcAPI.compra;
 
     return Response.json({
       periodo: periodoNum,
       tipoCambio: tcActual,
+      tipoCambioAjustado: tcAjustadoActual,
       esPrimerDia,
       ano: anoNum,
       mes,

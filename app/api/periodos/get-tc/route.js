@@ -29,7 +29,7 @@ export async function GET(req) {
       .single();
 
     if (error || !data) {
-      return Response.json({ tipo_cambio: 475, tipo_cambio_ajustado: 465 }, { status: 200 });
+      return Response.json({ tipo_cambio: 475, tipo_cambio_ajustado: 455 }, { status: 200 });
     }
 
     return Response.json(data);
