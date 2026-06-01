@@ -175,7 +175,7 @@ export async function POST(request) {
     const conteoData = {
       cajera: data.cajera,
       caja: data.caja,
-      fecha: fecha.split('T')[0], // Extract date part
+      fecha: fechaHoraUTC.split('T')[0], // Extract date part
       hora: fechaHoraUTC,
       c_20000: parseInt(data.denom20000) || 0,
       c_10000: parseInt(data.denom10000) || 0,
