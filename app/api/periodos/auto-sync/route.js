@@ -1,5 +1,21 @@
 import supabase from '../../../../lib/supabase-server.js';
 
+async function obtenerTipoCambioAPI() {
+  try {
+    const res = await fetch('https://api.hacienda.go.cr/indicadores/tc/dolar');
+    const data = await res.json();
+    if (data.venta && data.venta.valor && data.compra && data.compra.valor) {
+      return {
+        venta: Math.round(data.venta.valor),
+        compra: Math.round(data.compra.valor) - 10,
+      };
+    }
+  } catch (err) {
+    console.error('Error obteniendo TC de API Hacienda:', err);
+  }
+  return { venta: 475, compra: 455 };
+}
+
 export async function GET(request) {
   try {
     const now = new Date();
@@ -14,9 +30,9 @@ export async function GET(request) {
     const diaActual = parseInt(dia);
     const anoActual = parseInt(ano);
 
-    let resultado = { creados: 0, actualizados: 0, mensaje: 'Sin cambios' };
+    let resultado = { creados: 0, insertados: 0, mensaje: 'Sin cambios' };
 
-    // 1. SI ES PRIMER DIA DEL MES → Crear los 6 períodos
+    // 1. SI ES PRIMER DIA DEL MES → Crear los 6 períodos con NULL
     if (diaActual === 1) {
       const ultimoDiaDelMes = new Date(anoActual, mesActual, 0).getDate();
       const registros = [];
@@ -59,41 +75,47 @@ export async function GET(request) {
       resultado.mensaje = `Creados ${registros.length} períodos de ${mesActual}/${anoActual}`;
     }
 
-    // 2. DETERMINAR PERIODO ACTUAL y actualizar TC si es primer día del período
+    // 2. DETERMINAR PERIODO ACTUAL e insertar TC si es primer día del período (solo si NO existe)
     const periodoActual = Math.ceil(diaActual / 5);
     const primerDiaDelPeriodo = (periodoActual - 1) * 5 + 1;
 
     if (diaActual === primerDiaDelPeriodo) {
-      // Obtener TC del API
-      const tcReal = await fetch(
-        'https://api.exchangerate-api.com/v4/latest/USD'
-      )
-        .then((r) => r.json())
-        .then((d) => (d.rates?.CRC ? Math.round(d.rates.CRC) : 475))
-        .catch(() => 475);
-
-      const tcAjustado = tcReal - 10;
-
-      const { error } = await supabase
+      // Verificar si ya existe
+      const { data: existe } = await supabase
         .from('periodos_tipo_cambio')
-        .update({
-          tipo_cambio: tcReal,
-          tipo_cambio_ajustado: tcAjustado,
-        })
+        .select('tipo_cambio')
         .eq('ano', anoActual)
         .eq('mes', mesActual)
-        .eq('periodo_num', periodoActual);
+        .eq('periodo_num', periodoActual)
+        .single();
 
-      if (error) {
-        console.error('Error actualizando TC:', error);
-        return Response.json(
-          { error: error.message },
-          { status: 400 }
-        );
+      // Solo insertar si no existe o si es NULL
+      if (!existe || existe.tipo_cambio === null) {
+        const tcAPI = await obtenerTipoCambioAPI();
+
+        const { error } = await supabase
+          .from('periodos_tipo_cambio')
+          .update({
+            tipo_cambio: tcAPI.venta,
+            tipo_cambio_ajustado: tcAPI.compra,
+          })
+          .eq('ano', anoActual)
+          .eq('mes', mesActual)
+          .eq('periodo_num', periodoActual);
+
+        if (error) {
+          console.error('Error insertando TC:', error);
+          return Response.json(
+            { error: error.message },
+            { status: 400 }
+          );
+        }
+
+        resultado.insertados = 1;
+        resultado.mensaje = `TC guardado: ${tcAPI.venta} (ajustado: ${tcAPI.compra})`;
+      } else {
+        resultado.mensaje = `TC ya existe y está bloqueado`;
       }
-
-      resultado.actualizados = 1;
-      resultado.mensaje = `TC guardado: ${tcReal} (ajustado: ${tcAjustado})`;
     }
 
     return Response.json(resultado);
