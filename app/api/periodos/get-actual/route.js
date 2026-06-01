@@ -102,8 +102,8 @@ export async function GET(request) {
       .eq('periodo_num', periodoNum)
       .single();
 
-    const tcActual = periodoData?.tipo_cambio || tcAPI.venta;
-    const tcAjustadoActual = periodoData?.tipo_cambio_ajustado || tcAPI.compra;
+    const tcActual = periodoData?.tipo_cambio || tcAPI.compra;
+    const tcAjustadoActual = periodoData?.tipo_cambio_ajustado || tcAPI.compraAjustada;
 
     return Response.json({
       periodo: periodoNum,
