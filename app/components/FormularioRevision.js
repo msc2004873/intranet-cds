@@ -13,6 +13,11 @@ const parsearMiles = (str) => {
   return parseInt(str.replace(/\s/g, '')) || 0;
 };
 
+const fmtMonto = (monto, moneda = 'colones') => {
+  const simbolo = moneda === 'usd' ? '$' : '₡';
+  return simbolo + Math.round(monto).toLocaleString('es-CR');
+};
+
 export default function FormularioRevision({ cierre, periodo, onVolver, onGuardar }) {
   const [denominaciones, setDenominaciones] = useState({
     20000: '',
@@ -424,7 +429,7 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
                     )}
                     <div style={{ padding: '8px 10px' }}>
                       <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '14px', fontWeight: '700', color: '#2a78a5' }}>
-                        {fmt(parsearMiles(sinpe.monto_revisado))}
+                        {fmtMonto(parsearMiles(sinpe.monto_revisado), sinpe.moneda)}
                       </div>
                       <div style={{ fontSize: '11px', color: '#9C9590', marginTop: '2px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                         {sinpe.referencia || '—'}
@@ -479,7 +484,7 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
                     )}
                     <div style={{ padding: '8px 10px' }}>
                       <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '14px', fontWeight: '700', color: '#2a78a5' }}>
-                        {fmt(parsearMiles(transf.monto_revisado))}
+                        {fmtMonto(parsearMiles(transf.monto_revisado), transf.moneda)}
                       </div>
                       <div style={{ fontSize: '11px', color: '#9C9590', marginTop: '2px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                         {transf.descripcion || '—'}
@@ -534,7 +539,7 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
                     )}
                     <div style={{ padding: '8px 10px' }}>
                       <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '14px', fontWeight: '700', color: '#C0392B' }}>
-                        -{fmt(parsearMiles(salida.monto))}
+                        -{fmtMonto(parsearMiles(salida.monto), salida.moneda)}
                       </div>
                       <div style={{ fontSize: '11px', color: '#9C9590', marginTop: '2px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                         {salida.descripcion || '—'}
