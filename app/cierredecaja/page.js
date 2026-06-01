@@ -135,7 +135,9 @@ export default function CajeraPage() {
         const items = data.map((m, i) => ({
           id: m.id || i,
           monto: m.monto || 0,
-          referencia: m.referencia || 'N/A'
+          referencia: m.referencia || 'N/A',
+          archivo_url: m.archivo_url || null,
+          moneda: m.moneda || 'colones'
         }));
         if (items.length > 0) {
           setSinpeList(items);
@@ -178,7 +180,10 @@ export default function CajeraPage() {
         const items = data.map((m, i) => ({
           id: m.id || i,
           nombre: m.referencia || '',
-          monto: m.monto || 0
+          descripcion: m.referencia || '',
+          monto: m.monto || 0,
+          archivo_url: m.archivo_url || null,
+          moneda: m.moneda || 'colones'
         }));
         if (items.length > 0) {
           setDepositoList(items);
@@ -201,7 +206,9 @@ export default function CajeraPage() {
         const items = data.map((m, i) => ({
           id: m.id || i,
           descripcion: m.referencia || '',
-          monto: m.monto || 0
+          monto: m.monto || 0,
+          archivo_url: m.archivo_url || null,
+          moneda: m.moneda || 'colones'
         }));
         if (items.length > 0) {
           setSalidaList(items);
