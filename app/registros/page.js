@@ -142,10 +142,13 @@ export default function RegistrosPage() {
 
     setLoading(true);
     try {
+      const monedaAPI = mapMonedaToAPI(moneda);
+      console.log('Enviando moneda:', moneda, '→', monedaAPI);
+
       const formData = new FormData();
       formData.append('tipo', tipoMovimiento.toUpperCase());
       formData.append('monto', parseFloat(monto));
-      formData.append('moneda', mapMonedaToAPI(moneda));
+      formData.append('moneda', monedaAPI);
       formData.append('referencia', tipoMovimiento === 'salida' ? descripcion : (referencia || null));
       formData.append('cajera', cajera);
       formData.append('caja', caja);
