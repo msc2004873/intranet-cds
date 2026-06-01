@@ -484,16 +484,6 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
                         {sinpe.referencia || '—'}
                       </div>
                     </div>
-                    <div style={{ display: 'flex', borderTop: '1px solid #E2DDD4' }}>
-                      <label style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '7px 6px', cursor: 'pointer', background: sinpe.aprobado ? '#E8F3EC' : '#F7F5F0', borderRight: '1px solid #E2DDD4' }}>
-                        <input type="checkbox" checked={!!sinpe.aprobado} onChange={() => { const u = [...sinpeRevisado]; u[i] = { ...u[i], aprobado: !u[i].aprobado, rechazado: false }; setSinpeRevisado(u); }} style={{ width: '14px', height: '14px', accentColor: '#27AE60' }} />
-                        <span style={{ fontSize: '11px', fontWeight: '600', color: sinpe.aprobado ? '#27AE60' : '#9C9590' }}>OK</span>
-                      </label>
-                      <label style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '7px 6px', cursor: 'pointer', background: sinpe.rechazado ? '#FDEDEC' : '#F7F5F0' }}>
-                        <input type="checkbox" checked={!!sinpe.rechazado} onChange={() => { const u = [...sinpeRevisado]; u[i] = { ...u[i], rechazado: !u[i].rechazado, aprobado: false }; setSinpeRevisado(u); }} style={{ width: '14px', height: '14px', accentColor: '#E74C3C' }} />
-                        <span style={{ fontSize: '11px', fontWeight: '600', color: sinpe.rechazado ? '#E74C3C' : '#9C9590' }}>Mal</span>
-                      </label>
-                    </div>
                   </div>
                 );
               })
@@ -544,16 +534,6 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
                         {transf.descripcion || '—'}
                       </div>
                     </div>
-                    <div style={{ display: 'flex', borderTop: '1px solid #E2DDD4' }}>
-                      <label style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '7px 6px', cursor: 'pointer', background: transf.aprobado ? '#E8F3EC' : '#F7F5F0', borderRight: '1px solid #E2DDD4' }}>
-                        <input type="checkbox" checked={!!transf.aprobado} onChange={() => { const u = [...transfRevisadas]; u[i] = { ...u[i], aprobado: !u[i].aprobado, rechazado: false }; setTransfRevisadas(u); }} style={{ width: '14px', height: '14px', accentColor: '#27AE60' }} />
-                        <span style={{ fontSize: '11px', fontWeight: '600', color: transf.aprobado ? '#27AE60' : '#9C9590' }}>OK</span>
-                      </label>
-                      <label style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '7px 6px', cursor: 'pointer', background: transf.rechazado ? '#FDEDEC' : '#F7F5F0' }}>
-                        <input type="checkbox" checked={!!transf.rechazado} onChange={() => { const u = [...transfRevisadas]; u[i] = { ...u[i], rechazado: !u[i].rechazado, aprobado: false }; setTransfRevisadas(u); }} style={{ width: '14px', height: '14px', accentColor: '#E74C3C' }} />
-                        <span style={{ fontSize: '11px', fontWeight: '600', color: transf.rechazado ? '#E74C3C' : '#9C9590' }}>Mal</span>
-                      </label>
-                    </div>
                   </div>
                 );
               })
@@ -603,16 +583,6 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
                       <div style={{ fontSize: '11px', color: '#9C9590', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
                         {salida.descripcion || '—'}
                       </div>
-                    </div>
-                    <div style={{ display: 'flex', borderTop: '1px solid #E2DDD4' }}>
-                      <label style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '7px 6px', cursor: 'pointer', background: salida.aprobado ? '#FDEDEC' : '#F7F5F0', borderRight: '1px solid #E2DDD4' }}>
-                        <input type="checkbox" checked={!!salida.aprobado} onChange={() => { const u = [...salidEvaluadas]; u[i] = { ...u[i], aprobado: !u[i].aprobado, rechazado: false }; setSalidEvaluadas(u); }} style={{ width: '14px', height: '14px', accentColor: '#C0392B' }} />
-                        <span style={{ fontSize: '11px', fontWeight: '600', color: salida.aprobado ? '#C0392B' : '#9C9590' }}>OK</span>
-                      </label>
-                      <label style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '7px 6px', cursor: 'pointer', background: salida.rechazado ? '#FDEDEC' : '#F7F5F0' }}>
-                        <input type="checkbox" checked={!!salida.rechazado} onChange={() => { const u = [...salidEvaluadas]; u[i] = { ...u[i], rechazado: !u[i].rechazado, aprobado: false }; setSalidEvaluadas(u); }} style={{ width: '14px', height: '14px', accentColor: '#E74C3C' }} />
-                        <span style={{ fontSize: '11px', fontWeight: '600', color: salida.rechazado ? '#E74C3C' : '#9C9590' }}>Mal</span>
-                      </label>
                     </div>
                   </div>
                 );
