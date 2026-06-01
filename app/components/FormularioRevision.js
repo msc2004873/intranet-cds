@@ -88,21 +88,21 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
           const salidasApi = await salidaRes.json();
 
           if (Array.isArray(sinpesApi) && sinpesApi.length > 0) {
-            setSinpeRevisado(sinpesApi.map(s => ({ ...s, monto_revisado: formatearMiles(s.monto || 0), aprobado: false })));
+            setSinpeRevisado(sinpesApi.map(s => ({ ...s, monto_revisado: formatearMiles(s.monto || 0), aprobado: false, rechazado: false })));
           } else {
-            setSinpeRevisado(sinpesDb.map(s => ({ ...s, monto_revisado: '', aprobado: false })));
+            setSinpeRevisado(sinpesDb.map(s => ({ ...s, monto_revisado: '', aprobado: false, rechazado: false })));
           }
 
           if (Array.isArray(transfsApi) && transfsApi.length > 0) {
-            setTransfRevisadas(transfsApi.map(t => ({ ...t, monto_revisado: formatearMiles(t.monto || 0), aprobado: false })));
+            setTransfRevisadas(transfsApi.map(t => ({ ...t, monto_revisado: formatearMiles(t.monto || 0), aprobado: false, rechazado: false })));
           } else {
-            setTransfRevisadas(transfsDb.map(t => ({ ...t, monto_revisado: '', aprobado: false })));
+            setTransfRevisadas(transfsDb.map(t => ({ ...t, monto_revisado: '', aprobado: false, rechazado: false })));
           }
 
           if (Array.isArray(salidasApi) && salidasApi.length > 0) {
-            setSalidEvaluadas(salidasApi.map(s => ({ ...s, aprobado: false })));
+            setSalidEvaluadas(salidasApi.map(s => ({ ...s, aprobado: false, rechazado: false })));
           } else {
-            setSalidEvaluadas(salidasDb.map(s => ({ ...s, aprobado: false })));
+            setSalidEvaluadas(salidasDb.map(s => ({ ...s, aprobado: false, rechazado: false })));
           }
         } catch (apiErr) {
           console.error('Error cargando desde API, usando JSON guardado:', apiErr);
@@ -133,18 +133,6 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
   const showToast = (msg, type = 'info') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
-  };
-
-  const aprobarTodosSinpe = () => {
-    setSinpeRevisado(prev => prev.map(s => ({ ...s, aprobado: true })));
-  };
-
-  const aprobarTodasTransf = () => {
-    setTransfRevisadas(prev => prev.map(t => ({ ...t, aprobado: true })));
-  };
-
-  const aprobarTodasSalidas = () => {
-    setSalidEvaluadas(prev => prev.map(s => ({ ...s, aprobado: true })));
   };
 
   async function guardarRevision() {
@@ -418,57 +406,43 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>4</div>
               <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>SINPE Móvil</div>
-              {sinpeRevisado.length > 0 && (
-                <span style={{ fontSize: '11px', color: '#27AE60', fontWeight: '600' }}>
-                  ({sinpeRevisado.filter(s => s.aprobado).length}/{sinpeRevisado.length})
-                </span>
-              )}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ fontSize: '12px', fontWeight: '600', color: '#2a78a5', fontFamily: "'DM Mono', monospace" }}>
-                {fmt(totalSinpe)}
-              </div>
-              {sinpeRevisado.length > 0 && (
-                <button onClick={aprobarTodosSinpe} style={{ padding: '4px 10px', background: '#27AE60', color: 'white', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
-                  ✓ Todos
-                </button>
-              )}
+            <div style={{ fontSize: '12px', fontWeight: '600', color: '#2a78a5', fontFamily: "'DM Mono', monospace" }}>
+              {fmt(totalSinpe)}
             </div>
           </div>
           <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             {sinpeRevisado.length > 0 ? (
-              sinpeRevisado.map((sinpe, i) => (
-                <div key={i} style={{ border: `2px solid ${sinpe.aprobado ? '#27AE60' : '#E2DDD4'}`, borderRadius: '10px', overflow: 'hidden', background: '#fff', transition: 'border-color 0.2s' }}>
-                  {sinpe.archivo_url ? (
-                    <div onClick={() => setImagenPopup(sinpe.archivo_url)} style={{ height: '110px', background: `url(${sinpe.archivo_url}) center/cover no-repeat #F7F5F0`, cursor: 'zoom-in' }} />
-                  ) : (
-                    <div style={{ height: '110px', background: '#F7F5F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: '#C8C4BC' }}>📄</div>
-                  )}
-                  <div style={{ padding: '8px 10px' }}>
-                    <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '14px', fontWeight: '700', color: '#2a78a5' }}>
-                      {fmt(parsearMiles(sinpe.monto_revisado))}
+              sinpeRevisado.map((sinpe, i) => {
+                const borde = sinpe.aprobado ? '#27AE60' : sinpe.rechazado ? '#E74C3C' : '#E2DDD4';
+                return (
+                  <div key={i} style={{ border: `2px solid ${borde}`, borderRadius: '10px', overflow: 'hidden', background: '#fff', transition: 'border-color 0.2s' }}>
+                    {sinpe.archivo_url ? (
+                      <div onClick={() => setImagenPopup(sinpe.archivo_url)} style={{ height: '110px', background: `url(${sinpe.archivo_url}) center/cover no-repeat #F7F5F0`, cursor: 'zoom-in' }} />
+                    ) : (
+                      <div style={{ height: '110px', background: '#F7F5F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: '#C8C4BC' }}>📄</div>
+                    )}
+                    <div style={{ padding: '8px 10px' }}>
+                      <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '14px', fontWeight: '700', color: '#2a78a5' }}>
+                        {fmt(parsearMiles(sinpe.monto_revisado))}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#9C9590', marginTop: '2px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                        {sinpe.referencia || '—'}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '11px', color: '#9C9590', marginTop: '2px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                      {sinpe.referencia || '—'}
+                    <div style={{ display: 'flex', borderTop: '1px solid #E2DDD4' }}>
+                      <label style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '7px 6px', cursor: 'pointer', background: sinpe.aprobado ? '#E8F3EC' : '#F7F5F0', borderRight: '1px solid #E2DDD4' }}>
+                        <input type="checkbox" checked={!!sinpe.aprobado} onChange={() => { const u = [...sinpeRevisado]; u[i] = { ...u[i], aprobado: !u[i].aprobado, rechazado: false }; setSinpeRevisado(u); }} style={{ width: '14px', height: '14px', accentColor: '#27AE60' }} />
+                        <span style={{ fontSize: '11px', fontWeight: '600', color: sinpe.aprobado ? '#27AE60' : '#9C9590' }}>OK</span>
+                      </label>
+                      <label style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '7px 6px', cursor: 'pointer', background: sinpe.rechazado ? '#FDEDEC' : '#F7F5F0' }}>
+                        <input type="checkbox" checked={!!sinpe.rechazado} onChange={() => { const u = [...sinpeRevisado]; u[i] = { ...u[i], rechazado: !u[i].rechazado, aprobado: false }; setSinpeRevisado(u); }} style={{ width: '14px', height: '14px', accentColor: '#E74C3C' }} />
+                        <span style={{ fontSize: '11px', fontWeight: '600', color: sinpe.rechazado ? '#E74C3C' : '#9C9590' }}>Mal</span>
+                      </label>
                     </div>
                   </div>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', cursor: 'pointer', background: sinpe.aprobado ? '#E8F3EC' : '#F7F5F0', borderTop: '1px solid #E2DDD4' }}>
-                    <input
-                      type="checkbox"
-                      checked={!!sinpe.aprobado}
-                      onChange={() => {
-                        const updated = [...sinpeRevisado];
-                        updated[i] = { ...updated[i], aprobado: !updated[i].aprobado };
-                        setSinpeRevisado(updated);
-                      }}
-                      style={{ width: '16px', height: '16px', accentColor: '#27AE60', cursor: 'pointer' }}
-                    />
-                    <span style={{ fontSize: '11px', fontWeight: '600', color: sinpe.aprobado ? '#27AE60' : '#9C9590' }}>
-                      {sinpe.aprobado ? 'OK' : 'Pendiente'}
-                    </span>
-                  </label>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div style={{ padding: '20px', textAlign: 'center', color: '#9C9590', fontSize: '12px', gridColumn: '1 / -1' }}>
                 No se registraron SINPE — ₡0
@@ -487,57 +461,43 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>5</div>
               <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Transferencias</div>
-              {transfRevisadas.length > 0 && (
-                <span style={{ fontSize: '11px', color: '#27AE60', fontWeight: '600' }}>
-                  ({transfRevisadas.filter(t => t.aprobado).length}/{transfRevisadas.length})
-                </span>
-              )}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ fontSize: '12px', fontWeight: '600', color: '#2a78a5', fontFamily: "'DM Mono', monospace" }}>
-                {fmt(totalTransf)}
-              </div>
-              {transfRevisadas.length > 0 && (
-                <button onClick={aprobarTodasTransf} style={{ padding: '4px 10px', background: '#27AE60', color: 'white', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
-                  ✓ Todos
-                </button>
-              )}
+            <div style={{ fontSize: '12px', fontWeight: '600', color: '#2a78a5', fontFamily: "'DM Mono', monospace" }}>
+              {fmt(totalTransf)}
             </div>
           </div>
           <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             {transfRevisadas.length > 0 ? (
-              transfRevisadas.map((transf, i) => (
-                <div key={i} style={{ border: `2px solid ${transf.aprobado ? '#27AE60' : '#E2DDD4'}`, borderRadius: '10px', overflow: 'hidden', background: '#fff', transition: 'border-color 0.2s' }}>
-                  {transf.archivo_url ? (
-                    <div onClick={() => setImagenPopup(transf.archivo_url)} style={{ height: '110px', background: `url(${transf.archivo_url}) center/cover no-repeat #F7F5F0`, cursor: 'zoom-in' }} />
-                  ) : (
-                    <div style={{ height: '110px', background: '#F7F5F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: '#C8C4BC' }}>📄</div>
-                  )}
-                  <div style={{ padding: '8px 10px' }}>
-                    <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '14px', fontWeight: '700', color: '#2a78a5' }}>
-                      {fmt(parsearMiles(transf.monto_revisado))}
+              transfRevisadas.map((transf, i) => {
+                const borde = transf.aprobado ? '#27AE60' : transf.rechazado ? '#E74C3C' : '#E2DDD4';
+                return (
+                  <div key={i} style={{ border: `2px solid ${borde}`, borderRadius: '10px', overflow: 'hidden', background: '#fff', transition: 'border-color 0.2s' }}>
+                    {transf.archivo_url ? (
+                      <div onClick={() => setImagenPopup(transf.archivo_url)} style={{ height: '110px', background: `url(${transf.archivo_url}) center/cover no-repeat #F7F5F0`, cursor: 'zoom-in' }} />
+                    ) : (
+                      <div style={{ height: '110px', background: '#F7F5F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: '#C8C4BC' }}>📄</div>
+                    )}
+                    <div style={{ padding: '8px 10px' }}>
+                      <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '14px', fontWeight: '700', color: '#2a78a5' }}>
+                        {fmt(parsearMiles(transf.monto_revisado))}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#9C9590', marginTop: '2px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                        {transf.descripcion || '—'}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '11px', color: '#9C9590', marginTop: '2px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                      {transf.descripcion || '—'}
+                    <div style={{ display: 'flex', borderTop: '1px solid #E2DDD4' }}>
+                      <label style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '7px 6px', cursor: 'pointer', background: transf.aprobado ? '#E8F3EC' : '#F7F5F0', borderRight: '1px solid #E2DDD4' }}>
+                        <input type="checkbox" checked={!!transf.aprobado} onChange={() => { const u = [...transfRevisadas]; u[i] = { ...u[i], aprobado: !u[i].aprobado, rechazado: false }; setTransfRevisadas(u); }} style={{ width: '14px', height: '14px', accentColor: '#27AE60' }} />
+                        <span style={{ fontSize: '11px', fontWeight: '600', color: transf.aprobado ? '#27AE60' : '#9C9590' }}>OK</span>
+                      </label>
+                      <label style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '7px 6px', cursor: 'pointer', background: transf.rechazado ? '#FDEDEC' : '#F7F5F0' }}>
+                        <input type="checkbox" checked={!!transf.rechazado} onChange={() => { const u = [...transfRevisadas]; u[i] = { ...u[i], rechazado: !u[i].rechazado, aprobado: false }; setTransfRevisadas(u); }} style={{ width: '14px', height: '14px', accentColor: '#E74C3C' }} />
+                        <span style={{ fontSize: '11px', fontWeight: '600', color: transf.rechazado ? '#E74C3C' : '#9C9590' }}>Mal</span>
+                      </label>
                     </div>
                   </div>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', cursor: 'pointer', background: transf.aprobado ? '#E8F3EC' : '#F7F5F0', borderTop: '1px solid #E2DDD4' }}>
-                    <input
-                      type="checkbox"
-                      checked={!!transf.aprobado}
-                      onChange={() => {
-                        const updated = [...transfRevisadas];
-                        updated[i] = { ...updated[i], aprobado: !updated[i].aprobado };
-                        setTransfRevisadas(updated);
-                      }}
-                      style={{ width: '16px', height: '16px', accentColor: '#27AE60', cursor: 'pointer' }}
-                    />
-                    <span style={{ fontSize: '11px', fontWeight: '600', color: transf.aprobado ? '#27AE60' : '#9C9590' }}>
-                      {transf.aprobado ? 'OK' : 'Pendiente'}
-                    </span>
-                  </label>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div style={{ padding: '20px', textAlign: 'center', color: '#9C9590', fontSize: '12px', gridColumn: '1 / -1' }}>
                 No se registraron Transferencias — ₡0
@@ -556,57 +516,43 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>6</div>
               <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Salidas de caja</div>
-              {salidEvaluadas.length > 0 && (
-                <span style={{ fontSize: '11px', color: '#C0392B', fontWeight: '600' }}>
-                  ({salidEvaluadas.filter(s => s.aprobado).length}/{salidEvaluadas.length})
-                </span>
-              )}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <div style={{ fontSize: '12px', fontWeight: '600', color: '#C0392B', fontFamily: "'DM Mono', monospace" }}>
-                {fmt(totalSalidas)}
-              </div>
-              {salidEvaluadas.length > 0 && (
-                <button onClick={aprobarTodasSalidas} style={{ padding: '4px 10px', background: '#C0392B', color: 'white', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
-                  ✓ Todos
-                </button>
-              )}
+            <div style={{ fontSize: '12px', fontWeight: '600', color: '#C0392B', fontFamily: "'DM Mono', monospace" }}>
+              {fmt(totalSalidas)}
             </div>
           </div>
           <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             {salidEvaluadas.length > 0 ? (
-              salidEvaluadas.map((salida, i) => (
-                <div key={i} style={{ border: `2px solid ${salida.aprobado ? '#C0392B' : '#E2DDD4'}`, borderRadius: '10px', overflow: 'hidden', background: '#fff', transition: 'border-color 0.2s' }}>
-                  {salida.archivo_url ? (
-                    <div onClick={() => setImagenPopup(salida.archivo_url)} style={{ height: '110px', background: `url(${salida.archivo_url}) center/cover no-repeat #F7F5F0`, cursor: 'zoom-in' }} />
-                  ) : (
-                    <div style={{ height: '110px', background: '#F7F5F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: '#C8C4BC' }}>📄</div>
-                  )}
-                  <div style={{ padding: '8px 10px' }}>
-                    <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '14px', fontWeight: '700', color: '#C0392B' }}>
-                      -{fmt(parsearMiles(salida.monto))}
+              salidEvaluadas.map((salida, i) => {
+                const borde = salida.aprobado ? '#C0392B' : salida.rechazado ? '#E74C3C' : '#E2DDD4';
+                return (
+                  <div key={i} style={{ border: `2px solid ${borde}`, borderRadius: '10px', overflow: 'hidden', background: '#fff', transition: 'border-color 0.2s' }}>
+                    {salida.archivo_url ? (
+                      <div onClick={() => setImagenPopup(salida.archivo_url)} style={{ height: '110px', background: `url(${salida.archivo_url}) center/cover no-repeat #F7F5F0`, cursor: 'zoom-in' }} />
+                    ) : (
+                      <div style={{ height: '110px', background: '#F7F5F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: '#C8C4BC' }}>📄</div>
+                    )}
+                    <div style={{ padding: '8px 10px' }}>
+                      <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '14px', fontWeight: '700', color: '#C0392B' }}>
+                        -{fmt(parsearMiles(salida.monto))}
+                      </div>
+                      <div style={{ fontSize: '11px', color: '#9C9590', marginTop: '2px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                        {salida.descripcion || '—'}
+                      </div>
                     </div>
-                    <div style={{ fontSize: '11px', color: '#9C9590', marginTop: '2px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
-                      {salida.descripcion || '—'}
+                    <div style={{ display: 'flex', borderTop: '1px solid #E2DDD4' }}>
+                      <label style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '7px 6px', cursor: 'pointer', background: salida.aprobado ? '#FDEDEC' : '#F7F5F0', borderRight: '1px solid #E2DDD4' }}>
+                        <input type="checkbox" checked={!!salida.aprobado} onChange={() => { const u = [...salidEvaluadas]; u[i] = { ...u[i], aprobado: !u[i].aprobado, rechazado: false }; setSalidEvaluadas(u); }} style={{ width: '14px', height: '14px', accentColor: '#C0392B' }} />
+                        <span style={{ fontSize: '11px', fontWeight: '600', color: salida.aprobado ? '#C0392B' : '#9C9590' }}>OK</span>
+                      </label>
+                      <label style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '5px', padding: '7px 6px', cursor: 'pointer', background: salida.rechazado ? '#FDEDEC' : '#F7F5F0' }}>
+                        <input type="checkbox" checked={!!salida.rechazado} onChange={() => { const u = [...salidEvaluadas]; u[i] = { ...u[i], rechazado: !u[i].rechazado, aprobado: false }; setSalidEvaluadas(u); }} style={{ width: '14px', height: '14px', accentColor: '#E74C3C' }} />
+                        <span style={{ fontSize: '11px', fontWeight: '600', color: salida.rechazado ? '#E74C3C' : '#9C9590' }}>Mal</span>
+                      </label>
                     </div>
                   </div>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', cursor: 'pointer', background: salida.aprobado ? '#FDEDEC' : '#F7F5F0', borderTop: '1px solid #E2DDD4' }}>
-                    <input
-                      type="checkbox"
-                      checked={!!salida.aprobado}
-                      onChange={() => {
-                        const updated = [...salidEvaluadas];
-                        updated[i] = { ...updated[i], aprobado: !updated[i].aprobado };
-                        setSalidEvaluadas(updated);
-                      }}
-                      style={{ width: '16px', height: '16px', accentColor: '#C0392B', cursor: 'pointer' }}
-                    />
-                    <span style={{ fontSize: '11px', fontWeight: '600', color: salida.aprobado ? '#C0392B' : '#9C9590' }}>
-                      {salida.aprobado ? 'OK' : 'Pendiente'}
-                    </span>
-                  </label>
-                </div>
-              ))
+                );
+              })
             ) : (
               <div style={{ padding: '20px', textAlign: 'center', color: '#9C9590', fontSize: '12px', gridColumn: '1 / -1' }}>
                 No se registraron Salidas — ₡0
