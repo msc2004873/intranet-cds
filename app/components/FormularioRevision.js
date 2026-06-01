@@ -135,6 +135,18 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
     setTimeout(() => setToast(null), 3000);
   };
 
+  const aprobarTodosSinpe = () => {
+    setSinpeRevisado(prev => prev.map(s => ({ ...s, aprobado: true })));
+  };
+
+  const aprobarTodasTransf = () => {
+    setTransfRevisadas(prev => prev.map(t => ({ ...t, aprobado: true })));
+  };
+
+  const aprobarTodasSalidas = () => {
+    setSalidEvaluadas(prev => prev.map(s => ({ ...s, aprobado: true })));
+  };
+
   async function guardarRevision() {
     setLoading(true);
     try {
@@ -406,25 +418,41 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>4</div>
               <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>SINPE Móvil</div>
+              {sinpeRevisado.length > 0 && (
+                <span style={{ fontSize: '11px', color: '#27AE60', fontWeight: '600' }}>
+                  ({sinpeRevisado.filter(s => s.aprobado).length}/{sinpeRevisado.length})
+                </span>
+              )}
             </div>
-            <div style={{ fontSize: '12px', fontWeight: '600', color: '#2a78a5', fontFamily: "'DM Mono', monospace" }}>
-              {fmt(totalSinpe)}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ fontSize: '12px', fontWeight: '600', color: '#2a78a5', fontFamily: "'DM Mono', monospace" }}>
+                {fmt(totalSinpe)}
+              </div>
+              {sinpeRevisado.length > 0 && (
+                <button onClick={aprobarTodosSinpe} style={{ padding: '4px 10px', background: '#27AE60', color: 'white', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
+                  ✓ Todos
+                </button>
+              )}
             </div>
           </div>
-          <div style={{ padding: '20px' }}>
+          <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             {sinpeRevisado.length > 0 ? (
               sinpeRevisado.map((sinpe, i) => (
-                <div key={i} style={{ border: '1px solid #E2DDD4', borderRadius: '10px', overflow: 'hidden', marginBottom: '12px' }}>
+                <div key={i} style={{ border: `2px solid ${sinpe.aprobado ? '#27AE60' : '#E2DDD4'}`, borderRadius: '10px', overflow: 'hidden', background: '#fff', transition: 'border-color 0.2s' }}>
                   {sinpe.archivo_url ? (
-                    <img src={sinpe.archivo_url} alt="SINPE" onClick={() => setImagenPopup(sinpe.archivo_url)} style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', background: '#F7F5F0', cursor: 'zoom-in', display: 'block' }} />
+                    <div onClick={() => setImagenPopup(sinpe.archivo_url)} style={{ height: '110px', background: `url(${sinpe.archivo_url}) center/cover no-repeat #F7F5F0`, cursor: 'zoom-in' }} />
                   ) : (
-                    <div style={{ padding: '16px', background: '#F7F5F0', textAlign: 'center', fontSize: '12px', color: '#9C9590' }}>Sin comprobante</div>
+                    <div style={{ height: '110px', background: '#F7F5F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: '#C8C4BC' }}>📄</div>
                   )}
-                  <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #E2DDD4' }}>
-                    <span style={{ fontSize: '13px', color: '#6B6560' }}>Ref: {sinpe.referencia || '—'}</span>
-                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '15px', fontWeight: '700', color: '#2a78a5' }}>{fmt(parsearMiles(sinpe.monto_revisado))}</span>
+                  <div style={{ padding: '8px 10px' }}>
+                    <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '14px', fontWeight: '700', color: '#2a78a5' }}>
+                      {fmt(parsearMiles(sinpe.monto_revisado))}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#9C9590', marginTop: '2px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                      {sinpe.referencia || '—'}
+                    </div>
                   </div>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', cursor: 'pointer', background: sinpe.aprobado ? '#E8F3EC' : '#fff', borderTop: '1px solid #E2DDD4', transition: 'background 0.2s' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', cursor: 'pointer', background: sinpe.aprobado ? '#E8F3EC' : '#F7F5F0', borderTop: '1px solid #E2DDD4' }}>
                     <input
                       type="checkbox"
                       checked={!!sinpe.aprobado}
@@ -433,23 +461,23 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
                         updated[i] = { ...updated[i], aprobado: !updated[i].aprobado };
                         setSinpeRevisado(updated);
                       }}
-                      style={{ width: '18px', height: '18px', accentColor: '#27AE60', cursor: 'pointer' }}
+                      style={{ width: '16px', height: '16px', accentColor: '#27AE60', cursor: 'pointer' }}
                     />
-                    <span style={{ fontSize: '13px', fontWeight: '600', color: sinpe.aprobado ? '#27AE60' : '#9C9590' }}>
-                      {sinpe.aprobado ? 'Aprobado' : 'Pendiente'}
+                    <span style={{ fontSize: '11px', fontWeight: '600', color: sinpe.aprobado ? '#27AE60' : '#9C9590' }}>
+                      {sinpe.aprobado ? 'OK' : 'Pendiente'}
                     </span>
                   </label>
                 </div>
               ))
             ) : (
-              <div style={{ padding: '20px', textAlign: 'center', color: '#9C9590', fontSize: '12px' }}>
+              <div style={{ padding: '20px', textAlign: 'center', color: '#9C9590', fontSize: '12px', gridColumn: '1 / -1' }}>
                 No se registraron SINPE — ₡0
               </div>
             )}
-            <div style={{ marginTop: '12px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#E8F3EC' }}>
-              <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total SINPE</span>
-              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#2a78a5' }}>{fmt(totalSinpe)}</span>
-            </div>
+          </div>
+          <div style={{ padding: '0 16px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total SINPE</span>
+            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#2a78a5' }}>{fmt(totalSinpe)}</span>
           </div>
         </div>
 
@@ -459,25 +487,41 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>5</div>
               <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Transferencias</div>
+              {transfRevisadas.length > 0 && (
+                <span style={{ fontSize: '11px', color: '#27AE60', fontWeight: '600' }}>
+                  ({transfRevisadas.filter(t => t.aprobado).length}/{transfRevisadas.length})
+                </span>
+              )}
             </div>
-            <div style={{ fontSize: '12px', fontWeight: '600', color: '#2a78a5', fontFamily: "'DM Mono', monospace" }}>
-              {fmt(totalTransf)}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ fontSize: '12px', fontWeight: '600', color: '#2a78a5', fontFamily: "'DM Mono', monospace" }}>
+                {fmt(totalTransf)}
+              </div>
+              {transfRevisadas.length > 0 && (
+                <button onClick={aprobarTodasTransf} style={{ padding: '4px 10px', background: '#27AE60', color: 'white', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
+                  ✓ Todos
+                </button>
+              )}
             </div>
           </div>
-          <div style={{ padding: '20px' }}>
+          <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             {transfRevisadas.length > 0 ? (
               transfRevisadas.map((transf, i) => (
-                <div key={i} style={{ border: '1px solid #E2DDD4', borderRadius: '10px', overflow: 'hidden', marginBottom: '12px' }}>
+                <div key={i} style={{ border: `2px solid ${transf.aprobado ? '#27AE60' : '#E2DDD4'}`, borderRadius: '10px', overflow: 'hidden', background: '#fff', transition: 'border-color 0.2s' }}>
                   {transf.archivo_url ? (
-                    <img src={transf.archivo_url} alt="Transferencia" onClick={() => setImagenPopup(transf.archivo_url)} style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', background: '#F7F5F0', cursor: 'zoom-in', display: 'block' }} />
+                    <div onClick={() => setImagenPopup(transf.archivo_url)} style={{ height: '110px', background: `url(${transf.archivo_url}) center/cover no-repeat #F7F5F0`, cursor: 'zoom-in' }} />
                   ) : (
-                    <div style={{ padding: '16px', background: '#F7F5F0', textAlign: 'center', fontSize: '12px', color: '#9C9590' }}>Sin comprobante</div>
+                    <div style={{ height: '110px', background: '#F7F5F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: '#C8C4BC' }}>📄</div>
                   )}
-                  <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #E2DDD4' }}>
-                    <span style={{ fontSize: '13px', color: '#6B6560' }}>{transf.descripcion || '—'}</span>
-                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '15px', fontWeight: '700', color: '#2a78a5' }}>{fmt(parsearMiles(transf.monto_revisado))}</span>
+                  <div style={{ padding: '8px 10px' }}>
+                    <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '14px', fontWeight: '700', color: '#2a78a5' }}>
+                      {fmt(parsearMiles(transf.monto_revisado))}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#9C9590', marginTop: '2px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                      {transf.descripcion || '—'}
+                    </div>
                   </div>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', cursor: 'pointer', background: transf.aprobado ? '#E8F3EC' : '#fff', borderTop: '1px solid #E2DDD4', transition: 'background 0.2s' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', cursor: 'pointer', background: transf.aprobado ? '#E8F3EC' : '#F7F5F0', borderTop: '1px solid #E2DDD4' }}>
                     <input
                       type="checkbox"
                       checked={!!transf.aprobado}
@@ -486,23 +530,23 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
                         updated[i] = { ...updated[i], aprobado: !updated[i].aprobado };
                         setTransfRevisadas(updated);
                       }}
-                      style={{ width: '18px', height: '18px', accentColor: '#27AE60', cursor: 'pointer' }}
+                      style={{ width: '16px', height: '16px', accentColor: '#27AE60', cursor: 'pointer' }}
                     />
-                    <span style={{ fontSize: '13px', fontWeight: '600', color: transf.aprobado ? '#27AE60' : '#9C9590' }}>
-                      {transf.aprobado ? 'Aprobado' : 'Pendiente'}
+                    <span style={{ fontSize: '11px', fontWeight: '600', color: transf.aprobado ? '#27AE60' : '#9C9590' }}>
+                      {transf.aprobado ? 'OK' : 'Pendiente'}
                     </span>
                   </label>
                 </div>
               ))
             ) : (
-              <div style={{ padding: '20px', textAlign: 'center', color: '#9C9590', fontSize: '12px' }}>
+              <div style={{ padding: '20px', textAlign: 'center', color: '#9C9590', fontSize: '12px', gridColumn: '1 / -1' }}>
                 No se registraron Transferencias — ₡0
               </div>
             )}
-            <div style={{ marginTop: '12px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#E8F3EC' }}>
-              <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total transferencias</span>
-              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#2a78a5' }}>{fmt(totalTransf)}</span>
-            </div>
+          </div>
+          <div style={{ padding: '0 16px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total transferencias</span>
+            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#2a78a5' }}>{fmt(totalTransf)}</span>
           </div>
         </div>
 
@@ -512,25 +556,41 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <div style={{ width: '26px', height: '26px', background: '#2a78a5', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>6</div>
               <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Salidas de caja</div>
+              {salidEvaluadas.length > 0 && (
+                <span style={{ fontSize: '11px', color: '#C0392B', fontWeight: '600' }}>
+                  ({salidEvaluadas.filter(s => s.aprobado).length}/{salidEvaluadas.length})
+                </span>
+              )}
             </div>
-            <div style={{ fontSize: '12px', fontWeight: '600', color: '#2a78a5', fontFamily: "'DM Mono', monospace" }}>
-              {fmt(totalSalidas)}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <div style={{ fontSize: '12px', fontWeight: '600', color: '#C0392B', fontFamily: "'DM Mono', monospace" }}>
+                {fmt(totalSalidas)}
+              </div>
+              {salidEvaluadas.length > 0 && (
+                <button onClick={aprobarTodasSalidas} style={{ padding: '4px 10px', background: '#C0392B', color: 'white', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}>
+                  ✓ Todos
+                </button>
+              )}
             </div>
           </div>
-          <div style={{ padding: '20px' }}>
+          <div style={{ padding: '16px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
             {salidEvaluadas.length > 0 ? (
               salidEvaluadas.map((salida, i) => (
-                <div key={i} style={{ border: '1px solid #E2DDD4', borderRadius: '10px', overflow: 'hidden', marginBottom: '12px' }}>
+                <div key={i} style={{ border: `2px solid ${salida.aprobado ? '#C0392B' : '#E2DDD4'}`, borderRadius: '10px', overflow: 'hidden', background: '#fff', transition: 'border-color 0.2s' }}>
                   {salida.archivo_url ? (
-                    <img src={salida.archivo_url} alt="Salida" onClick={() => setImagenPopup(salida.archivo_url)} style={{ width: '100%', maxHeight: '200px', objectFit: 'contain', background: '#F7F5F0', cursor: 'zoom-in', display: 'block' }} />
+                    <div onClick={() => setImagenPopup(salida.archivo_url)} style={{ height: '110px', background: `url(${salida.archivo_url}) center/cover no-repeat #F7F5F0`, cursor: 'zoom-in' }} />
                   ) : (
-                    <div style={{ padding: '16px', background: '#F7F5F0', textAlign: 'center', fontSize: '12px', color: '#9C9590' }}>Sin comprobante</div>
+                    <div style={{ height: '110px', background: '#F7F5F0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px', color: '#C8C4BC' }}>📄</div>
                   )}
-                  <div style={{ padding: '12px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #E2DDD4' }}>
-                    <span style={{ fontSize: '13px', color: '#6B6560' }}>{salida.descripcion || '—'}</span>
-                    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '15px', fontWeight: '700', color: '#C0392B' }}>-{fmt(parsearMiles(salida.monto))}</span>
+                  <div style={{ padding: '8px 10px' }}>
+                    <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '14px', fontWeight: '700', color: '#C0392B' }}>
+                      -{fmt(parsearMiles(salida.monto))}
+                    </div>
+                    <div style={{ fontSize: '11px', color: '#9C9590', marginTop: '2px', overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis' }}>
+                      {salida.descripcion || '—'}
+                    </div>
                   </div>
-                  <label style={{ display: 'flex', alignItems: 'center', gap: '10px', padding: '12px 16px', cursor: 'pointer', background: salida.aprobado ? '#FDEDEC' : '#fff', borderTop: '1px solid #E2DDD4', transition: 'background 0.2s' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 10px', cursor: 'pointer', background: salida.aprobado ? '#FDEDEC' : '#F7F5F0', borderTop: '1px solid #E2DDD4' }}>
                     <input
                       type="checkbox"
                       checked={!!salida.aprobado}
@@ -539,23 +599,23 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
                         updated[i] = { ...updated[i], aprobado: !updated[i].aprobado };
                         setSalidEvaluadas(updated);
                       }}
-                      style={{ width: '18px', height: '18px', accentColor: '#C0392B', cursor: 'pointer' }}
+                      style={{ width: '16px', height: '16px', accentColor: '#C0392B', cursor: 'pointer' }}
                     />
-                    <span style={{ fontSize: '13px', fontWeight: '600', color: salida.aprobado ? '#C0392B' : '#9C9590' }}>
-                      {salida.aprobado ? 'Aprobada' : 'Pendiente'}
+                    <span style={{ fontSize: '11px', fontWeight: '600', color: salida.aprobado ? '#C0392B' : '#9C9590' }}>
+                      {salida.aprobado ? 'OK' : 'Pendiente'}
                     </span>
                   </label>
                 </div>
               ))
             ) : (
-              <div style={{ padding: '20px', textAlign: 'center', color: '#9C9590', fontSize: '12px' }}>
+              <div style={{ padding: '20px', textAlign: 'center', color: '#9C9590', fontSize: '12px', gridColumn: '1 / -1' }}>
                 No se registraron Salidas — ₡0
               </div>
             )}
-            <div style={{ marginTop: '12px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#FDEDEC' }}>
-              <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total salidas</span>
-              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#C0392B' }}>{fmt(totalSalidas)}</span>
-            </div>
+          </div>
+          <div style={{ padding: '0 16px 16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total salidas</span>
+            <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: '#C0392B' }}>{fmt(totalSalidas)}</span>
           </div>
         </div>
 
