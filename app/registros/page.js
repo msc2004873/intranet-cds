@@ -117,6 +117,8 @@ export default function RegistrosPage() {
     setPreviewSalida(null);
   };
 
+  const mapMonedaToAPI = (m) => m === 'dolares' ? 'usd' : 'colones';
+
   async function handleGuardar() {
     if (!cajera || !caja) {
       showToast('❌ Selecciona cajera y caja');
@@ -143,7 +145,7 @@ export default function RegistrosPage() {
       const formData = new FormData();
       formData.append('tipo', tipoMovimiento.toUpperCase());
       formData.append('monto', parseFloat(monto));
-      formData.append('moneda', moneda);
+      formData.append('moneda', mapMonedaToAPI(moneda));
       formData.append('referencia', tipoMovimiento === 'salida' ? descripcion : (referencia || null));
       formData.append('cajera', cajera);
       formData.append('caja', caja);
