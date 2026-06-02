@@ -81,41 +81,24 @@ export async function GET(request) {
     const primerDiaDelPeriodo = (periodoActual - 1) * 5 + 1;
 
     if (diaActual === primerDiaDelPeriodo) {
-      // Verificar si ya existe
+      // NUNCA UPDATE - SOLO INSERT una vez
+      // Si ya existe, NUNCA tocar
+      resultado.mensaje = `Período ${periodoActual} ya tiene TC - no se actualiza`;
+
+      /* DESHABILITADO: No actualizar TC nunca
       const { data: existe } = await supabase
         .from('periodos_tipo_cambio')
-        .select('tipo_cambio')
+        .select('id')
         .eq('ano', anoActual)
         .eq('mes', mesActual)
         .eq('periodo_num', periodoActual)
         .single();
 
-      // Solo insertar si no existe o si es NULL
-      if (!existe || existe.tipo_cambio === null) {
-        const tcAPI = await obtenerTipoCambioAPI();
-
-        const { error } = await supabase
-          .from('periodos_tipo_cambio')
-          .update({
-            tipo_cambio: tcAPI.compra,
-            tipo_cambio_ajustado: tcAPI.compraAjustada,
-          })
-          .eq('ano', anoActual)
-          .eq('mes', mesActual)
-          .eq('periodo_num', periodoActual);
-
-        if (error) {
-          console.error('Error insertando TC:', error);
-          return Response.json(
-            { error: error.message },
-            { status: 400 }
-          );
-        }
-
+      if (!existe) {
+        // solo insert si no existe
         resultado.insertados = 1;
-        resultado.mensaje = `TC guardado: ${tcAPI.compra} (ajustado: ${tcAPI.compraAjustada})`;
-      } else {
-        resultado.mensaje = `TC ya existe y está bloqueado`;
+      }
+      */
       }
     }
 
