@@ -219,6 +219,12 @@ export default function ConteoPage() {
               <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '20px', fontWeight: '700', color: '#2a78a5' }}>{fmt(total)}</span>
             </div>
 
+            {/* Neto (Total - Fondo de Caja) */}
+            <div style={{ marginTop: '8px', padding: '12px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F5F1EC', borderLeft: '3px solid #2a78a5' }}>
+              <span style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560' }}>Total en caja - Fondo (₡50 000)</span>
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '700', color: '#2a78a5' }}>{fmt(total - 50000)}</span>
+            </div>
+
             {/* Dólares */}
             <div style={{ marginTop: '12px', display: 'flex', gap: '12px', alignItems: 'center' }}>
               <label style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', flex: 1 }}>Dólares</label>
