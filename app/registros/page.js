@@ -294,6 +294,7 @@ export default function RegistrosPage() {
                       cursor: 'pointer',
                       background: '#F0EDE6',
                       transition: 'all 0.2s',
+                      pointerEvents: 'auto',
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.borderColor = '#2a78a5';
@@ -303,7 +304,19 @@ export default function RegistrosPage() {
                       e.currentTarget.style.borderColor = '#E2DDD4';
                       e.currentTarget.style.background = '#F0EDE6';
                     }}
+                    onDragEnter={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      e.currentTarget.style.borderColor = '#2a78a5';
+                      e.currentTarget.style.background = '#E8F3EC';
+                    }}
                     onDragOver={handleDragOver}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      e.currentTarget.style.borderColor = '#E2DDD4';
+                      e.currentTarget.style.background = '#F0EDE6';
+                    }}
                     onDrop={(e) => handleDrop(e, setArchivo, setPreview)}
                     >
                       <div style={{ fontSize: '20px', marginBottom: '6px' }}>📎</div>
@@ -405,6 +418,7 @@ export default function RegistrosPage() {
                       cursor: 'pointer',
                       background: '#F0EDE6',
                       transition: 'all 0.2s',
+                      pointerEvents: 'auto',
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.borderColor = '#2a78a5';
@@ -414,7 +428,19 @@ export default function RegistrosPage() {
                       e.currentTarget.style.borderColor = '#E2DDD4';
                       e.currentTarget.style.background = '#F0EDE6';
                     }}
+                    onDragEnter={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      e.currentTarget.style.borderColor = '#2a78a5';
+                      e.currentTarget.style.background = '#E8F3EC';
+                    }}
                     onDragOver={handleDragOver}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      e.currentTarget.style.borderColor = '#E2DDD4';
+                      e.currentTarget.style.background = '#F0EDE6';
+                    }}
                     onDrop={(e) => handleDrop(e, setArchivo, setPreview)}
                     >
                       <div style={{ fontSize: '20px', marginBottom: '6px' }}>📎</div>
