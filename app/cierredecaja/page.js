@@ -468,7 +468,7 @@ export default function CajeraPage() {
                       }
                     }}
                     placeholder="0"
-                    inputMode="numeric"
+                    inputMode="decimal"
                     style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '15px', fontWeight: '500', textAlign: 'center', fontFamily: "'DM Mono', monospace" }}
                   />
                   <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#2a78a5', fontWeight: '600', textAlign: 'right' }}>{fmt((denominaciones[d] || 0) * d)}</div>
@@ -556,12 +556,12 @@ export default function CajeraPage() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '12px' }}>
                 <div style={{ border: '1.5px solid #E2DDD4', borderRadius: '8px', padding: '14px' }}>
                   <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', color: '#6B6560', marginBottom: '8px' }}>BAC</div>
-                  <input type="text" value={tarjetaBac === 0 ? '' : tarjetaBac.toLocaleString('es-CR')} onChange={(e) => setTarjetaBac(e.target.value === '' ? 0 : parseFloat(e.target.value.replace(/\s/g, '')) || 0)} placeholder="0" inputMode="numeric" style={{ width: '100%', border: 'none', padding: '0', fontSize: '20px', fontWeight: '600', fontFamily: "'DM Mono', monospace", outline: 'none' }} />
+                  <input type="text" value={tarjetaBac === 0 ? '' : tarjetaBac.toLocaleString('es-CR')} onChange={(e) => setTarjetaBac(e.target.value === '' ? 0 : parseFloat(e.target.value.replace(/\s/g, '')) || 0)} placeholder="0" inputMode="decimal" style={{ width: '100%', border: 'none', padding: '0', fontSize: '20px', fontWeight: '600', fontFamily: "'DM Mono', monospace", outline: 'none' }} />
                   <div style={{ fontSize: '12px', color: '#9C9590', marginTop: '2px' }}>colones</div>
                 </div>
                 <div style={{ border: '1.5px solid #E2DDD4', borderRadius: '8px', padding: '14px' }}>
                   <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', color: '#6B6560', marginBottom: '8px' }}>BN</div>
-                  <input type="text" value={tarjetaBn === 0 ? '' : tarjetaBn.toLocaleString('es-CR')} onChange={(e) => setTarjetaBn(e.target.value === '' ? 0 : parseFloat(e.target.value.replace(/\s/g, '')) || 0)} placeholder="0" inputMode="numeric" style={{ width: '100%', border: 'none', padding: '0', fontSize: '20px', fontWeight: '600', fontFamily: "'DM Mono', monospace", outline: 'none' }} />
+                  <input type="text" value={tarjetaBn === 0 ? '' : tarjetaBn.toLocaleString('es-CR')} onChange={(e) => setTarjetaBn(e.target.value === '' ? 0 : parseFloat(e.target.value.replace(/\s/g, '')) || 0)} placeholder="0" inputMode="decimal" style={{ width: '100%', border: 'none', padding: '0', fontSize: '20px', fontWeight: '600', fontFamily: "'DM Mono', monospace", outline: 'none' }} />
                   <div style={{ fontSize: '12px', color: '#9C9590', marginTop: '2px' }}>colones</div>
                 </div>
               </div>
