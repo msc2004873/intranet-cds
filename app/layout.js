@@ -5,7 +5,7 @@ export const metadata = {
   title: 'Corral del Sol - Cierre de Caja',
   description: 'Sistema de cierre de caja veterinaria',
   icons: {
-    icon: '/logo.png.png',
+    icon: '/favicon.png',
   },
 };
 
