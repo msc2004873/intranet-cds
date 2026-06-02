@@ -99,7 +99,6 @@ export async function GET(request) {
         resultado.insertados = 1;
       }
       */
-      }
     }
 
     return Response.json(resultado);
