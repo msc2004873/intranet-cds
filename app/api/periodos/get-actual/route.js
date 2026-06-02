@@ -88,6 +88,7 @@ export async function GET(request) {
               fecha_fin: fechaFin,
             });
         }
+        // NUNCA actualizar si ya existe - TC está BLOQUEADO una vez guardado
       } catch (err) {
         console.log('Error guardando TC en BD:', err.message);
       }
