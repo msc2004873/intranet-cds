@@ -24,7 +24,7 @@ export default function CajeraPage() {
   const [cajera, setCajera] = useState('');
   const [caja, setCaja] = useState('');
   const [fecha, setFecha] = useState('');
-  const [tc, setTc] = useState(475);
+  const [tc, setTc] = useState(442);
   const [dolares, setDolares] = useState(0);
   const [tarjetaBac, setTarjetaBac] = useState(0);
   const [tarjetaBn, setTarjetaBn] = useState(0);
@@ -117,10 +117,10 @@ export default function CajeraPage() {
     try {
       const res = await fetch('/api/periodos/get-actual');
       const data = await res.json();
-      setTc(data.tipoCambioAjustado);
+      setTc(data.tipoCambio || 442);
     } catch (err) {
       console.log('No se pudo cargar TC del período');
-      setTc(455); // Default
+      setTc(442);
     }
   }
 
