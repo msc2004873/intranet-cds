@@ -60,9 +60,6 @@ export default function Home() {
   const [userName, setUserName] = useState('');
 
   useEffect(() => {
-    // Asegurar que existan datos de prueba
-    fetch('/api/periodos/ensure-test-data');
-
     const userData = localStorage.getItem('user');
     if (userData) {
       const user = JSON.parse(userData);
