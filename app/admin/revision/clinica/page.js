@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Header from '../../../components/Header';
 import CalendarioPeriodos from '../../../components/CalendarioPeriodos';
 import FormularioRevision from '../../../components/FormularioRevision';
@@ -15,6 +16,7 @@ const calcularTotalEnCaja = (cierre) => {
 };
 
 export default function RevisionClinicaPage() {
+  const router = useRouter();
   const [periodo, setPeriodo] = useState(null);
   const [caja, setCaja] = useState('Caja 1 (clínica)');
   const [cajas] = useState(['Caja 1 (clínica)', 'Caja 2']);
@@ -64,7 +66,7 @@ export default function RevisionClinicaPage() {
       const inicio = periodo.inicio.toISOString().split('T')[0];
       const fin = periodo.fin.toISOString().split('T')[0];
 
-      const res = await fetch(`/api/cierreCaja?fecha=${inicio}&hasta=${fin}&caja=${encodeURIComponent(caja)}`);
+      const res = await fetch(`/api/cierreCaja?fecha=${inicio}&hasta=${fin}&caja=${encodeURIComponent(caja)}`, { cache: 'no-store' });
       if (!res.ok) {
         throw new Error('Error al cargar cierres del API');
       }
@@ -241,26 +243,25 @@ export default function RevisionClinicaPage() {
           </>
         )}
 
-        <Link href="/revisora" style={{ textDecoration: 'none' }}>
-          <button
-            style={{
-              width: '100%',
-              padding: '12px',
-              background: '#F0EDE6',
-              color: '#6B6560',
-              border: '1.5px solid #E2DDD4',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              marginTop: '24px'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = '#E2DDD4'}
-            onMouseLeave={(e) => e.currentTarget.style.background = '#F0EDE6'}
-          >
-            ← Volver al dashboard
-          </button>
-        </Link>
+        <button
+          onClick={() => router.push('/revisora')}
+          style={{
+            width: '100%',
+            padding: '12px',
+            background: '#F0EDE6',
+            color: '#6B6560',
+            border: '1.5px solid #E2DDD4',
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            marginTop: '24px'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = '#E2DDD4'}
+          onMouseLeave={(e) => e.currentTarget.style.background = '#F0EDE6'}
+        >
+          ← Volver al dashboard
+        </button>
       </div>
     </div>
   );
