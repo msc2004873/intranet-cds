@@ -34,8 +34,8 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
   });
 
   const [tarjetas, setTarjetas] = useState({
-    bac: '',
-    bn: '',
+    bac: 0,
+    bn: 0,
   });
 
   const [dolares, setDolares] = useState('');
@@ -158,8 +158,8 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
         Object.entries(denominaciones).map(([k, v]) => [k, parsearMiles(v)])
       );
       const tarjetasNumeros = {
-        bac: parsearMiles(tarjetas.bac),
-        bn: parsearMiles(tarjetas.bn),
+        bac: Math.round(tarjetas.bac),
+        bn: Math.round(tarjetas.bn),
       };
 
       const res = await fetch('/api/revisionCaja', {
@@ -241,7 +241,9 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
   };
 
   const handleTarjetaChange = (banco, value) => {
-    setTarjetas({ ...tarjetas, [banco]: formatearMiles(parsearMiles(value)) });
+    const cleanValue = value.toString().replace(/\s/g, '');
+    const numValue = parseFloat(cleanValue) || 0;
+    setTarjetas({ ...tarjetas, [banco]: numValue });
   };
 
   const handleDolaresChange = (value) => {
