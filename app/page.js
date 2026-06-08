@@ -528,6 +528,19 @@ export default function Home() {
                 <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Fecha y Hora</label>
                 <div style={{ fontSize: '14px', color: '#1A1714' }}>{selectedLog.fecha} a las {selectedLog.hora}</div>
               </div>
+
+              {/* Foto del comprobante para SINPE, TRANSFERENCIA, SALIDA */}
+              {['SINPE', 'TRANSFERENCIA', 'SALIDA'].includes(selectedLog.tipo) && selectedLog.data?.archivo_url && (
+                <div>
+                  <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Comprobante</label>
+                  <img
+                    src={selectedLog.data.archivo_url}
+                    alt="Comprobante"
+                    style={{ width: '100%', maxHeight: '300px', objectFit: 'contain', borderRadius: '8px', border: '1px solid #E2DDD4' }}
+                  />
+                </div>
+              )}
+
               <div>
                 <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Detalles</label>
                 <table style={{ width: '100%', borderCollapse: 'collapse', background: '#F7F5F0', borderRadius: '8px', overflow: 'hidden' }}>
@@ -535,7 +548,8 @@ export default function Home() {
                     {selectedLog.data && (() => {
                       const entries = Object.entries(selectedLog.data);
                       const denomFields = entries.filter(([k]) => k.startsWith('c_'));
-                      const fieldsToHide = ['id', 'created_at', 'updated_at', 'fecha_hora'];
+                      const fieldsToHide = ['id', 'created_at', 'updated_at', 'fecha_hora', 'archivo_url'];
+                      const fmt = n => typeof n === 'number' ? n.toLocaleString('es-CR') : n;
 
                       let displayFields = [];
                       if (selectedLog.tipo === 'Cierre de Caja') {
@@ -544,7 +558,6 @@ export default function Home() {
                           const entry = entries.find(([k]) => k === field);
                           if (entry) displayFields.push(entry);
                         });
-                        // Agregar campo de Glory
                         displayFields.push(['glory_cierre', selectedLog.data.glory_json && Array.isArray(selectedLog.data.glory_json) && selectedLog.data.glory_json.length > 0 ? 'Sí' : 'No']);
                       } else {
                         displayFields = entries.filter(([k]) => !k.startsWith('c_') && !fieldsToHide.includes(k));
@@ -562,13 +575,21 @@ export default function Home() {
                               'tarjeta_bac': 'Tarjeta BAC',
                               'tarjeta_bn': 'Tarjeta BN',
                               'tc': 'Tipo de Cambio',
-                              'glory_cierre': 'Cierre de Glory'
+                              'glory_cierre': 'Cierre de Glory',
+                              'monto': 'Monto',
+                              'tipo': 'Tipo',
+                              'moneda': 'Moneda',
+                              'referencia': 'Referencia'
                             };
                             if (labelMap[key]) label = labelMap[key];
                             if (key === 'dolares_total' && typeof value === 'number') {
-                              displayValue = 'US$' + value.toLocaleString('es-CR');
-                            } else if ((key === 'tarjeta_bac' || key === 'tarjeta_bn') && typeof value === 'number') {
-                              displayValue = '₡' + value.toLocaleString('es-CR');
+                              displayValue = 'US$' + fmt(value);
+                            } else if ((key === 'tarjeta_bac' || key === 'tarjeta_bn' || key === 'monto') && typeof value === 'number') {
+                              displayValue = '₡' + fmt(value);
+                            } else if (key === 'moneda' && value === 'usd') {
+                              displayValue = 'Dólares (USD)';
+                            } else if (key === 'moneda' && value === 'colones') {
+                              displayValue = 'Colones (CRC)';
                             }
                             return (
                               <tr key={key} style={{ borderBottom: '1px solid #E2DDD4' }}>
@@ -591,6 +612,78 @@ export default function Home() {
                                   </tr>
                                 );
                               })}
+                            </>
+                          )}
+                          {/* Detalle completo del Cierre de Caja */}
+                          {selectedLog.tipo === 'Cierre de Caja' && (
+                            <>
+                              {selectedLog.data.sinpe_json && Array.isArray(selectedLog.data.sinpe_json) && selectedLog.data.sinpe_json.length > 0 && (
+                                <>
+                                  <tr style={{ borderBottom: '1px solid #E2DDD4', background: '#E8F3EC' }}>
+                                    <td colSpan="2" style={{ padding: '10px 12px', fontSize: '12px', fontWeight: '600', color: '#2a78a5' }}>SINPE Móvil</td>
+                                  </tr>
+                                  {selectedLog.data.sinpe_json.map((sinpe, i) => {
+                                    const total = sinpe.monto || 0;
+                                    return (
+                                      <tr key={`sinpe-${i}`} style={{ borderBottom: '1px solid #E2DDD4' }}>
+                                        <td style={{ padding: '10px 12px', fontSize: '12px', fontWeight: '600', color: '#6B6560', background: '#F0EDE6', width: '35%' }}>Ref: {sinpe.referencia || '—'}</td>
+                                        <td style={{ padding: '10px 12px', fontSize: '12px', color: '#1A1714' }}>₡{fmt(total)}</td>
+                                      </tr>
+                                    );
+                                  })}
+                                </>
+                              )}
+                              {selectedLog.data.depositos_json && Array.isArray(selectedLog.data.depositos_json) && selectedLog.data.depositos_json.length > 0 && (
+                                <>
+                                  <tr style={{ borderBottom: '1px solid #E2DDD4', background: '#FBF6E9' }}>
+                                    <td colSpan="2" style={{ padding: '10px 12px', fontSize: '12px', fontWeight: '600', color: '#8B6914' }}>Transferencias</td>
+                                  </tr>
+                                  {selectedLog.data.depositos_json.map((dep, i) => {
+                                    const total = dep.monto || 0;
+                                    return (
+                                      <tr key={`dep-${i}`} style={{ borderBottom: '1px solid #E2DDD4' }}>
+                                        <td style={{ padding: '10px 12px', fontSize: '12px', fontWeight: '600', color: '#6B6560', background: '#F0EDE6', width: '35%' }}>{dep.nombre || dep.referencia || '—'}</td>
+                                        <td style={{ padding: '10px 12px', fontSize: '12px', color: '#1A1714' }}>₡{fmt(total)}</td>
+                                      </tr>
+                                    );
+                                  })}
+                                </>
+                              )}
+                              {selectedLog.data.salidas_json && Array.isArray(selectedLog.data.salidas_json) && selectedLog.data.salidas_json.length > 0 && (
+                                <>
+                                  <tr style={{ borderBottom: '1px solid #E2DDD4', background: '#FDEDEC' }}>
+                                    <td colSpan="2" style={{ padding: '10px 12px', fontSize: '12px', fontWeight: '600', color: '#C0392B' }}>Salidas de Caja</td>
+                                  </tr>
+                                  {selectedLog.data.salidas_json.map((salida, i) => {
+                                    const total = salida.monto || 0;
+                                    return (
+                                      <tr key={`salida-${i}`} style={{ borderBottom: '1px solid #E2DDD4' }}>
+                                        <td style={{ padding: '10px 12px', fontSize: '12px', fontWeight: '600', color: '#6B6560', background: '#F0EDE6', width: '35%' }}>{salida.descripcion || '—'}</td>
+                                        <td style={{ padding: '10px 12px', fontSize: '12px', color: '#1A1714' }}>-₡{fmt(total)}</td>
+                                      </tr>
+                                    );
+                                  })}
+                                </>
+                              )}
+                              {selectedLog.data.denominaciones_sobre && (
+                                <>
+                                  <tr style={{ borderBottom: '1px solid #E2DDD4', background: '#FBF6E9' }}>
+                                    <td colSpan="2" style={{ padding: '10px 12px', fontSize: '12px', fontWeight: '600', color: '#C8A84B' }}>Denominaciones al Sobre</td>
+                                  </tr>
+                                  {Object.entries(selectedLog.data.denominaciones_sobre).map(([denom, cantidad]) => {
+                                    if (cantidad > 0) {
+                                      const total = parseInt(denom) * cantidad;
+                                      return (
+                                        <tr key={`sobre-${denom}`} style={{ borderBottom: '1px solid #E2DDD4' }}>
+                                          <td style={{ padding: '10px 12px', fontSize: '12px', fontWeight: '600', color: '#6B6560', background: '#F0EDE6', width: '35%' }}>₡{parseInt(denom).toLocaleString('es-CR')} × {cantidad}</td>
+                                          <td style={{ padding: '10px 12px', fontSize: '12px', color: '#1A1714' }}>₡{fmt(total)}</td>
+                                        </tr>
+                                      );
+                                    }
+                                    return null;
+                                  })}
+                                </>
+                              )}
                             </>
                           )}
                         </>

@@ -7,7 +7,7 @@ export async function GET(request) {
     // 1. Movimientos registrados
     const { data: movimientos, error: err1 } = await supabase
       .from('movimientos')
-      .select('id, tipo, monto, moneda, referencia, cajera, caja, created_at')
+      .select('id, tipo, monto, moneda, referencia, archivo_url, cajera, caja, created_at')
       .order('created_at', { ascending: false });
 
     if (movimientos && Array.isArray(movimientos)) {
