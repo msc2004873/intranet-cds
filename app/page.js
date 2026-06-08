@@ -682,6 +682,10 @@ export default function Home() {
                                     }
                                     return null;
                                   })}
+                                  <tr style={{ borderBottom: '1px solid #E2DDD4', background: '#FBF6E9', fontWeight: '700' }}>
+                                    <td style={{ padding: '10px 12px', fontSize: '12px', fontWeight: '600', color: '#C8A84B', background: '#F0EDE6', width: '35%' }}>Total al Sobre</td>
+                                    <td style={{ padding: '10px 12px', fontSize: '13px', fontWeight: '700', color: '#C8A84B' }}>₡{fmt(Object.entries(selectedLog.data.denominaciones_sobre).reduce((sum, [denom, cant]) => sum + (parseInt(denom) * cant), 0))}</td>
+                                  </tr>
                                 </>
                               )}
                             </>
