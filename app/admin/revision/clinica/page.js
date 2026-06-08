@@ -244,7 +244,7 @@ export default function RevisionClinicaPage() {
         )}
 
         <button
-          onClick={() => router.push('/revisora')}
+          onClick={() => router.push('/admin/revision')}
           style={{
             width: '100%',
             padding: '12px',
