@@ -80,7 +80,9 @@ export default function CobroGloryPage() {
   const formatTelefono = (valor) => {
     const solo_numeros = valor.replace(/\D/g, '');
     if (solo_numeros.length <= 4) return solo_numeros;
-    return `${solo_numeros.slice(0, 4)}-${solo_numeros.slice(4, 8)}`;
+    if (solo_numeros.length <= 8) return `${solo_numeros.slice(0, 4)}-${solo_numeros.slice(4)}`;
+    if (solo_numeros.length <= 12) return `${solo_numeros.slice(0, 4)}-${solo_numeros.slice(4, 8)}-${solo_numeros.slice(8)}`;
+    return `${solo_numeros.slice(0, 4)}-${solo_numeros.slice(4, 8)}-${solo_numeros.slice(8, 12)}-${solo_numeros.slice(12)}`;
   };
 
   function agregarPacienteALista() {
