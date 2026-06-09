@@ -38,6 +38,7 @@ export async function POST(request) {
       caja_revisada,
       fecha_cierre_revisado,
       tc: tc || 475,
+      estado: 'revisado',
       efectivo_revisado: Object.entries(denominaciones).reduce((sum, [denom, cant]) => {
         return sum + (parseInt(denom) * cant);
       }, 0),
