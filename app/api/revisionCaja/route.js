@@ -4,7 +4,7 @@ export async function POST(request) {
   try {
     const data = await request.json();
 
-    const { cierre_id, denominaciones, tarjetas, dolares, sinpeRevisado, transfRevisadas, salidEvaluadas } = data;
+    const { cierre_id, tc, denominaciones, tarjetas, dolares, sinpeRevisado, transfRevisadas, salidEvaluadas } = data;
 
     if (!cierre_id) {
       return Response.json(
@@ -20,6 +20,7 @@ export async function POST(request) {
 
     const revisaData = {
       cierre_id,
+      tc: tc || 475,
       revision_completada: true,
       c_20000: denominaciones[20000] || 0,
       c_10000: denominaciones[10000] || 0,

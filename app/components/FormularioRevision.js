@@ -51,9 +51,12 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
 
   useEffect(() => {
     cargarDetalles();
-    cargarTipoCambio();
     cargarUsuario();
-  }, [cierre?.id, periodo?.num]);
+    // TC SIEMPRE del cierre_caja, NO del API
+    if (cierre?.tc) {
+      setTipoCambio(cierre.tc);
+    }
+  }, [cierre?.id, cierre?.tc, periodo?.num]);
 
   function cargarUsuario() {
     try {
@@ -132,20 +135,6 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
     }
   }
 
-  async function cargarTipoCambio() {
-    if (!periodo || !cierre?.fecha_hora) return;
-
-    try {
-      const fecha = new Date(cierre.fecha_hora).toISOString().split('T')[0];
-      const res = await fetch(`/api/periodos/get-tc?fecha=${fecha}&periodo=${periodo.num}`);
-      const data = await res.json();
-      setTipoCambio(data.tipo_cambio || 475);
-    } catch (err) {
-      console.error('Error cargando TC:', err);
-      setTipoCambio(475);
-    }
-  }
-
   const showToast = (msg, type = 'info') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
@@ -167,6 +156,7 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cierre_id: cierre.id,
+          tc: tipoCambio,
           denominaciones: denomsNumeros,
           tarjetas: tarjetasNumeros,
           dolares: parsearMiles(dolares),
