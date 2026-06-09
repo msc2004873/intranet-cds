@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import Header from '../../../components/Header';
 import CalendarioPeriodos from '../../../components/CalendarioPeriodos';
 import FormularioRevision from '../../../components/FormularioRevision';
+import { parseQVetExcel } from '../../../lib/parseQVetExcel';
+import { generateAuditRows } from '../../../lib/generateAuditRows';
 
 const calcularTotalEnCaja = (cierre) => {
   if (!cierre) return 0;
@@ -25,6 +27,12 @@ export default function RevisionClinicaPage() {
   const [error, setError] = useState(null);
   const [cierreEnRevision, setCierreEnRevision] = useState(null);
   const [periodoActualAlMontar, setPeriodoActualAlMontar] = useState(null);
+  const [tabActivo, setTabActivo] = useState('cierres');
+  const [auditRows, setAuditRows] = useState([]);
+  const [loadingAudit, setLoadingAudit] = useState(false);
+  const [auditError, setAuditError] = useState(null);
+  const [modalAuditRow, setModalAuditRow] = useState(null);
+  const [modalComentario, setModalComentario] = useState('');
 
   useEffect(() => {
     const hoy = new Date();
@@ -66,7 +74,7 @@ export default function RevisionClinicaPage() {
       const inicio = periodo.inicio.toISOString().split('T')[0];
       const fin = periodo.fin.toISOString().split('T')[0];
 
-      const res = await fetch(`/api/cierreCaja?fecha=${inicio}&hasta=${fin}&caja=${encodeURIComponent(caja)}`, { cache: 'no-store' });
+      const res = await fetch(`/api/cierreCaja?fecha=${inicio}&hasta=${fin}&caja=${encodeURIComponent(caja)}`);
       if (!res.ok) {
         throw new Error('Error al cargar cierres del API');
       }
@@ -116,7 +124,48 @@ export default function RevisionClinicaPage() {
       <div style={{ flex: 1, maxWidth: '720px', margin: '0 auto', padding: '24px 16px', width: '100%' }}>
         <CalendarioPeriodos onSelectPeriodo={setPeriodo} />
 
-        {/* Período y caja */}
+        {/* Pestañas */}
+        {periodo && (
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '2px solid #E2DDD4' }}>
+            <button
+              onClick={() => setTabActivo('cierres')}
+              style={{
+                padding: '12px 20px',
+                background: 'transparent',
+                color: tabActivo === 'cierres' ? '#2a78a5' : '#9C9590',
+                border: 'none',
+                borderBottom: tabActivo === 'cierres' ? '3px solid #2a78a5' : 'none',
+                fontSize: '14px',
+                fontWeight: tabActivo === 'cierres' ? '700' : '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              📋 Cierres
+            </button>
+            <button
+              onClick={() => setTabActivo('auditoria')}
+              style={{
+                padding: '12px 20px',
+                background: 'transparent',
+                color: tabActivo === 'auditoria' ? '#2a78a5' : '#9C9590',
+                border: 'none',
+                borderBottom: tabActivo === 'auditoria' ? '3px solid #2a78a5' : 'none',
+                fontSize: '14px',
+                fontWeight: tabActivo === 'auditoria' ? '700' : '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              📊 Auditoría QVet
+            </button>
+          </div>
+        )}
+
+        {/* Tab: Cierres */}
+        {tabActivo === 'cierres' && (
+          <>
+            {/* Período y caja */}
         {periodo && (
           <>
             <div style={{
@@ -242,6 +291,318 @@ export default function RevisionClinicaPage() {
             )}
           </>
         )}
+          </>
+        )}
+
+        {/* Tab: Auditoría */}
+        {tabActivo === 'auditoria' && (
+          <>
+            {/* Upload */}
+            <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: '#1A1714', marginBottom: '16px' }}>
+                📤 Subir Excel de QVet
+              </div>
+
+              <input
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={async (e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+
+                  setLoadingAudit(true);
+                  setAuditError(null);
+                  try {
+                    // 1. Parse Excel
+                    const qvetData = await parseQVetExcel(file, periodo);
+
+                    if (!qvetData || qvetData.length === 0) {
+                      throw new Error('Excel vacío o sin datos válidos para este período');
+                    }
+
+                    // 2. Generar filas de auditoría para cada cierre revisado
+                    const allAuditRows = [];
+                    for (const cierre of cierres) {
+                      if (!cierre.revision_completada) continue;
+
+                      // Buscar cierre en QVet data
+                      const qvetCierre = qvetData.find(q => q.caja === cierre.caja && q.fecha === new Date(cierre.fecha_hora).toISOString().split('T')[0]);
+                      if (!qvetCierre) continue;
+
+                      // Buscar revision_caja
+                      const revRes = await fetch(`/api/revision?cierre_id=${cierre.id}`);
+                      if (!revRes.ok) continue;
+                      const revision = await revRes.json();
+
+                      // Generar filas
+                      const rows = generateAuditRows(cierre, revision, qvetCierre);
+                      allAuditRows.push(...rows);
+                    }
+
+                    if (allAuditRows.length === 0) {
+                      throw new Error('No se encontraron cierres revisados para comparar');
+                    }
+
+                    // 3. Guardar en DB
+                    const saveRes = await fetch('/api/auditoria', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        revision_caja_id: allAuditRows[0].revision_caja_id,
+                        audit_rows: allAuditRows,
+                        qvet_data: qvetData,
+                        qvet_archivo_url: file.name
+                      })
+                    });
+
+                    if (!saveRes.ok) throw new Error('Error al guardar auditoría');
+
+                    setAuditRows(allAuditRows);
+                    e.target.value = '';
+                  } catch (err) {
+                    setAuditError(err.message);
+                    console.error('Error:', err);
+                  } finally {
+                    setLoadingAudit(false);
+                  }
+                }}
+                style={{
+                  display: 'none'
+                }}
+                id="fileInput"
+              />
+
+              <label htmlFor="fileInput" style={{
+                border: '2px dashed #2a78a5',
+                borderRadius: '8px',
+                padding: '40px 20px',
+                textAlign: 'center',
+                backgroundColor: '#E8F3EC',
+                cursor: 'pointer',
+                transition: 'all 0.2s',
+                display: 'block'
+              }}>
+                <div style={{ fontSize: '32px', marginBottom: '12px' }}>📊</div>
+                <div style={{ fontSize: '14px', fontWeight: '600', color: '#2a78a5', marginBottom: '6px' }}>
+                  {loadingAudit ? '⏳ Procesando...' : 'Arrastra el archivo o clickea para seleccionar'}
+                </div>
+                <div style={{ fontSize: '12px', color: '#9C9590' }}>
+                  Formato: Excel (.xlsx)
+                </div>
+              </label>
+
+              <div style={{ marginTop: '24px', padding: '16px', background: '#FDE8E8', borderRadius: '8px', borderLeft: '3px solid #E74C3C' }}>
+                <div style={{ fontSize: '13px', color: '#C0392B', fontWeight: '600' }}>
+                  ℹ️ Instrucciones
+                </div>
+                <div style={{ fontSize: '12px', color: '#9C9590', marginTop: '8px', lineHeight: '1.6' }}>
+                  <strong>En QVet:</strong><br/>
+                  Documentos → Listados → COBROS → LISTADO CIERRE DE CAJA<br/>
+                  <br/>
+                  <strong>Descargar desde:</strong> {periodo?.inicio.toLocaleDateString('es-CR')} hasta {periodo?.fin.toLocaleDateString('es-CR')}<br/>
+                  <br/>
+                  Luego sube el archivo acá para comparar automáticamente
+                </div>
+              </div>
+
+              {auditError && (
+                <div style={{ marginTop: '16px', padding: '12px', background: '#FDEDEC', border: '1px solid #E74C3C', borderRadius: '8px', color: '#C0392B', fontSize: '12px' }}>
+                  ❌ {auditError}
+                </div>
+              )}
+            </div>
+
+            {/* Comparativo */}
+            {auditRows.length > 0 && (
+              <>
+                {['Caja 1 (clínica)', 'Caja 2'].map(cajaName => {
+                  const rowsPorCaja = auditRows.filter(r => r.caja === cajaName);
+                  if (rowsPorCaja.length === 0) return null;
+
+                  return (
+                    <div key={cajaName} style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
+                      <div style={{ fontSize: '16px', fontWeight: '700', color: '#1A1714', marginBottom: '16px' }}>
+                        {cajaName}
+                      </div>
+
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                          <thead>
+                            <tr style={{ borderBottom: '2px solid #E2DDD4' }}>
+                              <th style={{ padding: '10px', textAlign: 'left', fontWeight: '700', color: '#1A1714' }}>Tipo</th>
+                              <th style={{ padding: '10px', textAlign: 'right', fontWeight: '700', color: '#1A1714' }}>Cajera</th>
+                              <th style={{ padding: '10px', textAlign: 'right', fontWeight: '700', color: '#1A1714' }}>Revisora</th>
+                              <th style={{ padding: '10px', textAlign: 'right', fontWeight: '700', color: '#1A1714' }}>QVet</th>
+                              <th style={{ padding: '10px', textAlign: 'center', fontWeight: '700', color: '#1A1714' }}>Estado</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {rowsPorCaja.map((row, i) => {
+                              const hasDiff = Math.abs(row.diferencia_auditoria) > 0;
+                              const severidad = row.severidad_auditoria;
+                              const color = severidad === 'RED' ? '#E74C3C' : severidad === 'YELLOW' ? '#F39C12' : '#27AE60';
+                              const icon = severidad === 'RED' ? '🔴' : severidad === 'YELLOW' ? '🟡' : '✅';
+
+                              return (
+                                <tr
+                                  key={i}
+                                  onClick={() => hasDiff && setModalAuditRow(row)}
+                                  style={{
+                                    borderBottom: '1px solid #E2DDD4',
+                                    background: hasDiff ? '#FDE8E8' : 'transparent',
+                                    cursor: hasDiff ? 'pointer' : 'default',
+                                    transition: 'all 0.2s'
+                                  }}
+                                  onMouseEnter={(e) => hasDiff && (e.currentTarget.style.background = '#FDEDEC')}
+                                  onMouseLeave={(e) => hasDiff && (e.currentTarget.style.background = '#FDE8E8')}
+                                >
+                                  <td style={{ padding: '10px', color: '#1A1714', fontWeight: '600' }}>{row.tipo_movimiento}</td>
+                                  <td style={{ padding: '10px', textAlign: 'right', color: '#6B6560' }}>₡{row.monto_cajera.toLocaleString('es-CR')}</td>
+                                  <td style={{ padding: '10px', textAlign: 'right', color: '#6B6560' }}>₡{row.monto_revisora.toLocaleString('es-CR')}</td>
+                                  <td style={{ padding: '10px', textAlign: 'right', color: '#6B6560' }}>₡{row.monto_qvet.toLocaleString('es-CR')}</td>
+                                  <td style={{ padding: '10px', textAlign: 'center', color, fontWeight: '700' }}>{icon}</td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Modal para comentarios */}
+                {modalAuditRow && (
+                  <div style={{
+                    position: 'fixed',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    background: 'rgba(0,0,0,0.5)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    zIndex: 1000,
+                    padding: '20px'
+                  }}>
+                    <div style={{ background: '#fff', borderRadius: '12px', padding: '24px', maxWidth: '500px', width: '100%', maxHeight: '80vh', overflowY: 'auto' }}>
+                      <div style={{ fontSize: '16px', fontWeight: '700', color: '#1A1714', marginBottom: '16px' }}>
+                        {modalAuditRow.tipo_movimiento} — Diferencia de ₡{Math.abs(modalAuditRow.diferencia_auditoria).toLocaleString('es-CR')}
+                      </div>
+
+                      <div style={{ background: '#F0EDE6', padding: '12px', borderRadius: '8px', marginBottom: '16px', fontSize: '12px' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                          <div>
+                            <div style={{ color: '#9C9590', fontSize: '10px' }}>Cajera</div>
+                            <div style={{ color: '#1A1714', fontWeight: '700' }}>₡{modalAuditRow.monto_cajera.toLocaleString('es-CR')}</div>
+                          </div>
+                          <div>
+                            <div style={{ color: '#9C9590', fontSize: '10px' }}>Revisora</div>
+                            <div style={{ color: '#1A1714', fontWeight: '700' }}>₡{modalAuditRow.monto_revisora.toLocaleString('es-CR')}</div>
+                          </div>
+                          <div>
+                            <div style={{ color: '#9C9590', fontSize: '10px' }}>QVet</div>
+                            <div style={{ color: '#1A1714', fontWeight: '700' }}>₡{modalAuditRow.monto_qvet.toLocaleString('es-CR')}</div>
+                          </div>
+                          <div>
+                            <div style={{ color: '#9C9590', fontSize: '10px' }}>Severidad</div>
+                            <div style={{ color: modalAuditRow.severidad_auditoria === 'RED' ? '#E74C3C' : modalAuditRow.severidad_auditoria === 'YELLOW' ? '#F39C12' : '#27AE60', fontWeight: '700' }}>
+                              {modalAuditRow.severidad_auditoria === 'RED' ? '🔴 RED' : modalAuditRow.severidad_auditoria === 'YELLOW' ? '🟡 YELLOW' : '✅ GREEN'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div style={{ marginBottom: '16px' }}>
+                        <label style={{ display: 'block', fontSize: '12px', fontWeight: '600', color: '#6B6560', marginBottom: '8px' }}>
+                          Comentario:
+                        </label>
+                        <textarea
+                          value={modalComentario}
+                          onChange={(e) => setModalComentario(e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '10px',
+                            border: '1px solid #E2DDD4',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontFamily: 'inherit',
+                            minHeight: '80px',
+                            boxSizing: 'border-box'
+                          }}
+                          placeholder="Explica la diferencia encontrada..."
+                        />
+                      </div>
+
+                      <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end' }}>
+                        <button
+                          onClick={() => {
+                            setModalAuditRow(null);
+                            setModalComentario('');
+                          }}
+                          style={{
+                            padding: '10px 20px',
+                            background: '#F0EDE6',
+                            color: '#6B6560',
+                            border: '1px solid #E2DDD4',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Cancelar
+                        </button>
+                        <button
+                          onClick={async () => {
+                            try {
+                              const res = await fetch('/api/auditoria', {
+                                method: 'PUT',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  id: modalAuditRow.id,
+                                  comentario_auditoria: modalComentario
+                                })
+                              });
+
+                              if (!res.ok) throw new Error('Error al guardar');
+
+                              // Actualizar en local
+                              setAuditRows(auditRows.map(r => r.id === modalAuditRow.id ? { ...r, comentario_auditoria: modalComentario } : r));
+                              setModalAuditRow(null);
+                              setModalComentario('');
+                            } catch (err) {
+                              alert('Error: ' + err.message);
+                            }
+                          }}
+                          style={{
+                            padding: '10px 20px',
+                            background: '#2a78a5',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            cursor: 'pointer'
+                          }}
+                        >
+                          Guardar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
+
+            {auditRows.length === 0 && !loadingAudit && (
+              <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', padding: '24px', textAlign: 'center', color: '#9C9590' }}>
+                ⬆️ Sube un Excel para ver el comparativo
+              </div>
+            )}
+          </>
+        )}
 
         <button
           onClick={() => router.push('/admin/revision')}
@@ -266,3 +627,4 @@ export default function RevisionClinicaPage() {
     </div>
   );
 }
+
