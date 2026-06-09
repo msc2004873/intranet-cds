@@ -305,6 +305,7 @@ export default function CajeraPage() {
         sinpeList,
         depositoList,
         salidaList,
+        comentarios,
         // Conteo de denominaciones (para conteo_caja)
         ...Object.fromEntries(DENOMS.map(d => [`denom${d}`, denominaciones[d] || 0])),
         // Denominaciones al sobre (para cierre_caja)

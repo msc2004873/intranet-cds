@@ -169,7 +169,8 @@ export async function POST(request) {
       sinpe_json: data.sinpeList || null,
       depositos_json: data.depositoList || null,
       salidas_json: data.salidaList || null,
-      glory_json: data.gloryList || null
+      glory_json: data.gloryList || null,
+      observaciones: data.comentarios || null
     };
 
     const { data: result, error: cierreError } = await supabase
