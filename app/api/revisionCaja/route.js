@@ -38,7 +38,6 @@ export async function POST(request) {
       caja_revisada,
       fecha_cierre_revisado,
       tc: tc || 475,
-      revision_completada: true,
       efectivo_revisado: Object.entries(denominaciones).reduce((sum, [denom, cant]) => {
         return sum + (parseInt(denom) * cant);
       }, 0),
@@ -47,7 +46,6 @@ export async function POST(request) {
       sinpe_revisado_json: JSON.stringify(sinpeRevisado || []),
       depositos_revisados_json: JSON.stringify(transfRevisadas || []),
       salidas_revisadas_json: JSON.stringify(salidEvaluadas || []),
-      fecha_revision: new Date().toISOString(),
     };
 
     // Guardar en tabla de revisiones
