@@ -82,6 +82,9 @@ export default function RevisionClinicaPage() {
       const data = await res.json();
       setCierres(Array.isArray(data) ? data : []);
 
+      // Esperar un poco para que Supabase procese el nuevo registro
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // Cargar IDs de cierres revisados
       const revisadosRes = await fetch('/api/revision-caja-ids');
       if (revisadosRes.ok) {
