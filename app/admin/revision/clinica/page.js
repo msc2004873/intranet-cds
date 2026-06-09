@@ -86,10 +86,18 @@ export default function RevisionClinicaPage() {
       await new Promise(resolve => setTimeout(resolve, 500));
 
       // Cargar IDs de cierres revisados
-      const revisadosRes = await fetch('/api/revision-caja-ids');
-      if (revisadosRes.ok) {
-        const revisados = await revisadosRes.json();
-        setCierresRevisadosIds(new Set(revisados.map(r => r.cierre_caja_id)));
+      try {
+        const revisadosRes = await fetch('/api/revision-caja-ids');
+        if (revisadosRes.ok) {
+          const revisados = await revisadosRes.json();
+          const idsRevisados = new Set(revisados.map(r => r.cierre_caja_id));
+          setCierresRevisadosIds(idsRevisados);
+          console.log('Cierres revisados cargados:', Array.from(idsRevisados));
+        } else {
+          console.error('Error fetching revision IDs:', revisadosRes.status);
+        }
+      } catch (err) {
+        console.error('Error loading reviewed closures:', err);
       }
     } catch (err) {
       console.error('Error cargando cierres:', err);
