@@ -328,9 +328,12 @@ export default function RevisionClinicaPage() {
                   ℹ️ Instrucciones
                 </div>
                 <div style={{ fontSize: '12px', color: '#9C9590', marginTop: '8px', lineHeight: '1.6' }}>
-                  1. Exporta los datos del período desde QVet<br/>
-                  2. Sube el archivo Excel<br/>
-                  3. Se comparará automáticamente con las revisiones
+                  <strong>En QVet:</strong><br/>
+                  Documentos → Listados → COBROS → LISTADO CIERRE DE CAJA<br/>
+                  <br/>
+                  <strong>Descargar desde:</strong> {periodo?.inicio.toLocaleDateString('es-CR')} hasta {periodo?.fin.toLocaleDateString('es-CR')}<br/>
+                  <br/>
+                  Luego sube el archivo acá para comparar automáticamente
                 </div>
               </div>
             </div>
