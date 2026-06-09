@@ -36,7 +36,7 @@ export async function GET(req) {
       query = query.eq('caja', caja);
     }
 
-    const { data, error } = await query.order('fecha_hora', { ascending: false });
+    const { data, error } = await query.order('fecha_hora', { ascending: true });
 
     if (error) throw error;
 
