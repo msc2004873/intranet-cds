@@ -284,19 +284,6 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
           </div>
         </div>
 
-        {/* Comentario de la cajera */}
-        {cierre?.observaciones && (
-          <div style={{ background: '#FDE8E8', border: '1.5px solid #E74C3C', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
-            <div style={{ padding: '16px 20px', borderBottom: '1.5px solid #E74C3C', display: 'flex', alignItems: 'center', gap: '10px', background: '#FDEDEC' }}>
-              <div style={{ width: '26px', height: '26px', background: '#E74C3C', color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px' }}>💬</div>
-              <div style={{ fontSize: '14px', fontWeight: '600', color: '#C0392B' }}>Comentario de la cajera</div>
-            </div>
-            <div style={{ padding: '16px 20px', fontSize: '13px', color: '#6B6560', lineHeight: '1.5' }}>
-              {cierre.observaciones}
-            </div>
-          </div>
-        )}
-
         {/* 1. Denominaciones */}
         <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
