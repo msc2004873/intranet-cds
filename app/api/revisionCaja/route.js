@@ -19,26 +19,17 @@ export async function POST(request) {
     }, 0);
 
     const revisaData = {
-      cierre_id,
+      cierre_caja_id: cierre_id,
       tc: tc || 475,
       revision_completada: true,
-      c_20000: denominaciones[20000] || 0,
-      c_10000: denominaciones[10000] || 0,
-      c_5000: denominaciones[5000] || 0,
-      c_2000: denominaciones[2000] || 0,
-      c_1000: denominaciones[1000] || 0,
-      c_500: denominaciones[500] || 0,
-      c_100: denominaciones[100] || 0,
-      c_50: denominaciones[50] || 0,
-      c_25: denominaciones[25] || 0,
-      c_10: denominaciones[10] || 0,
-      c_5: denominaciones[5] || 0,
-      dolares_total: dolares,
-      tarjeta_bac: tarjetas.bac || 0,
-      tarjeta_bn: tarjetas.bn || 0,
-      sinpe_json: JSON.stringify(sinpeRevisado || []),
-      transferencias_json: JSON.stringify(transfRevisadas || []),
-      salidas_json: JSON.stringify(salidEvaluadas || []),
+      efectivo_revisado: Object.entries(denominaciones).reduce((sum, [denom, cant]) => {
+        return sum + (parseInt(denom) * cant);
+      }, 0),
+      tarjeta_bac_revisado: tarjetas.bac || 0,
+      tarjeta_bn_revisado: tarjetas.bn || 0,
+      sinpe_revisado_json: JSON.stringify(sinpeRevisado || []),
+      depositos_revisados_json: JSON.stringify(transfRevisadas || []),
+      salidas_revisadas_json: JSON.stringify(salidEvaluadas || []),
       fecha_revision: new Date().toISOString(),
     };
 
