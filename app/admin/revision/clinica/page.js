@@ -23,6 +23,7 @@ export default function RevisionClinicaPage() {
   const [caja, setCaja] = useState('Caja 1 (clínica)');
   const [cajas] = useState(['Caja 1 (clínica)', 'Caja 2']);
   const [cierres, setCierres] = useState([]);
+  const [cierresRevisadosIds, setCierresRevisadosIds] = useState(new Set());
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [cierreEnRevision, setCierreEnRevision] = useState(null);
@@ -80,6 +81,13 @@ export default function RevisionClinicaPage() {
       }
       const data = await res.json();
       setCierres(Array.isArray(data) ? data : []);
+
+      // Cargar IDs de cierres revisados
+      const revisadosRes = await fetch('/api/revision-caja-ids');
+      if (revisadosRes.ok) {
+        const revisados = await revisadosRes.json();
+        setCierresRevisadosIds(new Set(revisados.map(r => r.cierre_caja_id)));
+      }
     } catch (err) {
       console.error('Error cargando cierres:', err);
       setError('No se pudieron cargar los cierres. Intenta de nuevo.');
@@ -98,8 +106,8 @@ export default function RevisionClinicaPage() {
     periodo.inicio.getMonth() === mesHoy &&
     periodo.inicio.getFullYear() === anoHoy;
 
-  const cierresPendientes = cierres.filter(c => !c.revision_completada);
-  const cierresRevisados = cierres.filter(c => c.revision_completada);
+  const cierresPendientes = cierres.filter(c => !cierresRevisadosIds.has(c.id));
+  const cierresRevisados = cierres.filter(c => cierresRevisadosIds.has(c.id));
 
   if (cierreEnRevision) {
     return (
