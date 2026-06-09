@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import Header from '../../../components/Header';
 import CalendarioPeriodos from '../../../components/CalendarioPeriodos';
 import FormularioRevision from '../../../components/FormularioRevision';
@@ -15,6 +16,7 @@ const calcularTotalEnCaja = (cierre) => {
 };
 
 export default function RevisionClinicaPage() {
+  const router = useRouter();
   const [periodo, setPeriodo] = useState(null);
   const [caja, setCaja] = useState('Caja 1 (clínica)');
   const [cajas] = useState(['Caja 1 (clínica)', 'Caja 2']);
@@ -23,6 +25,7 @@ export default function RevisionClinicaPage() {
   const [error, setError] = useState(null);
   const [cierreEnRevision, setCierreEnRevision] = useState(null);
   const [periodoActualAlMontar, setPeriodoActualAlMontar] = useState(null);
+  const [tabActivo, setTabActivo] = useState('cierres');
 
   useEffect(() => {
     const hoy = new Date();
@@ -114,7 +117,48 @@ export default function RevisionClinicaPage() {
       <div style={{ flex: 1, maxWidth: '720px', margin: '0 auto', padding: '24px 16px', width: '100%' }}>
         <CalendarioPeriodos onSelectPeriodo={setPeriodo} />
 
-        {/* Período y caja */}
+        {/* Pestañas */}
+        {periodo && (
+          <div style={{ display: 'flex', gap: '8px', marginBottom: '20px', borderBottom: '2px solid #E2DDD4' }}>
+            <button
+              onClick={() => setTabActivo('cierres')}
+              style={{
+                padding: '12px 20px',
+                background: 'transparent',
+                color: tabActivo === 'cierres' ? '#2a78a5' : '#9C9590',
+                border: 'none',
+                borderBottom: tabActivo === 'cierres' ? '3px solid #2a78a5' : 'none',
+                fontSize: '14px',
+                fontWeight: tabActivo === 'cierres' ? '700' : '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              📋 Cierres
+            </button>
+            <button
+              onClick={() => setTabActivo('auditoria')}
+              style={{
+                padding: '12px 20px',
+                background: 'transparent',
+                color: tabActivo === 'auditoria' ? '#2a78a5' : '#9C9590',
+                border: 'none',
+                borderBottom: tabActivo === 'auditoria' ? '3px solid #2a78a5' : 'none',
+                fontSize: '14px',
+                fontWeight: tabActivo === 'auditoria' ? '700' : '600',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}
+            >
+              📊 Auditoría QVet
+            </button>
+          </div>
+        )}
+
+        {/* Tab: Cierres */}
+        {tabActivo === 'cierres' && (
+          <>
+            {/* Período y caja */}
         {periodo && (
           <>
             <div style={{
@@ -241,26 +285,90 @@ export default function RevisionClinicaPage() {
           </>
         )}
 
-        <Link href="/revisora" style={{ textDecoration: 'none' }}>
-          <button
-            style={{
-              width: '100%',
-              padding: '12px',
-              background: '#F0EDE6',
-              color: '#6B6560',
-              border: '1.5px solid #E2DDD4',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              marginTop: '24px'
-            }}
-            onMouseEnter={(e) => e.currentTarget.style.background = '#E2DDD4'}
-            onMouseLeave={(e) => e.currentTarget.style.background = '#F0EDE6'}
-          >
-            ← Volver al dashboard
-          </button>
-        </Link>
+        {/* Tab: Auditoría */}
+        {tabActivo === 'auditoria' && (
+          <>
+            <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: '#1A1714', marginBottom: '16px' }}>
+                📤 Subir Excel de QVet
+              </div>
+
+              <div style={{
+                border: '2px dashed #2a78a5',
+                borderRadius: '8px',
+                padding: '40px 20px',
+                textAlign: 'center',
+                backgroundColor: '#E8F3EC',
+                cursor: 'pointer',
+                transition: 'all 0.2s'
+              }}>
+                <div style={{ fontSize: '32px', marginBottom: '12px' }}>📊</div>
+                <div style={{ fontSize: '14px', fontWeight: '600', color: '#2a78a5', marginBottom: '6px' }}>
+                  Arrastra el archivo o clickea para seleccionar
+                </div>
+                <div style={{ fontSize: '12px', color: '#9C9590' }}>
+                  Formato: Excel (.xlsx)
+                </div>
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  style={{
+                    marginTop: '12px',
+                    padding: '8px 12px',
+                    fontSize: '12px',
+                    cursor: 'pointer'
+                  }}
+                />
+              </div>
+
+              <div style={{ marginTop: '24px', padding: '16px', background: '#FDE8E8', borderRadius: '8px', borderLeft: '3px solid #E74C3C' }}>
+                <div style={{ fontSize: '13px', color: '#C0392B', fontWeight: '600' }}>
+                  ℹ️ Instrucciones
+                </div>
+                <div style={{ fontSize: '12px', color: '#9C9590', marginTop: '8px', lineHeight: '1.6' }}>
+                  1. Exporta los datos del período desde QVet<br/>
+                  2. Sube el archivo Excel<br/>
+                  3. Se comparará automáticamente con las revisiones
+                </div>
+              </div>
+            </div>
+
+            <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', padding: '24px' }}>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: '#1A1714', marginBottom: '16px' }}>
+                📊 Comparativo del Período {periodo?.num}
+              </div>
+
+              <div style={{ textAlign: 'center', padding: '40px 20px', color: '#9C9590' }}>
+                <div style={{ fontSize: '14px', marginBottom: '8px' }}>
+                  ⬆️ Sube un Excel para ver el comparativo
+                </div>
+                <div style={{ fontSize: '12px', color: '#C8C4BC' }}>
+                  Se mostrarán los 3 niveles: Cajera vs Revisora vs QVet
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
+        <button
+          onClick={() => router.push('/admin/revision')}
+          style={{
+            width: '100%',
+            padding: '12px',
+            background: '#F0EDE6',
+            color: '#6B6560',
+            border: '1.5px solid #E2DDD4',
+            borderRadius: '8px',
+            fontSize: '14px',
+            fontWeight: '600',
+            cursor: 'pointer',
+            marginTop: '24px'
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.background = '#E2DDD4'}
+          onMouseLeave={(e) => e.currentTarget.style.background = '#F0EDE6'}
+        >
+          ← Volver al dashboard
+        </button>
       </div>
     </div>
   );
