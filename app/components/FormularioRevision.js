@@ -206,7 +206,9 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
         setResumenComparacion(resumen);
         // No llamar a onGuardar() aquí - dejar que el usuario cierre el resumen primero
       } else {
-        showToast('❌ Error al guardar la revisión', 'error');
+        const errorData = await res.json();
+        console.error('API Error:', errorData);
+        showToast(`❌ Error: ${errorData.error || 'Error al guardar'}`, 'error');
       }
     } catch (err) {
       console.error('Error guardando revisión:', err);
