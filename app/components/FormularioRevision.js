@@ -171,40 +171,10 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
 
       if (res.ok) {
         showToast('✅ Revisión guardada correctamente', 'success');
-
-        // Generar resumen de comparación
-        const resumen = {
-          sinpe: sinpeRevisado.map(s => ({
-            referencia: s.referencia,
-            monto_cajera: parsearMiles(s.monto || 0),
-            monto_revisado: parsearMiles(s.monto_revisado),
-            coincide: parsearMiles(s.monto || 0) === parsearMiles(s.monto_revisado),
-            aprobado: s.aprobado,
-            rechazado: s.rechazado,
-            moneda: s.moneda
-          })),
-          transferencias: transfRevisadas.map(t => ({
-            descripcion: t.descripcion,
-            monto_cajera: parsearMiles(t.monto || 0),
-            monto_revisado: parsearMiles(t.monto_revisado),
-            coincide: parsearMiles(t.monto || 0) === parsearMiles(t.monto_revisado),
-            aprobado: t.aprobado,
-            rechazado: t.rechazado,
-            moneda: t.moneda
-          })),
-          salidas: salidEvaluadas.map(s => ({
-            descripcion: s.descripcion,
-            monto_cajera: parsearMiles(s.monto || 0),
-            monto_revisado: parsearMiles(s.monto_revisado),
-            coincide: parsearMiles(s.monto || 0) === parsearMiles(s.monto_revisado),
-            aprobado: s.aprobado,
-            rechazado: s.rechazado,
-            moneda: s.moneda
-          }))
-        };
-
-        setResumenComparacion(resumen);
-        // No llamar a onGuardar() aquí - dejar que el usuario cierre el resumen primero
+        // Cerrar automáticamente después de 1 segundo y recargar lista
+        setTimeout(() => {
+          onGuardar();
+        }, 1000);
       } else {
         const errorData = await res.json();
         console.error('API Error:', errorData);
