@@ -1,36 +1,55 @@
-import supabase from '../../../lib/supabase-server.js';
+import { createClient } from '@supabase/supabase-js';
 
-export async function POST(request) {
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
+
+export async function GET(req) {
   try {
-    const data = await request.json();
+    const { searchParams } = new URL(req.url);
+    const cierre_id = searchParams.get('cierre_id');
 
-    const { data: result, error } = await supabase
-      .from('revision_caja')
-      .insert([
-        {
-          revisora: data.revisora,
-          caja_revisada: data.caja,
-          fecha_cierre_revisado: new Date(data.fechaCierre).toISOString(),
-          efectivo_contado: data.efectivoContado || 0,
-          tarjeta_verificada: data.tarjetaVerificada || 0,
-          sinpe_verificado: data.sinpeVerificado || 0,
-          estado: data.estado || 'pendiente',
-          observaciones: data.observaciones || null,
-        },
-      ])
-      .select();
-
-    if (error) {
-      console.error('Supabase error:', error);
-      return Response.json({ error: error.message }, { status: 400 });
+    if (!cierre_id) {
+      return new Response(
+        JSON.stringify({ error: 'Missing cierre_id parameter' }),
+        { status: 400 }
+      );
     }
 
-    return Response.json(
-      { success: true, message: '✅ Revisión guardada exitosamente', data: result },
-      { status: 200 }
+    // Fetch revision_caja by cierre_caja_id
+    const { data, error } = await supabase
+      .from('revision_caja')
+      .select('*')
+      .eq('cierre_caja_id', cierre_id)
+      .single();
+
+    if (error) {
+      // If no revision exists yet, return empty object with default values
+      if (error.code === 'PGRST116') {
+        return new Response(
+          JSON.stringify({
+            id: null,
+            cierre_caja_id: cierre_id,
+            efectivo_revisado: 0,
+            tarjeta_bac_revisado: 0,
+            tarjeta_bn_revisado: 0,
+            sinpe_revisado_json: [],
+            depositos_revisados_json: [],
+            salidas_revisadas_json: [],
+          }),
+          { status: 200 }
+        );
+      }
+      throw error;
+    }
+
+    return new Response(JSON.stringify(data), { status: 200 });
+  } catch (error) {
+    console.error('Error fetching revision:', error);
+    return new Response(
+      JSON.stringify({ error: error.message }),
+      { status: 500 }
     );
-  } catch (err) {
-    console.error('Server error:', err);
-    return Response.json({ error: err.message }, { status: 500 });
   }
 }
