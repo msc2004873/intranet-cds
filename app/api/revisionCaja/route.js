@@ -50,32 +50,17 @@ export async function POST(request) {
       fecha_revision: new Date().toISOString(),
     };
 
-    // Actualizar el cierre_caja marcándolo como revisado
-    const { error: updateError } = await supabase
-      .from('cierre_caja')
-      .update({ revision_completada: true })
-      .eq('id', cierre_id);
+    // Guardar en tabla de revisiones
+    const { error: insertError } = await supabase
+      .from('revision_caja')
+      .insert([revisaData]);
 
-    if (updateError) {
-      console.error('Error actualizando cierre:', updateError);
+    if (insertError) {
+      console.error('Error insertando revisión:', insertError);
       return Response.json(
-        { error: updateError.message },
+        { error: insertError.message },
         { status: 400 }
       );
-    }
-
-    // Intentar guardar en tabla de revisiones si existe
-    try {
-      const { error: insertError } = await supabase
-        .from('revision_caja')
-        .insert([revisaData]);
-
-      if (insertError && !insertError.message.includes('relation')) {
-        console.error('Error insertando revisión:', insertError);
-      }
-    } catch (err) {
-      // Tabla no existe aún, solo actualizar cierre_caja
-      console.log('Tabla revision_caja no existe, guardando en cierre_caja');
     }
 
     return Response.json({ success: true }, { status: 200 });
