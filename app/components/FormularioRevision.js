@@ -156,6 +156,9 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           cierre_id: cierre.id,
+          revisora: usuarioActual?.nombre || 'Sistema',
+          caja_revisada: cierre.caja,
+          fecha_cierre_revisado: cierre.fecha_hora,
           tc: tipoCambio,
           denominaciones: denomsNumeros,
           tarjetas: tarjetasNumeros,
