@@ -50,6 +50,10 @@ export async function GET(req) {
 export async function POST(request) {
   try {
     const data = await request.json();
+    console.log('=== CIERRE CAJA POST ===');
+    console.log('Received data:', JSON.stringify(data, null, 2));
+    console.log('tarjetaBac:', data.tarjetaBac, 'type:', typeof data.tarjetaBac);
+    console.log('tarjetaBn:', data.tarjetaBn, 'type:', typeof data.tarjetaBn);
 
     // Validaciones
     if (!data.cajera || data.cajera === '') throw new Error('Falta cajera');

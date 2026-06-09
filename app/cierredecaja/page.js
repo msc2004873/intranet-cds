@@ -315,11 +315,17 @@ export default function CajeraPage() {
         body.gloryList = gloryList;
       }
 
+      console.log('=== SUBMIT CIERRE CAJA ===');
+      console.log('tarjetaBac state:', tarjetaBac, 'type:', typeof tarjetaBac);
+      console.log('tarjetaBn state:', tarjetaBn, 'type:', typeof tarjetaBn);
+      console.log('Body before JSON.stringify:', body);
+
       const res = await fetch('/api/cierreCaja', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
+      console.log('Response status:', res.status);
 
       if (res.ok) {
         showToast('✅ Cierre guardado');
