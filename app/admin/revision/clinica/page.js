@@ -284,6 +284,8 @@ export default function RevisionClinicaPage() {
             )}
           </>
         )}
+          </>
+        )}
 
         {/* Tab: Auditoría */}
         {tabActivo === 'auditoria' && (
@@ -373,3 +375,4 @@ export default function RevisionClinicaPage() {
     </div>
   );
 }
+
