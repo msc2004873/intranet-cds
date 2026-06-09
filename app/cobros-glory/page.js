@@ -44,6 +44,7 @@ export default function CobroGloryPage() {
   const [pacientesSeleccionados, setPacientesSeleccionados] = useState(new Set());
   const [modoUnificacion, setModoUnificacion] = useState(false);
   const [comentariosCobro, setComentariosCobro] = useState('');
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     const hoy = getFechaCostaRica();
@@ -123,6 +124,9 @@ export default function CobroGloryPage() {
       return;
     }
 
+    if (isSaving) return;
+
+    setIsSaving(true);
     try {
       const now = new Date();
       const formatter = new Intl.DateTimeFormat('en-US', {
@@ -150,14 +154,17 @@ export default function CobroGloryPage() {
       if (error) {
         console.error('Error Supabase:', error);
         showToast('❌ Error al guardar pacientes: ' + error.message);
+        setIsSaving(false);
         return;
       }
 
       showToast(`✅ ${pacientesAIngresar.length} paciente(s) agregado(s)`);
       setPacientesAIngresar([]);
       cargarPacientesEspera();
+      setIsSaving(false);
     } catch (err) {
       showToast('❌ Error: ' + err.message);
+      setIsSaving(false);
     }
   }
 
@@ -259,6 +266,9 @@ export default function CobroGloryPage() {
       return;
     }
 
+    if (isSaving) return;
+
+    setIsSaving(true);
     try {
       const esTarjeta = selectMetodo === 'Tarjeta BAC';
       const montoFinal = esTarjeta ? parseFloat(inputMonto) * 1.13 : parseFloat(inputMonto);
@@ -288,6 +298,7 @@ export default function CobroGloryPage() {
         if (insertError) {
           console.error('Error Supabase:', insertError);
           showToast('❌ Error al registrar cobro: ' + insertError.message);
+          setIsSaving(false);
           return;
         }
 
@@ -313,6 +324,7 @@ export default function CobroGloryPage() {
         if (error) {
           console.error('Error Supabase:', error);
           showToast('❌ Error al registrar cobro: ' + error.message);
+          setIsSaving(false);
           return;
         }
       }
@@ -322,8 +334,10 @@ export default function CobroGloryPage() {
       setPacientesSeleccionados(new Set());
       cargarPacientesEspera();
       cargarRegistrosDia(filterFecha);
+      setIsSaving(false);
     } catch (err) {
       showToast('❌ Error: ' + err.message);
+      setIsSaving(false);
     }
   }
 
@@ -459,7 +473,7 @@ export default function CobroGloryPage() {
                   ))}
                 </div>
               ))}
-              <button onClick={guardarTodosPacientes} style={{ width: '100%', marginTop: '16px', padding: '12px', background: '#27AE60', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={(e) => e.target.style.background = '#1E8449'} onMouseLeave={(e) => e.target.style.background = '#27AE60'}>✓ Guardar todos los pacientes</button>
+              <button onClick={guardarTodosPacientes} disabled={isSaving} style={{ width: '100%', marginTop: '16px', padding: '12px', background: isSaving ? '#95A5A6' : '#27AE60', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: isSaving ? 'not-allowed' : 'pointer', transition: 'background 0.2s', opacity: isSaving ? 0.7 : 1 }} onMouseEnter={(e) => !isSaving && (e.target.style.background = '#1E8449')} onMouseLeave={(e) => !isSaving && (e.target.style.background = '#27AE60')}>✓ {isSaving ? 'Guardando...' : 'Guardar todos los pacientes'}</button>
             </div>
           </div>
         )}
@@ -639,7 +653,7 @@ export default function CobroGloryPage() {
             </div>
             <div style={{ display: 'flex', gap: '10px', justifyContent: 'flex-end' }}>
               <button onClick={cerrarModal} style={{ padding: '10px 16px', fontSize: '14px', background: '#F0EDE6', color: '#1A1714', border: '1.5px solid #E2DDD4', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', transition: 'background 0.2s' }} onMouseEnter={(e) => e.target.style.background = '#E2DDD4'} onMouseLeave={(e) => e.target.style.background = '#F0EDE6'}>Cancelar</button>
-              <button onClick={confirmarCobro} style={{ padding: '10px 16px', fontSize: '14px', background: '#2a78a5', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', transition: 'background 0.2s' }} onMouseEnter={(e) => e.target.style.background = '#1f5780'} onMouseLeave={(e) => e.target.style.background = '#2a78a5'}>Cobrar</button>
+              <button onClick={confirmarCobro} disabled={isSaving} style={{ padding: '10px 16px', fontSize: '14px', background: isSaving ? '#95A5A6' : '#2a78a5', color: 'white', border: 'none', borderRadius: '8px', cursor: isSaving ? 'not-allowed' : 'pointer', fontWeight: '600', transition: 'background 0.2s', opacity: isSaving ? 0.7 : 1 }} onMouseEnter={(e) => !isSaving && (e.target.style.background = '#1f5780')} onMouseLeave={(e) => !isSaving && (e.target.style.background = '#2a78a5')}>{isSaving ? 'Procesando...' : 'Cobrar'}</button>
             </div>
           </div>
         </div>
