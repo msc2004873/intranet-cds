@@ -728,7 +728,6 @@ export default function RevisionClinicaPage() {
                 </button>
               </div>
             )}
-            </div>
 
             {/* Comparativo */}
             {auditRows.length > 0 && (
