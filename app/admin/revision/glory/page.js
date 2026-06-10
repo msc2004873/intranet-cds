@@ -79,7 +79,9 @@ export default function RevisionGloryPage() {
       // Agrupar por día y cajera
       const agrupado = {};
       (Array.isArray(data) ? data : []).forEach(cobro => {
-        const fecha = new Date(cobro.fecha).toLocaleDateString('es-CR');
+        // cobro.fecha es DATE, ya está en CR — no pasar por new Date() para evitar shift de timezone
+        const fechaObj = new Date(`${cobro.fecha}T00:00:00`);
+        const fecha = fechaObj.toLocaleDateString('es-CR');
         if (!agrupado[fecha]) agrupado[fecha] = {};
         if (!agrupado[fecha][cobro.cajera]) agrupado[fecha][cobro.cajera] = [];
         agrupado[fecha][cobro.cajera].push(cobro);
