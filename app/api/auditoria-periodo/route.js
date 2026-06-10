@@ -38,6 +38,7 @@ export async function GET(req) {
         revision_caja!inner (
           id,
           cierre_caja_id,
+          qvet_data,
           cierre_caja!inner (
             id,
             fecha_hora,

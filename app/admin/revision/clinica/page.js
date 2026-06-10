@@ -82,6 +82,11 @@ export default function RevisionClinicaPage() {
           if (data && data.length > 0) {
             console.error('✅ AUDIT DATA LOADED:', data.length, 'rows');
             setAuditRows(data);
+            // Restore parser debug panel from saved qvet_data in DB
+            const savedQvetData = data.find(r => r.revision_caja?.qvet_data)?.revision_caja?.qvet_data;
+            if (savedQvetData) {
+              setQvetRawData(prev => prev || savedQvetData);
+            }
           } else {
             console.error('ℹ️ NO AUDIT DATA FOR THIS PERIOD');
           }
@@ -910,6 +915,80 @@ export default function RevisionClinicaPage() {
                     </div>
                   );
                 })}
+
+                {/* Resumen combinado Caja 1 + Caja 2 */}
+                {(() => {
+                  const tiposOrden = ['EFECTIVO', 'TARJETA', 'SINPE', 'TRANSFERENCIA', 'SALIDAS'];
+                  const resumen = tiposOrden.map(tipo => {
+                    const rowsTipo = auditRows.filter(r => r.tipo_movimiento === tipo);
+                    const cajera = rowsTipo.reduce((s, r) => s + (r.monto_cajera || 0), 0);
+                    const revisora = rowsTipo.reduce((s, r) => s + (r.monto_revisora || 0), 0);
+                    const qvet = rowsTipo.reduce((s, r) => s + (r.monto_qvet || 0), 0);
+                    return { tipo, cajera, revisora, qvet };
+                  });
+                  const totalCajera = resumen.reduce((s, r) => s + r.cajera, 0);
+                  const totalRevisora = resumen.reduce((s, r) => s + r.revisora, 0);
+                  const totalQvet = resumen.reduce((s, r) => s + r.qvet, 0);
+                  const diffColor = (diff) => {
+                    const abs = Math.abs(diff);
+                    if (abs < 5) return '#27AE60';
+                    if (abs < 500) return '#F39C12';
+                    return '#E74C3C';
+                  };
+                  return (
+                    <div style={{ background: '#fff', border: '2px solid #2a78a5', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
+                      <div style={{ fontSize: '15px', fontWeight: '700', color: '#2a78a5', marginBottom: '16px' }}>
+                        Resumen Total — Ambas Cajas
+                      </div>
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                          <thead>
+                            <tr style={{ borderBottom: '2px solid #E2DDD4' }}>
+                              <th style={{ padding: '8px', textAlign: 'left', fontWeight: '700', color: '#1A1714' }}>Tipo</th>
+                              <th style={{ padding: '4px', textAlign: 'right', fontWeight: '700', color: '#1A1714', fontSize: '11px' }}>Cajera</th>
+                              <th style={{ padding: '4px', textAlign: 'center', fontWeight: '600', color: '#9C9590', fontSize: '9px' }}>vs Rev</th>
+                              <th style={{ padding: '4px', textAlign: 'right', fontWeight: '700', color: '#1A1714', fontSize: '11px' }}>Revisora</th>
+                              <th style={{ padding: '4px', textAlign: 'center', fontWeight: '600', color: '#9C9590', fontSize: '9px' }}>vs QVet</th>
+                              <th style={{ padding: '4px', textAlign: 'right', fontWeight: '700', color: '#1A1714', fontSize: '11px' }}>QVet</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {resumen.map(({ tipo, cajera, revisora, qvet }) => {
+                              const diffRev = revisora - cajera;
+                              const diffAud = qvet - revisora;
+                              return (
+                                <tr key={tipo} style={{ borderBottom: '1px solid #E2DDD4' }}>
+                                  <td style={{ padding: '6px 8px', fontWeight: '600', color: '#1A1714' }}>{tipo}</td>
+                                  <td style={{ padding: '4px', textAlign: 'right', color: '#1A1714', fontSize: '11px' }}>₡{Math.round(cajera).toLocaleString('es-CR')}</td>
+                                  <td style={{ padding: '4px', textAlign: 'center', color: diffColor(diffRev), fontWeight: '600', fontSize: '10px' }}>
+                                    {Math.abs(diffRev) < 5 ? '✓' : (diffRev > 0 ? '+' : '') + '₡' + Math.abs(Math.round(diffRev)).toLocaleString('es-CR')}
+                                  </td>
+                                  <td style={{ padding: '4px', textAlign: 'right', color: '#1A1714', fontSize: '11px' }}>₡{Math.round(revisora).toLocaleString('es-CR')}</td>
+                                  <td style={{ padding: '4px', textAlign: 'center', color: diffColor(diffAud), fontWeight: '600', fontSize: '10px' }}>
+                                    {Math.abs(diffAud) < 5 ? '✓' : (diffAud > 0 ? '+' : '') + '₡' + Math.abs(Math.round(diffAud)).toLocaleString('es-CR')}
+                                  </td>
+                                  <td style={{ padding: '4px', textAlign: 'right', color: '#1A1714', fontSize: '11px' }}>₡{Math.round(qvet).toLocaleString('es-CR')}</td>
+                                </tr>
+                              );
+                            })}
+                            <tr style={{ borderTop: '2px solid #2a78a5', background: '#E8F3EC' }}>
+                              <td style={{ padding: '8px', fontWeight: '700', color: '#1A1714', fontSize: '12px' }}>TOTAL INGRESOS</td>
+                              <td style={{ padding: '4px', textAlign: 'right', fontWeight: '700', color: '#1A1714' }}>₡{Math.round(totalCajera).toLocaleString('es-CR')}</td>
+                              <td style={{ padding: '4px', textAlign: 'center', color: diffColor(totalRevisora - totalCajera), fontWeight: '700', fontSize: '10px' }}>
+                                {Math.abs(totalRevisora - totalCajera) < 5 ? '✓' : (totalRevisora - totalCajera > 0 ? '+' : '') + '₡' + Math.abs(Math.round(totalRevisora - totalCajera)).toLocaleString('es-CR')}
+                              </td>
+                              <td style={{ padding: '4px', textAlign: 'right', fontWeight: '700', color: '#1A1714' }}>₡{Math.round(totalRevisora).toLocaleString('es-CR')}</td>
+                              <td style={{ padding: '4px', textAlign: 'center', color: diffColor(totalQvet - totalRevisora), fontWeight: '700', fontSize: '10px' }}>
+                                {Math.abs(totalQvet - totalRevisora) < 5 ? '✓' : (totalQvet - totalRevisora > 0 ? '+' : '') + '₡' + Math.abs(Math.round(totalQvet - totalRevisora)).toLocaleString('es-CR')}
+                              </td>
+                              <td style={{ padding: '4px', textAlign: 'right', fontWeight: '700', color: '#1A1714' }}>₡{Math.round(totalQvet).toLocaleString('es-CR')}</td>
+                            </tr>
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Modal para comentarios */}
                 {modalAuditRow && (
