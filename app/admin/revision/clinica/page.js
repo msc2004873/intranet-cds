@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import Header from '../../../components/Header';
@@ -44,6 +44,7 @@ export default function RevisionClinicaPage() {
   const [denomsUSD, setDenomsUSD] = useState({});
   const [guardandoDeposito, setGuardandoDeposito] = useState(false);
   const [depositoGuardado, setDepositoGuardado] = useState(false);
+  const [expandedCommentId, setExpandedCommentId] = useState(null);
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -903,36 +904,72 @@ export default function RevisionClinicaPage() {
                                     return '#E74C3C';
                                   };
 
+                                  const tieneComentario = hasDiff && !!row.comentario_auditoria;
+                                  const rowKey = row.id || i;
+                                  const isExpanded = expandedCommentId === rowKey;
+                                  const bgNormal = !hasDiff ? 'transparent' : tieneComentario ? '#E8F3EC' : '#FDE8E8';
+                                  const bgHover = !hasDiff ? 'transparent' : tieneComentario ? '#D5EAD5' : '#FDEDEC';
+
                                   return (
-                                    <tr
-                                                      key={i}
-                                      onClick={() => {
-                                        if (!hasDiff) return;
-                                        setModalAuditRow(row);
-                                        setModalComentario(row.comentario_auditoria || '');
-                                        setModalDenominaciones(row.denominaciones_auditoria || {});
-                                      }}
-                                      style={{
-                                        borderBottom: '1px solid #E2DDD4',
-                                        background: hasDiff ? '#FDE8E8' : 'transparent',
-                                        cursor: hasDiff ? 'pointer' : 'default',
-                                        transition: 'all 0.2s'
-                                      }}
-                                      onMouseEnter={(e) => hasDiff && (e.currentTarget.style.background = '#FDEDEC')}
-                                      onMouseLeave={(e) => hasDiff && (e.currentTarget.style.background = '#FDE8E8')}
-                                    >
-                                      <td style={{ padding: '6px 8px', color: '#1A1714', fontWeight: '600', fontSize: '12px' }}>{row.tipo_movimiento}</td>
-                                      <td style={{ padding: '4px', textAlign: 'right', color: '#1A1714', fontSize: '11px', fontWeight: '500' }}>₡{Math.round(row.monto_cajera).toLocaleString('es-CR')}</td>
-                                      <td style={{ padding: '4px', textAlign: 'center', color: diffColor(diffRevision), fontWeight: '600', fontSize: '10px' }}>
-                                        {Math.abs(diffRevision) === 0 ? '✓' : (diffRevision > 0 ? '+' : '') + '₡' + Math.abs(Math.round(diffRevision)).toLocaleString('es-CR')}
-                                      </td>
-                                      <td style={{ padding: '4px', textAlign: 'right', color: '#1A1714', fontSize: '11px', fontWeight: '500' }}>₡{Math.round(row.monto_revisora).toLocaleString('es-CR')}</td>
-                                      <td style={{ padding: '4px', textAlign: 'center', color: diffColor(diffAuditoria), fontWeight: '600', fontSize: '10px' }}>
-                                        {Math.abs(diffAuditoria) === 0 ? '✓' : (diffAuditoria > 0 ? '+' : '') + '₡' + Math.abs(Math.round(diffAuditoria)).toLocaleString('es-CR')}
-                                      </td>
-                                      <td style={{ padding: '4px', textAlign: 'right', color: '#1A1714', fontSize: '11px', fontWeight: '500' }}>₡{Math.round(row.monto_qvet).toLocaleString('es-CR')}</td>
-                                      <td style={{ padding: '4px', textAlign: 'center', color, fontWeight: '700', fontSize: '14px' }}>{icon}</td>
-                                    </tr>
+                                    <React.Fragment key={i}>
+                                      <tr
+                                        onClick={() => {
+                                          if (!hasDiff) return;
+                                          if (tieneComentario) {
+                                            setExpandedCommentId(isExpanded ? null : rowKey);
+                                          } else {
+                                            setModalAuditRow(row);
+                                            setModalComentario('');
+                                            setModalDenominaciones({});
+                                          }
+                                        }}
+                                        style={{
+                                          borderBottom: isExpanded ? 'none' : '1px solid #E2DDD4',
+                                          background: bgNormal,
+                                          cursor: hasDiff ? 'pointer' : 'default',
+                                          transition: 'background 0.15s'
+                                        }}
+                                        onMouseEnter={(e) => hasDiff && (e.currentTarget.style.background = bgHover)}
+                                        onMouseLeave={(e) => hasDiff && (e.currentTarget.style.background = bgNormal)}
+                                      >
+                                        <td style={{ padding: '6px 8px', color: '#1A1714', fontWeight: '600', fontSize: '12px' }}>{row.tipo_movimiento}</td>
+                                        <td style={{ padding: '4px', textAlign: 'right', color: '#1A1714', fontSize: '11px', fontWeight: '500' }}>₡{Math.round(row.monto_cajera).toLocaleString('es-CR')}</td>
+                                        <td style={{ padding: '4px', textAlign: 'center', color: diffColor(diffRevision), fontWeight: '600', fontSize: '10px' }}>
+                                          {Math.abs(diffRevision) === 0 ? '✓' : (diffRevision > 0 ? '+' : '') + '₡' + Math.abs(Math.round(diffRevision)).toLocaleString('es-CR')}
+                                        </td>
+                                        <td style={{ padding: '4px', textAlign: 'right', color: '#1A1714', fontSize: '11px', fontWeight: '500' }}>₡{Math.round(row.monto_revisora).toLocaleString('es-CR')}</td>
+                                        <td style={{ padding: '4px', textAlign: 'center', color: diffColor(diffAuditoria), fontWeight: '600', fontSize: '10px' }}>
+                                          {Math.abs(diffAuditoria) === 0 ? '✓' : (diffAuditoria > 0 ? '+' : '') + '₡' + Math.abs(Math.round(diffAuditoria)).toLocaleString('es-CR')}
+                                        </td>
+                                        <td style={{ padding: '4px', textAlign: 'right', color: '#1A1714', fontSize: '11px', fontWeight: '500' }}>₡{Math.round(row.monto_qvet).toLocaleString('es-CR')}</td>
+                                        <td style={{ padding: '4px', textAlign: 'center', color, fontWeight: '700', fontSize: '14px' }}>{icon}</td>
+                                      </tr>
+                                      {isExpanded && (
+                                        <tr style={{ background: '#E8F3EC', borderBottom: '1px solid #E2DDD4' }}>
+                                          <td colSpan={7} style={{ padding: '8px 12px' }}>
+                                            <div style={{ fontSize: '12px', color: '#1A1714', marginBottom: '6px', lineHeight: '1.5' }}>
+                                              <span style={{ fontWeight: '600', color: '#27AE60' }}>Comentario: </span>
+                                              {row.comentario_auditoria}
+                                            </div>
+                                            {row.comentado_por && (
+                                              <div style={{ fontSize: '10px', color: '#9C9590', marginBottom: '8px' }}>por {row.comentado_por}</div>
+                                            )}
+                                            <button
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setModalAuditRow(row);
+                                                setModalComentario(row.comentario_auditoria || '');
+                                                setModalDenominaciones(row.denominaciones_auditoria || {});
+                                                setExpandedCommentId(null);
+                                              }}
+                                              style={{ padding: '5px 12px', background: '#2a78a5', color: 'white', border: 'none', borderRadius: '6px', fontSize: '11px', fontWeight: '600', cursor: 'pointer' }}
+                                            >
+                                              Editar comentario
+                                            </button>
+                                          </td>
+                                        </tr>
+                                      )}
+                                    </React.Fragment>
                                   );
                                 })}
                               </tbody>
@@ -1280,7 +1317,7 @@ export default function RevisionClinicaPage() {
                         cursor: guardandoDeposito ? 'wait' : 'pointer'
                       }}
                     >
-                      {guardandoDeposito ? '⏳ Guardando...' : depositoGuardado ? '✅ Conteo guardado' : '💾 Guardar conteo del período'}
+                      {guardandoDeposito ? 'Guardando...' : depositoGuardado ? 'Conteo guardado' : 'Guardar conteo del período'}
                     </button>
                   </div>
                 </div>
