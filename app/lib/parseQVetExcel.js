@@ -85,12 +85,14 @@ export function parseQVetExcel(file, periodo) {
             return;
           }
 
-          const key = `${caja}|${fecha}`;
+          // Use parsed date for key to avoid grouping issues
+          const fechaKey = fechaObj.toISOString().split('T')[0]; // YYYY-MM-DD
+          const key = `${caja}|${fechaKey}`;
 
           if (!cierres[key]) {
             cierres[key] = {
               caja,
-              fecha: fechaObj.toISOString().split('T')[0], // Fecha sin hora
+              fecha: fechaKey, // Fecha sin hora
               efectivo: 0,
               tarjeta: 0,
               sinpe: 0,
