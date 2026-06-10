@@ -19,6 +19,7 @@ export async function GET(req) {
     }
 
     // Fetch audit rows for all closures in the period
+    // Filter by CLOSURE DATE (fecha_hora), not by when audit was created
     const crDayStart = new Date(Date.UTC(
       parseInt(inicio.split('-')[0]),
       parseInt(inicio.split('-')[1]) - 1,
@@ -34,6 +35,7 @@ export async function GET(req) {
     ) + (24 * 60 * 60 * 1000) - 1000).toISOString();
 
     // Get audit rows with related closure info
+    // Filter by revision_caja.cierre_caja.fecha_hora, not revision_auditoria.created_at
     const { data, error } = await supabase
       .from('revision_auditoria')
       .select(`
@@ -48,9 +50,9 @@ export async function GET(req) {
           )
         )
       `)
-      .gte('created_at', crDayStart)
-      .lte('created_at', crDayEnd)
-      .order('created_at', { ascending: true });
+      .gte('revision_caja.cierre_caja.fecha_hora', crDayStart)
+      .lte('revision_caja.cierre_caja.fecha_hora', crDayEnd)
+      .order('revision_caja.cierre_caja.fecha_hora', { ascending: true });
 
     if (error) throw error;
 
