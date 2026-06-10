@@ -419,16 +419,64 @@ export default function RevisionClinicaPage() {
                 e.currentTarget.style.background = '#fff';
                 e.currentTarget.style.borderColor = '#2a78a5';
               }}
-              onDrop={(e) => {
+              onDrop={async (e) => {
                 e.preventDefault();
                 e.currentTarget.style.background = '#fff';
                 e.currentTarget.style.borderColor = '#2a78a5';
                 const file = e.dataTransfer.files?.[0];
-                if (file) {
-                  document.getElementById('auditExcelInput').files = e.dataTransfer.files;
-                  // Trigger change event manually
-                  const event = new Event('change', { bubbles: true });
-                  document.getElementById('auditExcelInput').dispatchEvent(event);
+                if (!file) return;
+
+                console.log('File dropped:', file.name);
+                setLoadingAudit(true);
+                setAuditError(null);
+                try {
+                  console.log('Periodo:', periodo);
+                  const qvetData = await parseQVetExcel(file, periodo);
+                  console.log('QVet data parsed:', qvetData);
+
+                  if (!qvetData || qvetData.length === 0) {
+                    throw new Error('Excel vacío o sin datos válidos para este período');
+                  }
+
+                  const allAuditRows = [];
+                  for (const cierre of cierres) {
+                    if (!cierresRevisadosIds.has(cierre.id)) continue;
+
+                    const qvetCierre = qvetData.find(q => q.caja === cierre.caja && q.fecha === new Date(cierre.fecha_hora).toISOString().split('T')[0]);
+                    if (!qvetCierre) continue;
+
+                    const revRes = await fetch(`/api/revision?cierre_id=${cierre.id}`);
+                    if (!revRes.ok) continue;
+                    const revision = await revRes.json();
+
+                    const rows = generateAuditRows(cierre, revision, qvetCierre);
+                    allAuditRows.push(...rows);
+                  }
+
+                  if (allAuditRows.length === 0) {
+                    throw new Error('No se encontraron cierres revisados para comparar');
+                  }
+
+                  const saveRes = await fetch('/api/auditoria', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      revision_caja_id: allAuditRows[0].revision_caja_id,
+                      audit_rows: allAuditRows,
+                      qvet_data: qvetData,
+                      qvet_archivo_url: file.name
+                    })
+                  });
+
+                  if (!saveRes.ok) throw new Error('Error al guardar auditoría');
+
+                  setAuditRows(allAuditRows);
+                  console.log('✅ Auditoría guardada:', allAuditRows.length, 'filas');
+                } catch (err) {
+                  console.error('Error en drop:', err);
+                  setAuditError(err.message || 'Error al procesar archivo');
+                } finally {
+                  setLoadingAudit(false);
                 }
               }}
             >
@@ -446,13 +494,19 @@ export default function RevisionClinicaPage() {
                 style={{ display: 'none' }}
                 onChange={async (e) => {
                   const file = e.target.files?.[0];
-                  if (!file) return;
+                  if (!file) {
+                    console.log('No file selected');
+                    return;
+                  }
 
+                  console.log('File selected:', file.name);
                   setLoadingAudit(true);
                   setAuditError(null);
                   try {
+                    console.log('Periodo:', periodo);
                     // 1. Parse Excel
                     const qvetData = await parseQVetExcel(file, periodo);
+                    console.log('QVet data parsed:', qvetData);
 
                     if (!qvetData || qvetData.length === 0) {
                       throw new Error('Excel vacío o sin datos válidos para este período');
