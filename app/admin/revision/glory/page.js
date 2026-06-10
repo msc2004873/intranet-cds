@@ -40,10 +40,25 @@ export default function RevisionGloryPage() {
   const [cajerasRevisadas, setCajerasRevisadas] = useState(new Set());
   const [cobrosPorDia, setCobrosPorDia] = useState({});
   const [comparativoActivo, setComparativoActivo] = useState(null);
+  const [revisionActual, setRevisionActual] = useState(null);
+  const [loadingRev, setLoadingRev] = useState(false);
 
   useEffect(() => {
+    const hoy = new Date();
+    const diaHoy = hoy.getDate();
+    const periodos = [
+      { num: 1, inicio: 1, fin: 5 },
+      { num: 2, inicio: 6, fin: 10 },
+      { num: 3, inicio: 11, fin: 15 },
+      { num: 4, inicio: 16, fin: 20 },
+      { num: 5, inicio: 21, fin: 25 },
+      { num: 6, inicio: 26, fin: 31 },
+    ];
+    const periodoActual = periodos.find(p => diaHoy >= p.inicio && diaHoy <= p.fin);
+
     const p = generarPeriodos();
-    setPeriodo(p[0]);
+    const periodoIndex = periodoActual ? periodoActual.num - 1 : 0;
+    setPeriodo(p[periodoIndex]);
   }, []);
 
   useEffect(() => {
@@ -111,10 +126,6 @@ export default function RevisionGloryPage() {
   }
 
   const fmt = n => '₡' + Math.round(n).toLocaleString('es-CR');
-
-  // Cargar revisión cuando se abre el comparativo
-  const [revisionActual, setRevisionActual] = useState(null);
-  const [loadingRev, setLoadingRev] = useState(false);
 
   const abrirComparativo = async (fecha, cajera) => {
     setLoadingRev(true);
@@ -238,7 +249,14 @@ export default function RevisionGloryPage() {
   }
 
   // Agrupar días por estado (pendientes/revisados)
-  const diasOrdenados = Object.keys(cobrosPorDia).sort((a, b) => new Date(a) - new Date(b));
+  const diasOrdenados = Object.keys(cobrosPorDia).sort((a, b) => {
+    // Parsear fechas en formato CR (31/5/2026) a ISO
+    const parseaCR = (fechaStr) => {
+      const [dia, mes, ano] = fechaStr.split('/');
+      return new Date(`${ano}-${mes}-${dia}`);
+    };
+    return parseaCR(a) - parseaCR(b);
+  });
   const diasPendientes = [];
   const diasRevisados = [];
 
