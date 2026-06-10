@@ -425,22 +425,23 @@ export default function RevisionClinicaPage() {
               </div>
             )}
 
-            {/* Upload */}
-            <div style={{ background: '#fff', border: '2px dashed #2a78a5', borderRadius: '12px', padding: '32px 24px', marginBottom: '24px', textAlign: 'center', cursor: 'pointer' }}
-              onClick={() => {
-                const input = document.querySelector('input[accept=".xlsx,.xls"]');
-                if (input) input.click();
-              }}
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.currentTarget.style.background = '#E8F3EC';
-                e.currentTarget.style.borderColor = '#27AE60';
-              }}
-              onDragLeave={(e) => {
-                e.currentTarget.style.background = '#fff';
-                e.currentTarget.style.borderColor = '#2a78a5';
-              }}
-              onDrop={async (e) => {
+            {/* Upload or Summary */}
+            {auditRows.length === 0 ? (
+              <div style={{ background: '#fff', border: '2px dashed #2a78a5', borderRadius: '12px', padding: '32px 24px', marginBottom: '24px', textAlign: 'center', cursor: 'pointer' }}
+                onClick={() => {
+                  const input = document.querySelector('input[accept=".xlsx,.xls"]');
+                  if (input) input.click();
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.style.background = '#E8F3EC';
+                  e.currentTarget.style.borderColor = '#27AE60';
+                }}
+                onDragLeave={(e) => {
+                  e.currentTarget.style.background = '#fff';
+                  e.currentTarget.style.borderColor = '#2a78a5';
+                }}
+                onDrop={async (e) => {
                 e.preventDefault();
                 e.currentTarget.style.background = '#fff';
                 e.currentTarget.style.borderColor = '#2a78a5';
@@ -633,6 +634,72 @@ export default function RevisionClinicaPage() {
                   ❌ {auditError}
                 </div>
               )}
+            </div>
+            ) : (
+              <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
+                <div style={{ fontSize: '16px', fontWeight: '700', color: '#1A1714', marginBottom: '16px' }}>
+                  ✅ Auditoría Procesada
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
+                  {/* Diferencias encontradas */}
+                  {(() => {
+                    const withDiff = auditRows.filter(row => {
+                      const diffRevision = row.monto_revisora - row.monto_cajera;
+                      const diffAuditoria = row.monto_qvet - row.monto_revisora;
+                      return Math.abs(diffRevision) > 0 || Math.abs(diffAuditoria) > 0;
+                    });
+                    return (
+                      <div style={{ background: '#FDE8E8', padding: '16px', borderRadius: '8px', borderLeft: '4px solid #E74C3C' }}>
+                        <div style={{ fontSize: '12px', color: '#9C9590', fontWeight: '600' }}>DIFERENCIAS ENCONTRADAS</div>
+                        <div style={{ fontSize: '32px', fontWeight: '700', color: '#E74C3C', marginTop: '8px' }}>
+                          {withDiff.length}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#9C9590', marginTop: '4px' }}>de {auditRows.length} movimientos</div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Pendientes de comentario */}
+                  {(() => {
+                    const needsComment = auditRows.filter(row => {
+                      const diffRevision = row.monto_revisora - row.monto_cajera;
+                      const diffAuditoria = row.monto_qvet - row.monto_revisora;
+                      const hasDiff = Math.abs(diffRevision) > 0 || Math.abs(diffAuditoria) > 0;
+                      return hasDiff && !row.comentario_auditoria;
+                    });
+                    return (
+                      <div style={{ background: '#FFF3CD', padding: '16px', borderRadius: '8px', borderLeft: '4px solid #F39C12' }}>
+                        <div style={{ fontSize: '12px', color: '#9C9590', fontWeight: '600' }}>PENDIENTES DE COMENTARIO</div>
+                        <div style={{ fontSize: '32px', fontWeight: '700', color: '#F39C12', marginTop: '8px' }}>
+                          {needsComment.length}
+                        </div>
+                        <div style={{ fontSize: '12px', color: '#9C9590', marginTop: '4px' }}>discrepancias sin explicar</div>
+                      </div>
+                    );
+                  })()}
+                </div>
+
+                <button
+                  onClick={() => {
+                    setAuditRows([]);
+                    setAuditError(null);
+                  }}
+                  style={{
+                    padding: '10px 16px',
+                    background: '#2a78a5',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '12px',
+                    fontWeight: '600',
+                    cursor: 'pointer'
+                  }}
+                >
+                  🔄 Subir otro Excel
+                </button>
+              </div>
+            )}
             </div>
 
             {/* Comparativo */}
