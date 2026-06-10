@@ -22,8 +22,8 @@ export async function GET(req) {
     // A day in CR (2026-06-05 00:00 CR) spans from 06:00 UTC that day to 05:59 UTC next day
     // MUST use UTC explicitly (Z suffix) to avoid timezone ambiguity
 
-    // Start of day in CR = 06:00 UTC that day
-    const crDayStart = new Date(`${inicio}T06:00:00Z`).toISOString();
+    // Start of day in CR = 00:00 UTC (captures overnight closures: 18:54 CR = 00:54 UTC)
+    const crDayStart = new Date(`${inicio}T00:00:00Z`).toISOString();
 
     // End of day in CR = 05:59:59 UTC next day
     const finDate = new Date(`${fin}T05:59:59Z`);

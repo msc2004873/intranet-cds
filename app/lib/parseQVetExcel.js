@@ -106,8 +106,10 @@ export function parseQVetExcel(file, periodo) {
             return;
           }
 
-          // Use parsed date for key to avoid grouping issues
-          const fechaKey = fechaObj.toISOString().split('T')[0]; // YYYY-MM-DD
+          // CRITICAL: Group by CR date, not UTC date
+          // Convert UTC to CR (UTC-6) to group correctly
+          const fechaCR = new Date(fechaObj.getTime() - 6 * 60 * 60 * 1000);
+          const fechaKey = fechaCR.toISOString().split('T')[0]; // YYYY-MM-DD in CR
           const key = `${caja}|${fechaKey}`;
 
           if (!cierres[key]) {
