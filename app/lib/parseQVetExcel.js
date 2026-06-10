@@ -31,18 +31,27 @@ export function parseQVetExcel(file, periodo) {
         const formasPago = ['EFECTIVO', 'TARJETA', 'SINPE MOVIL', 'TRANSFERENCIA', 'OTRO'];
         const cierres = {};
 
-        rows.forEach(row => {
+        console.log('Parser - Columns:', colMap);
+        console.log('Parser - Period:', { inicio: periodo.inicio, fin: periodo.fin });
+
+        rows.forEach((row, idx) => {
           const caja = row[colMap.caja]?.trim();
           const fecha = row[colMap.fecha];
           const forma = row[colMap.formaPago]?.trim();
           const monto = parseFloat(row[colMap.monto]) || 0;
           const salida = Math.abs(parseFloat(row[colMap.salidas])) || 0;
 
-          if (!caja || !fecha) return; // Skip invalid rows
+          if (!caja || !fecha) {
+            console.log(`Row ${idx}: Skipped - missing caja or fecha`);
+            return;
+          }
 
           // Validar que la fecha está en el período
           const fechaObj = new Date(fecha);
+          console.log(`Row ${idx}: caja=${caja}, fecha=${fecha} (${fechaObj}), forma=${forma}, monto=${monto}`);
+
           if (fechaObj < periodo.inicio || fechaObj > periodo.fin) {
+            console.log(`Row ${idx}: Outside period range`);
             return; // Ignorar filas fuera del período
           }
 
