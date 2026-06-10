@@ -35,6 +35,8 @@ export default function RevisionClinicaPage() {
   const [auditError, setAuditError] = useState(null);
   const [modalAuditRow, setModalAuditRow] = useState(null);
   const [modalComentario, setModalComentario] = useState('');
+  const [qvetRawData, setQvetRawData] = useState(null);
+  const [showQvetDebug, setShowQvetDebug] = useState(false);
 
   useEffect(() => {
     const hoy = new Date();
@@ -502,6 +504,9 @@ export default function RevisionClinicaPage() {
                     throw new Error('Excel vacío o sin datos válidos para este período');
                   }
 
+                  setQvetRawData(qvetData);
+                  setShowQvetDebug(true);
+
                   // Load ALL cierres for the period (not just the selected caja)
                   const inicio = periodo.inicio.toISOString().split('T')[0];
                   const fin = periodo.fin.toISOString().split('T')[0];
@@ -510,15 +515,18 @@ export default function RevisionClinicaPage() {
                   console.error('📦 ALL CIERRES FOR PERIOD:', todosCierres.length, 'total');
 
                   const allAuditRows = [];
-                  const dbCierres = todosCierres.filter(c => cierresRevisadosIds.has(c.id)).map(c => ({ caja: c.caja, fecha: new Date(c.fecha_hora).toISOString().split('T')[0] }));
-                  console.error('🗄️ DB CIERRES REVIEWED:', dbCierres);
+                  // Convert Supabase UTC timestamp to CR date (subtract 6h from UTC)
+                  const toCRDate = (utcStr) => new Date(new Date(utcStr).getTime() - 6 * 60 * 60 * 1000).toISOString().split('T')[0];
+                  const dbCierres = todosCierres.filter(c => cierresRevisadosIds.has(c.id)).map(c => ({ caja: c.caja, fecha: toCRDate(c.fecha_hora) }));
+                  console.error('🗄️ DB CIERRES REVIEWED (CR dates):', dbCierres);
                   console.error('📑 EXCEL DATA:', qvetData.map(q => ({ caja: q.caja, fecha: q.fecha })));
 
                   for (const cierre of todosCierres) {
                     if (!cierresRevisadosIds.has(cierre.id)) continue;
 
-                    const cierreFecha = new Date(cierre.fecha_hora).toISOString().split('T')[0];
-                    console.error(`🔎 Buscando en Excel: caja="${cierre.caja}" fecha="${cierreFecha}"`);
+                    // Use CR date for comparison (Supabase stores UTC, parser stores CR date)
+                    const cierreFecha = toCRDate(cierre.fecha_hora);
+                    console.error(`🔎 Buscando en Excel: caja="${cierre.caja}" fechaCR="${cierreFecha}"`);
 
                     const qvetCierre = qvetData.find(q => {
                       const match = q.caja === cierre.caja && q.fecha === cierreFecha;
@@ -607,13 +615,19 @@ export default function RevisionClinicaPage() {
                       throw new Error('Excel vacío o sin datos válidos para este período');
                     }
 
+                    setQvetRawData(qvetData);
+                    setShowQvetDebug(true);
+
                     // 2. Generar filas de auditoría para cada cierre revisado
                     const allAuditRows = [];
+                    // Convert Supabase UTC timestamp to CR date (subtract 6h from UTC)
+                    const toCRDate = (utcStr) => new Date(new Date(utcStr).getTime() - 6 * 60 * 60 * 1000).toISOString().split('T')[0];
                     for (const cierre of cierres) {
                       if (!cierresRevisadosIds.has(cierre.id)) continue;
 
-                      // Buscar cierre en QVet data
-                      const qvetCierre = qvetData.find(q => q.caja === cierre.caja && q.fecha === new Date(cierre.fecha_hora).toISOString().split('T')[0]);
+                      // Use CR date for comparison (Supabase stores UTC, parser stores CR date)
+                      const cierreFechaCR = toCRDate(cierre.fecha_hora);
+                      const qvetCierre = qvetData.find(q => q.caja === cierre.caja && q.fecha === cierreFechaCR);
                       if (!qvetCierre) continue;
 
                       // Buscar revision_caja
@@ -742,6 +756,53 @@ export default function RevisionClinicaPage() {
                     );
                   })()}
                 </div>
+              </div>
+            )}
+
+            {/* Debug: QVet raw parsed data */}
+            {qvetRawData && (
+              <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: showQvetDebug ? '16px' : '0' }}>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: '#1A1714' }}>
+                    🔍 Lo que leyó el parser ({qvetRawData.length} entradas)
+                  </div>
+                  <button
+                    onClick={() => setShowQvetDebug(v => !v)}
+                    style={{ background: 'none', border: 'none', color: '#2a78a5', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
+                  >
+                    {showQvetDebug ? '▲ Ocultar' : '▼ Ver'}
+                  </button>
+                </div>
+                {showQvetDebug && (
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                      <thead>
+                        <tr style={{ borderBottom: '1px solid #E2DDD4', background: '#F0EDE6' }}>
+                          <th style={{ padding: '6px 8px', textAlign: 'left', fontWeight: '700' }}>Caja</th>
+                          <th style={{ padding: '6px 8px', textAlign: 'left', fontWeight: '700' }}>Fecha CR</th>
+                          <th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '700' }}>Efectivo</th>
+                          <th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '700' }}>Tarjeta</th>
+                          <th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '700' }}>SINPE</th>
+                          <th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '700' }}>Transfer.</th>
+                          <th style={{ padding: '6px 8px', textAlign: 'right', fontWeight: '700' }}>Salidas</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {qvetRawData.sort((a, b) => a.caja.localeCompare(b.caja) || a.fecha.localeCompare(b.fecha)).map((row, i) => (
+                          <tr key={i} style={{ borderBottom: '1px solid #F0EDE6' }}>
+                            <td style={{ padding: '5px 8px', fontWeight: '600', color: '#1A1714' }}>{row.caja}</td>
+                            <td style={{ padding: '5px 8px', color: '#6B6560' }}>{row.fecha}</td>
+                            <td style={{ padding: '5px 8px', textAlign: 'right', color: row.efectivo > 0 ? '#1A1714' : '#C8C4BE' }}>₡{Math.round(row.efectivo).toLocaleString('es-CR')}</td>
+                            <td style={{ padding: '5px 8px', textAlign: 'right', color: row.tarjeta > 0 ? '#1A1714' : '#C8C4BE' }}>₡{Math.round(row.tarjeta).toLocaleString('es-CR')}</td>
+                            <td style={{ padding: '5px 8px', textAlign: 'right', color: row.sinpe > 0 ? '#1A1714' : '#C8C4BE' }}>₡{Math.round(row.sinpe).toLocaleString('es-CR')}</td>
+                            <td style={{ padding: '5px 8px', textAlign: 'right', color: row.transferencia > 0 ? '#1A1714' : '#C8C4BE' }}>₡{Math.round(row.transferencia).toLocaleString('es-CR')}</td>
+                            <td style={{ padding: '5px 8px', textAlign: 'right', color: row.salidas > 0 ? '#E74C3C' : '#C8C4BE' }}>₡{Math.round(row.salidas).toLocaleString('es-CR')}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
             )}
 

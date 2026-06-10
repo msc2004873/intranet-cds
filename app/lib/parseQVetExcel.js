@@ -103,35 +103,37 @@ export function parseQVetExcel(file, periodo) {
             return;
           }
 
-          const fechaStr = fechaObj.toISOString().split('T')[0]; // YYYY-MM-DD
           const periodoStart = periodo.inicio.toISOString().split('T')[0];
           const periodoEnd = periodo.fin.toISOString().split('T')[0];
 
-          console.error(`📍 Row ${idx}: ${caja} | ${fechaStr} | ${forma} | ₡${monto}`);
-
-          // Compare dates as strings (YYYY-MM-DD) to include FULL day (including end of day 5)
-          if (fechaStr < periodoStart || fechaStr > periodoEnd) {
-            console.log(`Row ${idx}: Outside period [${periodoStart} - ${periodoEnd}]`);
-            return;
-          }
-
-          // CRITICAL: Group by CR date, not UTC date
-          // Caja 1 closures at 18:54 CR = 00:54 UTC NEXT day
-          // Closures < 06:00 UTC represent the NEXT day in CR (e.g., 00:54 UTC = 18:54 CR previous day)
-          // So: if closure < 06:00 UTC, ADD 1 day to get the CR date. Otherwise just convert.
+          // Compute CR date FIRST, then filter by it.
+          // XLSX with cellDates:true returns Excel serials as UTC, treating the stored
+          // CR local time value as UTC. So "18:54 CR" comes in as hour=18 UTC (not 0).
+          // For pure date cells (midnight, hour=0), +18h stays on the same day.
+          // For all other times (>=6), subtract 6h to get CR date.
           const hour = fechaObj.getUTCHours();
           let fechaKey;
           if (hour < 6) {
-            // Madrugada UTC = represents previous CR day's evening
-            // 2026-06-05 00:54 UTC = 2026-06-04 18:54 CR, but Caja 1 closes at 18:54 CR on the NEXT day
-            // So ADD 1 day to get correct CR date
-            const fechaCR = new Date(fechaObj.getTime() + 18 * 60 * 60 * 1000); // +18 hours to skip to next day
+            // Pure date cell (midnight UTC) or very early CR time stored as UTC.
+            // +18h keeps us on the correct same day without crossing into previous day.
+            const fechaCR = new Date(fechaObj.getTime() + 18 * 60 * 60 * 1000);
             fechaKey = fechaCR.toISOString().split('T')[0];
           } else {
-            // Normal time, just subtract 6 hours for CR
+            // Date+time cell: XLSX stored CR local time as UTC value.
+            // Subtract 6h gives the correct CR date (e.g., 18:54 UTC → 12:54 UTC → same date).
             const fechaCR = new Date(fechaObj.getTime() - 6 * 60 * 60 * 1000);
             fechaKey = fechaCR.toISOString().split('T')[0];
           }
+
+          console.error(`📍 Row ${idx}: ${caja} | CR:${fechaKey} | ${forma} | ₡${monto}`);
+
+          // Filter by CR date (not raw UTC) — avoids excluding end-of-day entries that
+          // cross midnight UTC (e.g., 18:54 CR on last day of period = next UTC day).
+          if (fechaKey < periodoStart || fechaKey > periodoEnd) {
+            console.log(`Row ${idx}: Outside period [${periodoStart} - ${periodoEnd}] (CR date: ${fechaKey})`);
+            return;
+          }
+
           const key = `${caja}|${fechaKey}`;
 
           if (!cierres[key]) {
