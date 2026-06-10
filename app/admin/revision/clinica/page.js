@@ -39,9 +39,11 @@ export default function RevisionClinicaPage() {
   const [showQvetDebug, setShowQvetDebug] = useState(false);
   const [usuarioActual, setUsuarioActual] = useState(null);
   const [modalDenominaciones, setModalDenominaciones] = useState({});
-  const [conteosPeriodo, setConteosPeriodo] = useState({});
-  const [guardandoConteo, setGuardandoConteo] = useState({});
-  const [conteoGuardado, setConteoGuardado] = useState({});
+  const [depositoPeriodo, setDepositoPeriodo] = useState(null);
+  const [denomsColones, setDenomsColones] = useState({});
+  const [denomsUSD, setDenomsUSD] = useState({});
+  const [guardandoDeposito, setGuardandoDeposito] = useState(false);
+  const [depositoGuardado, setDepositoGuardado] = useState(false);
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -100,17 +102,15 @@ export default function RevisionClinicaPage() {
           } else {
             console.error('ℹ️ NO AUDIT DATA FOR THIS PERIOD');
           }
-          // Load existing period denomination counts
-          const cRes = await fetch(`/api/conteo-auditoria-periodo?inicio=${periodo.inicio.toISOString().split('T')[0]}&fin=${periodo.fin.toISOString().split('T')[0]}`);
-          if (cRes.ok) {
-            const cData = await cRes.json();
-            const byKey = {};
-            cData.forEach(c => { byKey[c.caja] = c; });
-            if (Object.keys(byKey).length > 0) {
-              setConteosPeriodo(byKey);
-              const initDenoms = {};
-              cData.forEach(c => { initDenoms[c.caja] = c.denominaciones || {}; });
-              setConteoGuardado(Object.fromEntries(cData.map(c => [c.caja, true])));
+          // Load existing deposito for this period
+          const dRes = await fetch(`/api/depositos-cds?inicio=${periodo.inicio.toISOString().split('T')[0]}&fin=${periodo.fin.toISOString().split('T')[0]}`);
+          if (dRes.ok) {
+            const dData = await dRes.json();
+            if (dData) {
+              setDepositoPeriodo(dData);
+              setDenomsColones(dData.denominaciones_colones || {});
+              setDenomsUSD(dData.denominaciones_usd || {});
+              setDepositoGuardado(true);
             }
           }
         } catch (err) {
@@ -1143,158 +1143,153 @@ export default function RevisionClinicaPage() {
               </>
             )}
 
-            {/* Conteo de denominaciones del período */}
+            {/* Conteo de denominaciones del período — Depósito CDS */}
             {auditRows.length > 0 && (() => {
-              const DENOMS = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 25, 10, 5];
-              const cajas = ['Caja 1 (clínica)', 'Caja 2'];
-              const totalQvetPorCaja = {};
-              cajas.forEach(c => {
-                totalQvetPorCaja[c] = auditRows
-                  .filter(r => r.caja === c && r.tipo_movimiento === 'EFECTIVO')
-                  .reduce((s, r) => s + (r.monto_qvet || 0), 0);
-              });
+              const DENOMS_CRC = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 25, 10, 5];
+              const DENOMS_USD = [100, 50, 20, 10, 5, 1];
+              const totalRevCRC = auditRows
+                .filter(r => r.tipo_movimiento === 'EFECTIVO')
+                .reduce((s, r) => s + (r.monto_revisora || 0), 0);
+              const totalContadoCRC = DENOMS_CRC.reduce((s, d) => s + ((denomsColones[d] || 0) * d), 0);
+              const totalContadoUSD = DENOMS_USD.reduce((s, d) => s + ((denomsUSD[d] || 0) * d), 0);
+              const diffCRC = totalContadoCRC - totalRevCRC;
+              const diffColorCRC = Math.abs(diffCRC) < 5 ? '#27AE60' : Math.abs(diffCRC) < 500 ? '#F39C12' : '#E74C3C';
+
+              const fmtCRC = n => '₡' + Math.round(n).toLocaleString('es-CR');
+              const fmtUSD = n => '$' + n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
               return (
-                <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
-                  <div style={{ fontSize: '15px', fontWeight: '700', color: '#1A1714', marginBottom: '4px' }}>
-                    Conteo de Denominaciones del Período
+                <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '24px', overflow: 'hidden' }}>
+                  {/* Header */}
+                  <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', background: '#F0EDE6', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: '#1A1714' }}>Conteo de Denominaciones del Período</div>
+                    {depositoGuardado && (
+                      <div style={{ fontSize: '11px', color: '#27AE60', fontWeight: '600' }}>✅ Guardado · {depositoPeriodo?.contado_por}</div>
+                    )}
                   </div>
-                  <div style={{ fontSize: '12px', color: '#9C9590', marginBottom: '20px' }}>
-                    Conteo físico del efectivo acumulado en el período — independiente de las denominaciones por cierre
-                  </div>
 
-                  {cajas.map(cajaName => {
-                    const denoms = conteosPeriodo[cajaName]?.denominaciones || {};
-                    const totalContado = DENOMS.reduce((s, d) => s + (parseInt(denoms[`c_${d}`] || 0) * d), 0);
-                    const diffVsQvet = totalContado - totalQvetPorCaja[cajaName];
-                    const diffColor = Math.abs(diffVsQvet) < 5 ? '#27AE60' : Math.abs(diffVsQvet) < 500 ? '#F39C12' : '#E74C3C';
-                    const yaGuardado = conteoGuardado[cajaName];
-
-                    return (
-                      <div key={cajaName} style={{ marginBottom: '24px', paddingBottom: '24px', borderBottom: '1px solid #E2DDD4' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                          <div style={{ fontSize: '13px', fontWeight: '700', color: '#1A1714' }}>{cajaName}</div>
-                          {yaGuardado && <div style={{ fontSize: '11px', color: '#27AE60', fontWeight: '600' }}>✅ Guardado · por {conteosPeriodo[cajaName]?.contado_por}</div>}
-                        </div>
-
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '8px', marginBottom: '12px' }}>
-                          {DENOMS.map((denom, idx) => {
-                            const key = `c_${denom}`;
-                            const qty = denoms[key] || 0;
-                            return (
-                              <div key={denom} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#F0EDE6', borderRadius: '6px', padding: '6px 10px' }}>
-                                <span style={{ fontSize: '11px', color: '#6B6560', fontWeight: '600', minWidth: '52px' }}>
-                                  ₡{denom.toLocaleString('es-CR')}
-                                </span>
-                                <span style={{ fontSize: '11px', color: '#9C9590' }}>×</span>
-                                <input
-                                  type="text"
-                                  inputMode="numeric"
-                                  value={qty === 0 ? '' : qty.toLocaleString('es-CR')}
-                                  placeholder="0"
-                                  onChange={(e) => {
-                                    const val = parseInt(e.target.value.replace(/\s/g, '')) || 0;
-                                    setConteosPeriodo(prev => ({
-                                      ...prev,
-                                      [cajaName]: {
-                                        ...(prev[cajaName] || {}),
-                                        denominaciones: {
-                                          ...(prev[cajaName]?.denominaciones || {}),
-                                          [key]: val
-                                        }
-                                      }
-                                    }));
-                                    setConteoGuardado(prev => ({ ...prev, [cajaName]: false }));
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === 'ArrowDown') {
-                                      e.preventDefault();
-                                      const inputs = document.querySelectorAll(`[data-conteo="${cajaName}"]`);
-                                      if (inputs[idx + 1]) inputs[idx + 1].focus();
-                                    }
-                                    if (e.key === 'ArrowUp') {
-                                      e.preventDefault();
-                                      const inputs = document.querySelectorAll(`[data-conteo="${cajaName}"]`);
-                                      if (inputs[idx - 1]) inputs[idx - 1].focus();
-                                    }
-                                  }}
-                                  data-conteo={cajaName}
-                                  style={{ width: '60px', padding: '4px 6px', border: '1px solid #E2DDD4', borderRadius: '4px', fontSize: '12px', fontFamily: 'inherit', background: '#fff', textAlign: 'right' }}
-                                />
-                                {qty > 0 && (
-                                  <span style={{ fontSize: '10px', color: '#9C9590', marginLeft: '2px' }}>
-                                    = ₡{(qty * denom).toLocaleString('es-CR')}
-                                  </span>
-                                )}
-                              </div>
-                            );
-                          })}
-                        </div>
-
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F0EDE6', padding: '10px 14px', borderRadius: '8px', marginBottom: '12px' }}>
-                          <div>
-                            <span style={{ fontSize: '12px', color: '#6B6560' }}>Total contado: </span>
-                            <span style={{ fontSize: '14px', fontWeight: '700', color: '#1A1714' }}>₡{Math.round(totalContado).toLocaleString('es-CR')}</span>
-                          </div>
-                          <div>
-                            <span style={{ fontSize: '12px', color: '#6B6560' }}>QVet efectivo: </span>
-                            <span style={{ fontSize: '14px', fontWeight: '700', color: '#1A1714' }}>₡{Math.round(totalQvetPorCaja[cajaName]).toLocaleString('es-CR')}</span>
-                          </div>
-                          <div>
-                            <span style={{ fontSize: '12px', color: '#6B6560' }}>Diferencia: </span>
-                            <span style={{ fontSize: '14px', fontWeight: '700', color: diffColor }}>
-                              {Math.abs(diffVsQvet) < 5 ? '✓ Cuadra' : (diffVsQvet > 0 ? '+' : '') + '₡' + Math.abs(Math.round(diffVsQvet)).toLocaleString('es-CR')}
-                            </span>
-                          </div>
-                        </div>
-
-                        <button
-                          disabled={guardandoConteo[cajaName]}
-                          onClick={async () => {
-                            setGuardandoConteo(prev => ({ ...prev, [cajaName]: true }));
-                            try {
-                              const inicio = periodo.inicio.toISOString().split('T')[0];
-                              const fin = periodo.fin.toISOString().split('T')[0];
-                              const denominaciones = conteosPeriodo[cajaName]?.denominaciones || {};
-                              const total = DENOMS.reduce((s, d) => s + (parseInt(denominaciones[`c_${d}`] || 0) * d), 0);
-                              const res = await fetch('/api/conteo-auditoria-periodo', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                  periodo_inicio: inicio,
-                                  periodo_fin: fin,
-                                  caja: cajaName,
-                                  denominaciones,
-                                  total_efectivo: total,
-                                  contado_por: usuarioActual?.nombre || 'Sistema'
-                                })
-                              });
-                              if (!res.ok) throw new Error('Error al guardar');
-                              const saved = await res.json();
-                              setConteosPeriodo(prev => ({ ...prev, [cajaName]: saved }));
-                              setConteoGuardado(prev => ({ ...prev, [cajaName]: true }));
-                            } catch (err) {
-                              alert('Error: ' + err.message);
-                            } finally {
-                              setGuardandoConteo(prev => ({ ...prev, [cajaName]: false }));
-                            }
+                  <div style={{ padding: '20px' }}>
+                    {/* Colones */}
+                    <div style={{ fontSize: '12px', fontWeight: '700', color: '#6B6560', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.5px' }}>Colones — ambas cajas</div>
+                    {DENOMS_CRC.map((d, idx) => (
+                      <div key={d} style={{ display: 'grid', gridTemplateColumns: '100px 1fr 120px', alignItems: 'center', gap: '10px', padding: '6px 0', borderBottom: '1px solid #E2DDD4' }}>
+                        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#6B6560', fontWeight: '500' }}>₡{d.toLocaleString('es-CR')}</div>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          ref={el => { window[`inputDepCRC${idx}`] = el; }}
+                          value={denomsColones[d] === 0 || !denomsColones[d] ? '' : denomsColones[d].toLocaleString('es-CR')}
+                          placeholder="0"
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value.replace(/\s/g, '')) || 0;
+                            setDenomsColones(prev => ({ ...prev, [d]: val }));
+                            setDepositoGuardado(false);
                           }}
-                          style={{
-                            padding: '10px 20px',
-                            background: conteoGuardado[cajaName] ? '#27AE60' : '#2a78a5',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '6px',
-                            fontSize: '13px',
-                            fontWeight: '600',
-                            cursor: guardandoConteo[cajaName] ? 'wait' : 'pointer'
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === 'ArrowDown') { e.preventDefault(); window[`inputDepCRC${idx + 1}`]?.focus(); }
+                            if (e.key === 'ArrowUp') { e.preventDefault(); window[`inputDepCRC${idx - 1}`]?.focus(); }
                           }}
-                        >
-                          {guardandoConteo[cajaName] ? '⏳ Guardando...' : conteoGuardado[cajaName] ? '✅ Guardado' : '💾 Guardar conteo'}
-                        </button>
+                          style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '15px', fontWeight: '500', textAlign: 'center', fontFamily: "'DM Mono', monospace" }}
+                        />
+                        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#2a78a5', fontWeight: '600', textAlign: 'right' }}>
+                          {(denomsColones[d] || 0) > 0 ? fmtCRC((denomsColones[d] || 0) * d) : '—'}
+                        </div>
                       </div>
-                    );
-                  })}
+                    ))}
+                    <div style={{ marginTop: '12px', padding: '12px 16px', borderRadius: '8px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', background: '#E8F3EC', marginBottom: '24px' }}>
+                      <div>
+                        <div style={{ fontSize: '10px', color: '#6B6560', fontWeight: '600', textTransform: 'uppercase' }}>Total contado</div>
+                        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '16px', fontWeight: '700', color: '#1A1714' }}>{fmtCRC(totalContadoCRC)}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '10px', color: '#6B6560', fontWeight: '600', textTransform: 'uppercase' }}>Revisora registró</div>
+                        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '16px', fontWeight: '700', color: '#1A1714' }}>{fmtCRC(totalRevCRC)}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '10px', color: '#6B6560', fontWeight: '600', textTransform: 'uppercase' }}>Diferencia</div>
+                        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '16px', fontWeight: '700', color: diffColorCRC }}>
+                          {Math.abs(diffCRC) < 5 ? '✓ Cuadra' : (diffCRC > 0 ? '+' : '') + fmtCRC(Math.abs(diffCRC))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* USD */}
+                    <div style={{ fontSize: '12px', fontWeight: '700', color: '#6B6560', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.5px' }}>Dólares — ambas cajas</div>
+                    {DENOMS_USD.map((d, idx) => (
+                      <div key={d} style={{ display: 'grid', gridTemplateColumns: '100px 1fr 120px', alignItems: 'center', gap: '10px', padding: '6px 0', borderBottom: '1px solid #E2DDD4' }}>
+                        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#6B6560', fontWeight: '500' }}>${d}</div>
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          ref={el => { window[`inputDepUSD${idx}`] = el; }}
+                          value={denomsUSD[d] === 0 || !denomsUSD[d] ? '' : denomsUSD[d].toLocaleString('es-CR')}
+                          placeholder="0"
+                          onChange={(e) => {
+                            const val = parseInt(e.target.value.replace(/\s/g, '')) || 0;
+                            setDenomsUSD(prev => ({ ...prev, [d]: val }));
+                            setDepositoGuardado(false);
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === 'ArrowDown') { e.preventDefault(); window[`inputDepUSD${idx + 1}`]?.focus(); }
+                            if (e.key === 'ArrowUp') { e.preventDefault(); window[`inputDepUSD${idx - 1}`]?.focus(); }
+                          }}
+                          style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '15px', fontWeight: '500', textAlign: 'center', fontFamily: "'DM Mono', monospace" }}
+                        />
+                        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#C8A84B', fontWeight: '600', textAlign: 'right' }}>
+                          {(denomsUSD[d] || 0) > 0 ? fmtUSD((denomsUSD[d] || 0) * d) : '—'}
+                        </div>
+                      </div>
+                    ))}
+                    <div style={{ marginTop: '12px', padding: '12px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#FBF6E9', marginBottom: '20px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total USD</span>
+                      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '700', color: '#C8A84B' }}>{fmtUSD(totalContadoUSD)}</span>
+                    </div>
+
+                    <button
+                      disabled={guardandoDeposito}
+                      onClick={async () => {
+                        setGuardandoDeposito(true);
+                        try {
+                          const inicio = periodo.inicio.toISOString().split('T')[0];
+                          const fin = periodo.fin.toISOString().split('T')[0];
+                          const res = await fetch('/api/depositos-cds', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                              periodo_inicio: inicio,
+                              periodo_fin: fin,
+                              denominaciones_colones: denomsColones,
+                              total_colones: totalContadoCRC,
+                              denominaciones_usd: denomsUSD,
+                              total_usd: totalContadoUSD,
+                              contado_por: usuarioActual?.nombre || 'Sistema'
+                            })
+                          });
+                          if (!res.ok) throw new Error('Error al guardar');
+                          const saved = await res.json();
+                          setDepositoPeriodo(saved);
+                          setDepositoGuardado(true);
+                        } catch (err) {
+                          alert('Error: ' + err.message);
+                        } finally {
+                          setGuardandoDeposito(false);
+                        }
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '12px',
+                        background: depositoGuardado ? '#27AE60' : '#2a78a5',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        fontSize: '14px',
+                        fontWeight: '600',
+                        cursor: guardandoDeposito ? 'wait' : 'pointer'
+                      }}
+                    >
+                      {guardandoDeposito ? '⏳ Guardando...' : depositoGuardado ? '✅ Conteo guardado' : '💾 Guardar conteo del período'}
+                    </button>
+                  </div>
                 </div>
               );
             })()}

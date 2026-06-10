@@ -16,13 +16,14 @@ export async function GET(req) {
     }
 
     const { data, error } = await supabase
-      .from('conteo_auditoria_periodo')
+      .from('depositos_cds')
       .select('*')
       .eq('periodo_inicio', inicio)
-      .eq('periodo_fin', fin);
+      .eq('periodo_fin', fin)
+      .maybeSingle();
 
     if (error) throw error;
-    return Response.json(data || []);
+    return Response.json(data || null);
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
@@ -30,17 +31,17 @@ export async function GET(req) {
 
 export async function POST(req) {
   try {
-    const { periodo_inicio, periodo_fin, caja, denominaciones, total_efectivo, contado_por } = await req.json();
+    const { periodo_inicio, periodo_fin, denominaciones_colones, total_colones, denominaciones_usd, total_usd, contado_por } = await req.json();
 
-    if (!periodo_inicio || !periodo_fin || !caja) {
+    if (!periodo_inicio || !periodo_fin) {
       return Response.json({ error: 'Faltan campos requeridos' }, { status: 400 });
     }
 
     const { data, error } = await supabase
-      .from('conteo_auditoria_periodo')
+      .from('depositos_cds')
       .upsert(
-        { periodo_inicio, periodo_fin, caja, denominaciones, total_efectivo, contado_por, updated_at: new Date().toISOString() },
-        { onConflict: 'periodo_inicio,periodo_fin,caja' }
+        { periodo_inicio, periodo_fin, denominaciones_colones, total_colones, denominaciones_usd, total_usd, contado_por, updated_at: new Date().toISOString() },
+        { onConflict: 'periodo_inicio,periodo_fin' }
       )
       .select()
       .single();
