@@ -67,6 +67,30 @@ export default function RevisionClinicaPage() {
     }
   }, [periodo, caja]);
 
+  // Auto-load audit data when audit tab is opened
+  useEffect(() => {
+    if (tabActivo === 'auditoria' && auditRows.length === 0 && !loadingAudit && periodo) {
+      console.error('📋 AUTO-LOADING AUDIT DATA FOR PERIOD:', periodo);
+      const cargarAuditoria = async () => {
+        try {
+          const inicio = periodo.inicio.toISOString().split('T')[0];
+          const fin = periodo.fin.toISOString().split('T')[0];
+          const res = await fetch(`/api/auditoria-periodo?inicio=${inicio}&fin=${fin}`);
+          const data = await res.json();
+          if (data && data.length > 0) {
+            console.error('✅ AUDIT DATA LOADED:', data.length, 'rows');
+            setAuditRows(data);
+          } else {
+            console.error('ℹ️ NO AUDIT DATA FOR THIS PERIOD');
+          }
+        } catch (err) {
+          console.error('❌ Error loading audit data:', err);
+        }
+      };
+      cargarAuditoria();
+    }
+  }, [tabActivo, periodo, auditRows.length, loadingAudit]);
+
   async function cargarCierres() {
     if (!periodo) return;
 
@@ -435,24 +459,6 @@ export default function RevisionClinicaPage() {
         {/* Tab: Auditoría */}
         {tabActivo === 'auditoria' && (
           <>
-            {/* Cargar auditRows al abrir tab */}
-            {!auditRows.length && !loadingAudit && !auditError && (
-              <div style={{ display: 'none' }}>
-                {(() => {
-                  // Cargar automáticamente cuando se abre el tab
-                  fetch(`/api/auditoria-periodo?inicio=${periodo?.inicio.toISOString().split('T')[0]}&fin=${periodo?.fin.toISOString().split('T')[0]}`)
-                    .then(r => r.json())
-                    .then(data => {
-                      if (data && data.length > 0) {
-                        setAuditRows(data);
-                      }
-                    })
-                    .catch(err => console.error('Error loading audit rows:', err));
-                  return null;
-                })()}
-              </div>
-            )}
-
             {/* Upload or Summary */}
             {auditRows.length === 0 ? (
               <div style={{ background: '#fff', border: '2px dashed #2a78a5', borderRadius: '12px', padding: '32px 24px', marginBottom: '24px', textAlign: 'center', cursor: 'pointer' }}

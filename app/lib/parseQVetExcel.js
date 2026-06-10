@@ -73,11 +73,16 @@ export function parseQVetExcel(file, periodo) {
             return;
           }
 
-          console.log(`Row ${idx}: caja=${caja}, fecha=${fecha} → ${fechaObj.toISOString()}, forma=${forma}, monto=${monto}`);
+          const fechaStr = fechaObj.toISOString().split('T')[0]; // YYYY-MM-DD
+          const periodoStart = periodo.inicio.toISOString().split('T')[0];
+          const periodoEnd = periodo.fin.toISOString().split('T')[0];
 
-          if (fechaObj < periodo.inicio || fechaObj > periodo.fin) {
-            console.log(`Row ${idx}: Outside period range [${periodo.inicio.toISOString()} - ${periodo.fin.toISOString()}]`);
-            return; // Ignorar filas fuera del período
+          console.log(`Row ${idx}: caja=${caja}, fecha=${fechaStr}, forma=${forma}, monto=${monto}`);
+
+          // Compare dates as strings (YYYY-MM-DD) to include FULL day (including end of day 5)
+          if (fechaStr < periodoStart || fechaStr > periodoEnd) {
+            console.log(`Row ${idx}: Outside period [${periodoStart} - ${periodoEnd}]`);
+            return;
           }
 
           const key = `${caja}|${fecha}`;
