@@ -25,16 +25,18 @@ export function parseQVetExcel(file, periodo) {
 
       // If it's a string, try to parse it
       if (typeof valor === 'string') {
-        // Try DD/MM/YY format first (European: 1/6/26)
-        const match = valor.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+        // Try DD/MM/YY format first (European: 1/6/26 or 1/6/26 18:41 with optional time)
+        // CRITICAL BUG FIX: Regex must NOT require $ end-of-string (allows optional time)
+        const match = valor.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
         if (match) {
           let [, day, month, year] = match.map(Number);
           if (year < 100) year += 2000; // 26 → 2026
           // Assume DD/MM/YY (European format)
-          return new Date(year, month - 1, day);
+          // Set time to 00:00:00 to avoid timezone issues
+          return new Date(year, month - 1, day, 0, 0, 0);
         }
 
-        // Fallback: try standard parsing
+        // Fallback: try standard parsing (should not reach here for well-formatted dates)
         return new Date(valor);
       }
 
