@@ -476,33 +476,36 @@ export default function RevisionClinicaPage() {
                 const file = e.dataTransfer.files?.[0];
                 if (!file) return;
 
-                console.log('File dropped:', file.name);
+                console.error('🔍 FILE DROPPED:', file.name);
                 setLoadingAudit(true);
                 setAuditError(null);
                 try {
-                  console.log('Periodo:', periodo);
+                  console.error('📅 PERIODO:', periodo);
                   const qvetData = await parseQVetExcel(file, periodo);
-                  console.log('QVet data parsed:', qvetData);
+                  console.error('📊 QVET DATA PARSED:', qvetData.length, 'rows');
 
                   if (!qvetData || qvetData.length === 0) {
                     throw new Error('Excel vacío o sin datos válidos para este período');
                   }
 
                   const allAuditRows = [];
-                  console.log('Cierres revisados en DB:', cierres.filter(c => cierresRevisadosIds.has(c.id)).map(c => ({ caja: c.caja, fecha: new Date(c.fecha_hora).toISOString().split('T')[0] })));
-                  console.log('Datos en Excel:', qvetData.map(q => ({ caja: q.caja, fecha: q.fecha })));
+                  const dbCierres = cierres.filter(c => cierresRevisadosIds.has(c.id)).map(c => ({ caja: c.caja, fecha: new Date(c.fecha_hora).toISOString().split('T')[0] }));
+                  console.error('🗄️ DB CIERRES:', dbCierres);
+                  console.error('📑 EXCEL DATA:', qvetData.map(q => ({ caja: q.caja, fecha: q.fecha })));
 
                   for (const cierre of cierres) {
                     if (!cierresRevisadosIds.has(cierre.id)) continue;
 
                     const cierreFecha = new Date(cierre.fecha_hora).toISOString().split('T')[0];
+                    console.error(`🔎 Buscando en Excel: caja="${cierre.caja}" fecha="${cierreFecha}"`);
+
                     const qvetCierre = qvetData.find(q => {
                       const match = q.caja === cierre.caja && q.fecha === cierreFecha;
-                      console.log(`Intentando matchear DB(${cierre.caja}|${cierreFecha}) con Excel(${q.caja}|${q.fecha}): ${match}`);
+                      if (match) console.error(`✅ MATCH FOUND: ${cierre.caja}|${cierreFecha}`);
                       return match;
                     });
                     if (!qvetCierre) {
-                      console.log(`No encontrado: caja=${cierre.caja}, fecha=${cierreFecha}`);
+                      console.error(`❌ NO MATCH: caja="${cierre.caja}", fecha="${cierreFecha}"`);
                       continue;
                     }
 
