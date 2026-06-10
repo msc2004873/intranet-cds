@@ -16,19 +16,35 @@ export async function POST(req) {
       );
     }
 
-    // 1. Actualizar revision_caja con QVet data
-    const { error: updateError } = await supabase
-      .from('revision_caja')
-      .update({
-        qvet_data: qvet_data,
-        qvet_archivo_url: qvet_archivo_url,
-        estado_auditoria: 'EN_REVISION',
-      })
-      .eq('id', revision_caja_id);
+    // Get all unique revision_caja_ids from audit_rows (could be multiple cajas)
+    const revision_caja_ids = [...new Set(audit_rows.map(row => row.revision_caja_id))];
 
-    if (updateError) throw updateError;
+    // 1. Delete existing audit rows for these revisions (to avoid duplicates on re-upload)
+    const { error: deleteError } = await supabase
+      .from('revision_auditoria')
+      .delete()
+      .in('revision_caja_id', revision_caja_ids);
 
-    // 2. Insertar filas de auditoría
+    if (deleteError) {
+      console.warn('Warning deleting old audit rows:', deleteError);
+      // Don't throw - continue anyway
+    }
+
+    // 2. Update revision_caja with QVet data
+    for (const rc_id of revision_caja_ids) {
+      const { error: updateError } = await supabase
+        .from('revision_caja')
+        .update({
+          qvet_data: qvet_data,
+          qvet_archivo_url: qvet_archivo_url,
+          estado_auditoria: 'EN_REVISION',
+        })
+        .eq('id', rc_id);
+
+      if (updateError) throw updateError;
+    }
+
+    // 3. Insert NEW audit rows
     const { error: insertError } = await supabase
       .from('revision_auditoria')
       .insert(audit_rows);
@@ -40,6 +56,7 @@ export async function POST(req) {
         success: true,
         message: 'Audit saved successfully',
         rows_created: audit_rows.length,
+        revision_cajas_updated: revision_caja_ids.length,
       }),
       { status: 200 }
     );
