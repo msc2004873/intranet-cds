@@ -562,11 +562,8 @@ export default function RevisionClinicaPage() {
 
                   if (reloadedData.length > 0) {
                     setAuditRows(reloadedData);
-                    console.error('✅ AUDIT ROWS RELOADED WITH RELATIONS:', {
-                      total: reloadedData.length,
-                      firstRow: reloadedData[0],
-                      hasRelations: reloadedData[0]?.revision_caja ? 'YES' : 'NO'
-                    });
+                    console.error('✅ AUDIT ROWS RELOADED WITH RELATIONS: ' + reloadedData.length + ' rows');
+                    console.error('  First row has relations:', reloadedData[0]?.revision_caja ? 'YES' : 'NO');
                   } else {
                     console.error('⚠️ Reload returned 0 rows, using local data');
                     setAuditRows(allAuditRows);
