@@ -681,8 +681,14 @@ export default function RevisionClinicaPage() {
                                 {rowsDelDia.map((row, i) => {
                                   const diffRevision = row.monto_revisora - row.monto_cajera;
                                   const diffAuditoria = row.monto_qvet - row.monto_revisora;
-                                  const hasDiff = Math.abs(diffRevision) > 0 || Math.abs(diffAuditoria) > 0;
-                                  const severidad = row.severidad_auditoria;
+                                  const maxDiff = Math.max(Math.abs(diffRevision), Math.abs(diffAuditoria));
+                                  const hasDiff = maxDiff > 0;
+
+                                  // Calcular severidad basada en la MAYOR diferencia
+                                  let severidad = 'GREEN';
+                                  if (maxDiff >= 500) severidad = 'RED';
+                                  else if (maxDiff >= 50) severidad = 'YELLOW';
+
                                   const color = severidad === 'RED' ? '#E74C3C' : severidad === 'YELLOW' ? '#F39C12' : '#27AE60';
                                   const icon = severidad === 'RED' ? '🔴' : severidad === 'YELLOW' ? '🟡' : '✅';
 
