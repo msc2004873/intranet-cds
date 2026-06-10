@@ -408,14 +408,42 @@ export default function RevisionClinicaPage() {
         {tabActivo === 'auditoria' && (
           <>
             {/* Upload */}
-            <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
-              <div style={{ fontSize: '16px', fontWeight: '700', color: '#1A1714', marginBottom: '16px' }}>
+            <div style={{ background: '#fff', border: '2px dashed #2a78a5', borderRadius: '12px', padding: '32px 24px', marginBottom: '24px', textAlign: 'center', cursor: 'pointer' }}
+              onClick={() => document.getElementById('auditExcelInput').click()}
+              onDragOver={(e) => {
+                e.preventDefault();
+                e.currentTarget.style.background = '#E8F3EC';
+                e.currentTarget.style.borderColor = '#27AE60';
+              }}
+              onDragLeave={(e) => {
+                e.currentTarget.style.background = '#fff';
+                e.currentTarget.style.borderColor = '#2a78a5';
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.currentTarget.style.background = '#fff';
+                e.currentTarget.style.borderColor = '#2a78a5';
+                const file = e.dataTransfer.files?.[0];
+                if (file) {
+                  document.getElementById('auditExcelInput').files = e.dataTransfer.files;
+                  // Trigger change event manually
+                  const event = new Event('change', { bubbles: true });
+                  document.getElementById('auditExcelInput').dispatchEvent(event);
+                }
+              }}
+            >
+              <div style={{ fontSize: '16px', fontWeight: '700', color: '#1A1714', marginBottom: '8px' }}>
                 📤 Subir Excel de QVet
+              </div>
+              <div style={{ fontSize: '13px', color: '#9C9590', marginBottom: '16px' }}>
+                Arrastra el archivo o haz click para seleccionar
               </div>
 
               <input
+                id="auditExcelInput"
                 type="file"
                 accept=".xlsx,.xls"
+                style={{ display: 'none' }}
                 onChange={async (e) => {
                   const file = e.target.files?.[0];
                   if (!file) return;
@@ -433,7 +461,7 @@ export default function RevisionClinicaPage() {
                     // 2. Generar filas de auditoría para cada cierre revisado
                     const allAuditRows = [];
                     for (const cierre of cierres) {
-                      if (!cierre.revision_completada) continue;
+                      if (!cierresRevisadosIds.has(cierre.id)) continue;
 
                       // Buscar cierre en QVet data
                       const qvetCierre = qvetData.find(q => q.caja === cierre.caja && q.fecha === new Date(cierre.fecha_hora).toISOString().split('T')[0]);
