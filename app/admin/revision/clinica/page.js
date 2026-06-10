@@ -1109,14 +1109,15 @@ export default function RevisionClinicaPage() {
                                 headers: { 'Content-Type': 'application/json' },
                                 body: JSON.stringify({
                                   id: modalAuditRow.id,
-                                  comentario_auditoria: modalComentario
+                                  comentario_auditoria: modalComentario,
+                                  comentado_por: usuarioActual?.nombre || null
                                 })
                               });
 
                               if (!res.ok) throw new Error('Error al guardar');
 
                               // Actualizar en local
-                              setAuditRows(auditRows.map(r => r.id === modalAuditRow.id ? { ...r, comentario_auditoria: modalComentario } : r));
+                              setAuditRows(auditRows.map(r => r.id === modalAuditRow.id ? { ...r, comentario_auditoria: modalComentario, comentado_por: usuarioActual?.nombre || null } : r));
                               setModalAuditRow(null);
                               setModalComentario('');
                             } catch (err) {
