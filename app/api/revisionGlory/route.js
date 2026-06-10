@@ -4,7 +4,7 @@ export async function POST(request) {
   try {
     const data = await request.json();
 
-    const { fecha, cajera, revisora, hora_revision, caja, denominaciones, bac, efectivo_revisado, total_revisado, total_cajera } = data;
+    const { fecha, cajera, revisora, hora_revision, caja, denominaciones, bac, efectivo_revisado, sinpe_revisado, transferencias_revisadas, total_revisado, total_cajera } = data;
 
     if (!fecha || !cajera || !revisora) {
       return Response.json(
@@ -22,6 +22,8 @@ export async function POST(request) {
       denominaciones_json: JSON.stringify(denominaciones || {}),
       bac_revisado: bac || 0,
       efectivo_revisado: efectivo_revisado || 0,
+      sinpe_revisado: sinpe_revisado || 0,
+      transferencias_revisadas: transferencias_revisadas || 0,
       total_revisado: total_revisado || 0,
       total_cajera: total_cajera || 0,
       estado: 'revisado',

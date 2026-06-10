@@ -3,97 +3,105 @@
 import { useState, useEffect } from 'react';
 import Header from './Header';
 
-const formatearMiles = (num) => {
-  if (!num) return '';
-  return num.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
-};
-
 const parsearMiles = (str) => {
   if (typeof str === 'number') return Math.round(str);
-  return parseInt(str.replace(/\s/g, '')) || 0;
+  return parseInt(String(str).replace(/\s/g, '')) || 0;
 };
 
-const fmtMonto = (monto) => {
-  return '₡' + Math.round(monto).toLocaleString('es-CR');
+const fmt = (n) => '₡' + Math.round(n).toLocaleString('es-CR');
+
+const formatMiles = (n) => {
+  if (n === 0) return '';
+  return Math.round(n).toLocaleString('es-CR');
 };
 
 export default function FormularioRevisionGlory({ fecha, cajera, cobros, periodo, onVolver, onGuardar }) {
   const [denominaciones, setDenominaciones] = useState({
-    20000: '',
-    10000: '',
-    5000: '',
-    2000: '',
-    1000: '',
-    500: '',
-    100: '',
-    50: '',
-    25: '',
-    10: '',
-    5: '',
+    20000: 0, 10000: 0, 5000: 0, 2000: 0, 1000: 0,
+    500: 0, 100: 0, 50: 0, 25: 0, 10: 0, 5: 0,
   });
-
-  const [bac, setBac] = useState('');
+  const [bac, setBac] = useState(0);
+  const [sinpeRevisado, setSinpeRevisado] = useState([]);
+  const [transfRevisadas, setTransfRevisadas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
   const [usuarioActual, setUsuarioActual] = useState(null);
-  const [horaRevision, setHoraRevision] = useState(new Date().toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }));
 
   useEffect(() => {
-    cargarUsuario();
-  }, []);
-
-  function cargarUsuario() {
     try {
       const user = JSON.parse(localStorage.getItem('user') || '{}');
       setUsuarioActual(user);
     } catch (err) {
       console.error('Error cargando usuario:', err);
     }
-  }
+
+    // Inicializar listas de SINPE y Transferencias desde los cobros
+    const cobrosArray = Array.isArray(cobros) ? cobros : [];
+    setSinpeRevisado(
+      cobrosArray
+        .filter(c => c.metodo === 'SINPE')
+        .map(c => ({ ...c, monto_revisado: 0 }))
+    );
+    setTransfRevisadas(
+      cobrosArray
+        .filter(c => c.metodo === 'Transferencia')
+        .map(c => ({ ...c, monto_revisado: 0 }))
+    );
+  }, []);
 
   const showToast = (msg, type = 'info') => {
     setToast({ msg, type });
     setTimeout(() => setToast(null), 3000);
   };
 
-  // Calcular totales
-  const totalEfectivo = Object.entries(denominaciones).reduce((sum, [denom, cant]) => {
-    return sum + (parseInt(denom) * parsearMiles(cant));
-  }, 0);
+  const handleDenomChange = (denom, value) => {
+    const num = parsearMiles(value);
+    setDenominaciones({ ...denominaciones, [denom]: num });
+  };
 
-  const totalBac = parsearMiles(bac);
-  const totalCajera = cobros.reduce((sum, c) => sum + (c.monto || 0), 0);
-  const totalEnCaja = totalEfectivo + totalBac;
+  // Totales
+  const totalEfectivo = Object.entries(denominaciones).reduce((sum, [denom, cant]) => {
+    return sum + (parseInt(denom) * cant);
+  }, 0);
+  const totalBac = bac;
+  const totalSinpe = sinpeRevisado.reduce((sum, s) => sum + s.monto_revisado, 0);
+  const totalTransf = transfRevisadas.reduce((sum, t) => sum + t.monto_revisado, 0);
+  const totalRevisado = totalEfectivo + totalBac + totalSinpe + totalTransf;
+
+  // Total cobrado por la cajera (suma de todos los cobros)
+  const cobrosArray = Array.isArray(cobros) ? cobros : [];
+  const totalCajera = cobrosArray.reduce((sum, c) => sum + (c.monto || 0), 0);
+  const totalCajeraEfectivo = cobrosArray.filter(c => c.metodo === 'Efectivo').reduce((sum, c) => sum + (c.monto || 0), 0);
+  const totalCajeraBac = cobrosArray.filter(c => c.metodo === 'Tarjeta BAC').reduce((sum, c) => sum + (c.monto || 0), 0);
+  const totalCajeraSinpe = cobrosArray.filter(c => c.metodo === 'SINPE').reduce((sum, c) => sum + (c.monto || 0), 0);
+  const totalCajeraTransf = cobrosArray.filter(c => c.metodo === 'Transferencia').reduce((sum, c) => sum + (c.monto || 0), 0);
+
+  const diferencia = totalCajera - totalRevisado;
 
   async function guardarRevision() {
     if (!usuarioActual?.nombre) {
       showToast('No se encontró el usuario actual', 'error');
       return;
     }
-
     setLoading(true);
     try {
-      const denomsNumeros = Object.fromEntries(
-        Object.entries(denominaciones).map(([k, v]) => [k, parsearMiles(v)])
-      );
-
-      const revisionData = {
-        fecha,
-        cajera,
-        revisora: usuarioActual.nombre,
-        hora_revision: horaRevision,
-        caja: 'Caja Glory',
-        denominaciones: denomsNumeros,
-        bac: totalBac,
-        efectivo_revisado: totalEfectivo,
-        total_revisado: totalEnCaja,
-        total_cajera: totalCajera,
-      };
-
       const res = await fetch('/api/revisionGlory', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(revisionData),
+        body: JSON.stringify({
+          fecha,
+          cajera,
+          revisora: usuarioActual.nombre,
+          hora_revision: new Date().toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }),
+          caja: 'Caja Glory',
+          denominaciones,
+          bac: totalBac,
+          efectivo_revisado: totalEfectivo,
+          sinpe_revisado: totalSinpe,
+          transferencias_revisadas: totalTransf,
+          total_revisado: totalRevisado,
+          total_cajera: totalCajera,
+        }),
       });
 
       if (!res.ok) {
@@ -101,8 +109,8 @@ export default function FormularioRevisionGlory({ fecha, cajera, cobros, periodo
         throw new Error(err.error || 'Error al guardar revisión');
       }
 
-      showToast('✅ Revisión guardada', 'success');
-      setTimeout(() => onGuardar(), 1500);
+      showToast('✅ Revisión guardada correctamente', 'success');
+      setTimeout(() => onGuardar(), 1000);
     } catch (err) {
       console.error('Error guardando revisión:', err);
       showToast(`❌ ${err.message}`, 'error');
@@ -111,210 +119,331 @@ export default function FormularioRevisionGlory({ fecha, cajera, cobros, periodo
     }
   }
 
+  const GOLD = '#C8A84B';
+  const GOLD_DARK = '#A88A38';
+  const GOLD_LIGHT = '#FBF6E9';
+  const GOLD_BORDER = '#E8D99A';
+
+  const SeccionHeader = ({ num, titulo, total }) => (
+    <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', justifyContent: 'space-between', background: '#F0EDE6' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+        <div style={{ width: '26px', height: '26px', background: GOLD, color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600', flexShrink: 0 }}>{num}</div>
+        <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>{titulo}</div>
+      </div>
+      {total !== undefined && (
+        <div style={{ fontSize: '12px', fontWeight: '600', color: GOLD, fontFamily: "'DM Mono', monospace" }}>{fmt(total)}</div>
+      )}
+    </div>
+  );
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
       <Header title="Revisión — Glory" subtitle={`${fecha} • ${cajera}`} showLogout={false} homeLink="#" />
 
       <div style={{ flex: 1, maxWidth: '720px', margin: '0 auto', padding: '24px 16px', width: '100%' }}>
 
-        {/* Información de la revisión */}
-        <div style={{ background: '#FBF6E9', border: '1px solid #C8A84B', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', fontSize: '13px' }}>
-            <div>
-              <div style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', marginBottom: '4px' }}>Fecha</div>
-              <div style={{ fontSize: '14px', fontWeight: '700', color: '#1A1714' }}>{fecha}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', marginBottom: '4px' }}>Cajera</div>
-              <div style={{ fontSize: '14px', fontWeight: '700', color: '#1A1714' }}>{cajera}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', marginBottom: '4px' }}>Revisora</div>
-              <div style={{ fontSize: '14px', fontWeight: '700', color: '#1A1714' }}>{usuarioActual?.nombre || 'Cargando...'}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', marginBottom: '4px' }}>Hora de cierre</div>
-              <div style={{ fontSize: '14px', fontWeight: '700', color: '#1A1714' }}>{horaRevision}</div>
-            </div>
-            <div>
-              <div style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', marginBottom: '4px' }}>Caja</div>
-              <div style={{ fontSize: '14px', fontWeight: '700', color: '#1A1714' }}>Caja Glory</div>
-            </div>
-            <div>
-              <div style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', marginBottom: '4px' }}>Total cobrado</div>
-              <div style={{ fontSize: '14px', fontWeight: '700', color: '#C8A84B' }}>{fmtMonto(totalCajera)}</div>
-            </div>
+        {/* Info de Revisión */}
+        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
+            <div style={{ width: '26px', height: '26px', background: GOLD, color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '12px', fontWeight: '600' }}>ℹ</div>
+            <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Información de revisión</div>
           </div>
-        </div>
-
-        {/* Sección: Conteo de Denominaciones */}
-        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
-          <div style={{ fontSize: '16px', fontWeight: '700', color: '#1A1714', marginBottom: '16px' }}>
-            💵 Conteo de Denominaciones
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-            {Object.entries(denominaciones).map(([denom, value]) => (
-              <div key={denom}>
-                <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
-                  ₡{parseInt(denom).toLocaleString('es-CR')}
-                </label>
-                <input
-                  type="text"
-                  inputMode="numeric"
-                  value={value}
-                  onChange={(e) => {
-                    const num = e.target.value.replace(/[^0-9]/g, '');
-                    setDenominaciones({ ...denominaciones, [denom]: num ? parseInt(num).toLocaleString('es-CR') : '' });
-                  }}
-                  placeholder="0"
-                  style={{
-                    width: '100%',
-                    padding: '10px',
-                    border: '1px solid #E2DDD4',
-                    borderRadius: '6px',
-                    fontSize: '13px',
-                    fontFamily: "'DM Mono', monospace",
-                    boxSizing: 'border-box'
-                  }}
-                />
+          <div style={{ padding: '20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Cajera</label>
+              <div style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px', background: '#F0EDE6', color: '#1A1714', fontWeight: '600' }}>
+                {cajera}
               </div>
-            ))}
-          </div>
-
-          <div style={{ background: '#FBF6E9', border: '1px solid #E2DDD4', borderRadius: '8px', padding: '12px', marginTop: '16px' }}>
-            <div style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', marginBottom: '4px' }}>Total Efectivo</div>
-            <div style={{ fontSize: '18px', fontWeight: '700', color: '#C8A84B', fontFamily: "'DM Mono', monospace" }}>{fmtMonto(totalEfectivo)}</div>
-          </div>
-        </div>
-
-        {/* Sección: Conteo de Datafono */}
-        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
-          <div style={{ fontSize: '16px', fontWeight: '700', color: '#1A1714', marginBottom: '16px' }}>
-            💳 Conteo de Datafono
-          </div>
-
-          <div>
-            <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>
-              BAC
-            </label>
-            <input
-              type="text"
-              inputMode="numeric"
-              value={bac}
-              onChange={(e) => {
-                const num = e.target.value.replace(/[^0-9]/g, '');
-                setBac(num ? parseInt(num).toLocaleString('es-CR') : '');
-              }}
-              placeholder="0"
-              style={{
-                width: '100%',
-                padding: '10px',
-                border: '1px solid #E2DDD4',
-                borderRadius: '6px',
-                fontSize: '13px',
-                fontFamily: "'DM Mono', monospace",
-                boxSizing: 'border-box'
-              }}
-            />
-          </div>
-
-          <div style={{ background: '#FBF6E9', border: '1px solid #E2DDD4', borderRadius: '8px', padding: '12px', marginTop: '16px' }}>
-            <div style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', marginBottom: '4px' }}>Total Datafono</div>
-            <div style={{ fontSize: '18px', fontWeight: '700', color: '#C8A84B', fontFamily: "'DM Mono', monospace" }}>{fmtMonto(totalBac)}</div>
+            </div>
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Revisa</label>
+              <div style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px', background: '#F0EDE6', color: '#1A1714', fontWeight: '600' }}>
+                {usuarioActual?.nombre || '—'}
+              </div>
+            </div>
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Fecha</label>
+              <div style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px', background: '#F0EDE6', color: '#6B6560', fontFamily: "'DM Mono', monospace" }}>
+                {fecha}
+              </div>
+            </div>
+            <div>
+              <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Caja</label>
+              <div style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px', background: '#F0EDE6', color: '#6B6560' }}>
+                Caja Glory
+              </div>
+            </div>
+            <div style={{ gridColumn: '1 / -1' }}>
+              <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total cobrado (cajera)</label>
+              <div style={{ width: '100%', padding: '10px 12px', border: `1.5px solid ${GOLD_BORDER}`, borderRadius: '8px', fontSize: '16px', background: GOLD_LIGHT, color: GOLD, fontFamily: "'DM Mono', monospace", fontWeight: '700' }}>
+                {fmt(totalCajera)}
+                <span style={{ fontSize: '11px', color: '#9C9590', fontWeight: '400', marginLeft: '8px' }}>
+                  ({cobrosArray.length} cobro{cobrosArray.length !== 1 ? 's' : ''})
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Resumen total */}
-        <div style={{ background: '#E8F3EC', border: '1px solid #27AE60', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
-          <div style={{ fontSize: '12px', fontWeight: '600', color: '#1A1714', textTransform: 'uppercase', marginBottom: '8px' }}>
-            Total Revisado
+        {/* 1. Denominaciones */}
+        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+          <SeccionHeader num="1" titulo="Conteo de denominaciones" total={totalEfectivo} />
+          <div style={{ padding: '20px' }}>
+            {[20000, 10000, 5000, 2000, 1000, 500, 100, 50, 25, 10, 5].map((denom, idx) => {
+              const cant = denominaciones[denom];
+              const subtotal = denom * cant;
+              const label = denom >= 1000 ? `₡${(denom / 1000).toFixed(0)}k` : `₡${denom}`;
+              return (
+                <div key={denom} style={{ display: 'grid', gridTemplateColumns: '80px 1fr 110px', alignItems: 'center', gap: '10px', padding: '6px 0', borderBottom: '1px solid #E2DDD4' }}>
+                  <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#6B6560', fontWeight: '500' }}>
+                    {label}
+                  </div>
+                  <input
+                    ref={(el) => (window[`inputGloryDenom${idx}`] = el)}
+                    type="text"
+                    value={cant === 0 ? '' : cant.toLocaleString('es-CR')}
+                    onChange={(e) => handleDenomChange(denom, e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === 'ArrowDown') {
+                        e.preventDefault();
+                        const next = window[`inputGloryDenom${idx + 1}`];
+                        if (next) next.focus();
+                      }
+                      if (e.key === 'ArrowUp') {
+                        e.preventDefault();
+                        const prev = window[`inputGloryDenom${idx - 1}`];
+                        if (prev) prev.focus();
+                      }
+                    }}
+                    placeholder="0"
+                    inputMode="numeric"
+                    style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '15px', fontWeight: '500', textAlign: 'center', fontFamily: "'DM Mono', monospace" }}
+                  />
+                  <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: GOLD, fontWeight: '600', textAlign: 'right' }}>
+                    {fmt(subtotal)}
+                  </div>
+                </div>
+              );
+            })}
+            <div style={{ marginTop: '14px', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#E8F3EC' }}>
+              <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total efectivo</span>
+              <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: GOLD }}>
+                {fmt(totalEfectivo)}
+              </span>
+            </div>
+            {totalCajeraEfectivo > 0 && (
+              <div style={{ marginTop: '8px', fontSize: '12px', color: '#9C9590', textAlign: 'right' }}>
+                Cajera registró: {fmt(totalCajeraEfectivo)}
+                {totalEfectivo > 0 && (
+                  <span style={{ marginLeft: '8px', fontWeight: '700', color: totalEfectivo === totalCajeraEfectivo ? '#27AE60' : '#E74C3C' }}>
+                    {totalEfectivo === totalCajeraEfectivo ? '✓' : `Δ ${fmt(Math.abs(totalEfectivo - totalCajeraEfectivo))}`}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
-          <div style={{ fontSize: '24px', fontWeight: '700', color: '#27AE60', fontFamily: "'DM Mono', monospace", marginBottom: '12px' }}>
-            {fmtMonto(totalEnCaja)}
+        </div>
+
+        {/* 2. Tarjeta BAC */}
+        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+          <SeccionHeader num="2" titulo="Tarjeta BAC" total={totalBac} />
+          <div style={{ padding: '20px' }}>
+            <div style={{ border: '1.5px solid #E2DDD4', borderRadius: '8px', padding: '14px' }}>
+              <div style={{ fontSize: '11px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', color: '#6B6560', marginBottom: '8px' }}>BAC Datafono</div>
+              <input
+                type="text"
+                value={bac === 0 ? '' : bac.toLocaleString('es-CR')}
+                onChange={(e) => setBac(parsearMiles(e.target.value))}
+                placeholder="0"
+                inputMode="numeric"
+                style={{ width: '100%', border: 'none', padding: '0', fontSize: '20px', fontWeight: '600', fontFamily: "'DM Mono', monospace", outline: 'none' }}
+              />
+              <div style={{ fontSize: '12px', color: '#9C9590', marginTop: '2px' }}>colones (incluye comisión 13%)</div>
+            </div>
+            {totalCajeraBac > 0 && (
+              <div style={{ marginTop: '8px', fontSize: '12px', color: '#9C9590', textAlign: 'right' }}>
+                Cajera registró: {fmt(totalCajeraBac)}
+                {bac > 0 && (
+                  <span style={{ marginLeft: '8px', fontWeight: '700', color: bac === totalCajeraBac ? '#27AE60' : '#E74C3C' }}>
+                    {bac === totalCajeraBac ? '✓' : `Δ ${fmt(Math.abs(bac - totalCajeraBac))}`}
+                  </span>
+                )}
+              </div>
+            )}
           </div>
-          <div style={{ fontSize: '12px', color: '#6B6560', display: 'flex', justifyContent: 'space-between' }}>
-            <span>Cobrado: {fmtMonto(totalCajera)}</span>
-            <span style={{ fontWeight: '700', color: totalCajera === totalEnCaja ? '#27AE60' : '#E74C3C' }}>
-              {totalCajera === totalEnCaja ? '✅ Coincide' : `Diferencia: ${fmtMonto(Math.abs(totalCajera - totalEnCaja))}`}
-            </span>
+        </div>
+
+        {/* 3. SINPE */}
+        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+          <SeccionHeader num="3" titulo="SINPE Móvil" total={totalSinpe} />
+          <div style={{ padding: '16px' }}>
+            {sinpeRevisado.length > 0 ? (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+                  {sinpeRevisado.map((s, i) => (
+                    <div key={i} style={{ border: '1.5px solid #E2DDD4', borderRadius: '10px', padding: '12px', background: '#fff' }}>
+                      <div style={{ fontSize: '11px', color: '#9C9590', marginBottom: '4px' }}>
+                        {s.nombre_mascota || s.nombre_dueno || `Cobro ${i + 1}`}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#6B6560', marginBottom: '8px' }}>
+                        Cajera: <strong>{fmt(s.monto || 0)}</strong>
+                      </div>
+                      <input
+                        type="text"
+                        value={s.monto_revisado === 0 ? '' : s.monto_revisado.toLocaleString('es-CR')}
+                        onChange={(e) => {
+                          const u = [...sinpeRevisado];
+                          u[i] = { ...u[i], monto_revisado: parsearMiles(e.target.value) };
+                          setSinpeRevisado(u);
+                        }}
+                        placeholder="Monto visto"
+                        inputMode="numeric"
+                        style={{ width: '100%', padding: '6px 8px', border: '1px solid #E2DDD4', borderRadius: '6px', fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '600', textAlign: 'center' }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div style={{ padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#E8F3EC' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total SINPE</span>
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: GOLD }}>{fmt(totalSinpe)}</span>
+                </div>
+              </>
+            ) : (
+              <div style={{ padding: '20px', textAlign: 'center', color: '#9C9590', fontSize: '12px' }}>
+                No se registraron SINPE — ₡0
+              </div>
+            )}
           </div>
+        </div>
+
+        {/* 4. Transferencias */}
+        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+          <SeccionHeader num="4" titulo="Transferencias" total={totalTransf} />
+          <div style={{ padding: '16px' }}>
+            {transfRevisadas.length > 0 ? (
+              <>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
+                  {transfRevisadas.map((t, i) => (
+                    <div key={i} style={{ border: '1.5px solid #E2DDD4', borderRadius: '10px', padding: '12px', background: '#fff' }}>
+                      <div style={{ fontSize: '11px', color: '#9C9590', marginBottom: '4px' }}>
+                        {t.nombre_mascota || t.nombre_dueno || `Cobro ${i + 1}`}
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#6B6560', marginBottom: '8px' }}>
+                        Cajera: <strong>{fmt(t.monto || 0)}</strong>
+                      </div>
+                      <input
+                        type="text"
+                        value={t.monto_revisado === 0 ? '' : t.monto_revisado.toLocaleString('es-CR')}
+                        onChange={(e) => {
+                          const u = [...transfRevisadas];
+                          u[i] = { ...u[i], monto_revisado: parsearMiles(e.target.value) };
+                          setTransfRevisadas(u);
+                        }}
+                        placeholder="Monto visto"
+                        inputMode="numeric"
+                        style={{ width: '100%', padding: '6px 8px', border: '1px solid #E2DDD4', borderRadius: '6px', fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '600', textAlign: 'center' }}
+                      />
+                    </div>
+                  ))}
+                </div>
+                <div style={{ padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', background: '#E8F3EC' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total transferencias</span>
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '600', color: GOLD }}>{fmt(totalTransf)}</span>
+                </div>
+              </>
+            ) : (
+              <div style={{ padding: '20px', textAlign: 'center', color: '#9C9590', fontSize: '12px' }}>
+                No se registraron transferencias — ₡0
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Resumen */}
+        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+          <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
+            <div style={{ width: '26px', height: '26px', background: GOLD, color: 'white', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '14px', fontWeight: '600' }}>✓</div>
+            <div style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714' }}>Resumen de revisión</div>
+          </div>
+          <div style={{ padding: '20px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '12px' }}>
+              <div style={{ fontSize: '12px', color: '#6B6560' }}>Efectivo</div>
+              <div style={{ fontSize: '12px', fontWeight: '600', color: '#1A1714', textAlign: 'right', fontFamily: "'DM Mono', monospace" }}>{fmt(totalEfectivo)}</div>
+
+              <div style={{ fontSize: '12px', color: '#6B6560' }}>Tarjeta BAC</div>
+              <div style={{ fontSize: '12px', fontWeight: '600', color: '#1A1714', textAlign: 'right', fontFamily: "'DM Mono', monospace" }}>{fmt(totalBac)}</div>
+
+              <div style={{ fontSize: '12px', color: '#6B6560' }}>SINPE</div>
+              <div style={{ fontSize: '12px', fontWeight: '600', color: '#1A1714', textAlign: 'right', fontFamily: "'DM Mono', monospace" }}>{fmt(totalSinpe)}</div>
+
+              <div style={{ fontSize: '12px', color: '#6B6560' }}>Transferencias</div>
+              <div style={{ fontSize: '12px', fontWeight: '600', color: '#1A1714', textAlign: 'right', fontFamily: "'DM Mono', monospace" }}>{fmt(totalTransf)}</div>
+            </div>
+            <div style={{ borderTop: '2px solid #E2DDD4', paddingTop: '12px', marginBottom: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+              <div style={{ fontSize: '13px', fontWeight: '700', color: GOLD }}>TOTAL REVISADO</div>
+              <div style={{ fontSize: '13px', fontWeight: '700', color: GOLD, textAlign: 'right', fontFamily: "'DM Mono', monospace" }}>{fmt(totalRevisado)}</div>
+
+              <div style={{ fontSize: '12px', color: '#6B6560' }}>Total cajera</div>
+              <div style={{ fontSize: '12px', fontWeight: '600', color: '#1A1714', textAlign: 'right', fontFamily: "'DM Mono', monospace" }}>{fmt(totalCajera)}</div>
+            </div>
+            <div style={{
+              padding: '14px 16px',
+              borderRadius: '8px',
+              background: diferencia === 0 ? '#E8F3EC' : '#FDE8E8',
+              border: `1px solid ${diferencia === 0 ? '#27AE60' : '#E74C3C'}`,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <span style={{ fontSize: '12px', fontWeight: '600', color: diferencia === 0 ? '#27AE60' : '#E74C3C', textTransform: 'uppercase' }}>
+                {diferencia === 0 ? '✅ Coincide' : '⚠️ Diferencia'}
+              </span>
+              {diferencia !== 0 && (
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '16px', fontWeight: '700', color: '#E74C3C' }}>
+                  {diferencia > 0 ? '+' : ''}{fmt(diferencia)}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Botones */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginTop: '16px', marginBottom: '24px' }}>
+          <button
+            onClick={onVolver}
+            disabled={loading}
+            style={{ padding: '16px', background: '#F0EDE6', color: '#6B6560', border: '1.5px solid #E2DDD4', borderRadius: '12px', fontSize: '16px', fontWeight: '600', cursor: loading ? 'default' : 'pointer', transition: 'background 0.2s' }}
+            onMouseEnter={(e) => !loading && (e.currentTarget.style.background = '#E2DDD4')}
+            onMouseLeave={(e) => !loading && (e.currentTarget.style.background = '#F0EDE6')}
+          >
+            ✕ Volver
+          </button>
+          <button
+            onClick={guardarRevision}
+            disabled={loading}
+            style={{ padding: '16px', background: loading ? '#ccc' : GOLD, color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '600', cursor: loading ? 'default' : 'pointer', transition: 'background 0.2s' }}
+            onMouseEnter={(e) => !loading && (e.currentTarget.style.background = GOLD_DARK)}
+            onMouseLeave={(e) => !loading && (e.currentTarget.style.background = GOLD)}
+          >
+            {loading ? '⏳ Guardando...' : '✓ Guardar revisión'}
+          </button>
         </div>
 
         {/* Toast */}
         {toast && (
           <div style={{
-            position: 'fixed',
-            bottom: '20px',
-            left: '20px',
-            right: '20px',
-            maxWidth: '600px',
-            margin: '0 auto',
-            padding: '16px',
-            background: toast.type === 'error' ? '#FDEDEC' : toast.type === 'success' ? '#E8F3EC' : '#f0f0f0',
-            border: `1px solid ${toast.type === 'error' ? '#E74C3C' : toast.type === 'success' ? '#27AE60' : '#E2DDD4'}`,
-            borderRadius: '8px',
-            color: toast.type === 'error' ? '#C0392B' : toast.type === 'success' ? '#27AE60' : '#666',
-            fontSize: '14px',
-            fontWeight: '600',
-            zIndex: 9999,
-            animation: 'fadeIn 0.3s'
+            position: 'fixed', bottom: '20px', right: '20px',
+            background: toast.type === 'success' ? '#E8F3EC' : toast.type === 'error' ? '#FDEDEC' : '#F0EDE6',
+            border: `1.5px solid ${toast.type === 'success' ? '#27AE60' : toast.type === 'error' ? '#E74C3C' : '#E2DDD4'}`,
+            borderRadius: '8px', padding: '14px 16px',
+            color: toast.type === 'success' ? '#27AE60' : toast.type === 'error' ? '#C0392B' : '#6B6560',
+            fontSize: '13px', fontWeight: '600', maxWidth: '300px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.1)', zIndex: 9999,
           }}>
             {toast.msg}
           </div>
         )}
-
-        {/* Botones */}
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '24px' }}>
-          <button
-            onClick={onVolver}
-            disabled={loading}
-            style={{
-              padding: '12px',
-              background: '#F0EDE6',
-              color: '#6B6560',
-              border: '1.5px solid #E2DDD4',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.6 : 1,
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => !loading && (e.currentTarget.style.background = '#E2DDD4')}
-            onMouseLeave={(e) => !loading && (e.currentTarget.style.background = '#F0EDE6')}
-          >
-            ← Volver
-          </button>
-          <button
-            onClick={guardarRevision}
-            disabled={loading}
-            style={{
-              padding: '12px',
-              background: '#C8A84B',
-              color: 'white',
-              border: 'none',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: loading ? 'not-allowed' : 'pointer',
-              opacity: loading ? 0.6 : 1,
-              transition: 'all 0.2s'
-            }}
-            onMouseEnter={(e) => !loading && (e.currentTarget.style.background = '#A88A38')}
-            onMouseLeave={(e) => !loading && (e.currentTarget.style.background = '#C8A84B')}
-          >
-            {loading ? '⏳ Guardando...' : '💾 Guardar Revisión'}
-          </button>
-        </div>
       </div>
-
-      <style jsx>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(10px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
     </div>
   );
 }
