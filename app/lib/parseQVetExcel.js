@@ -85,7 +85,7 @@ export function parseQVetExcel(file, periodo) {
           if (!cierres[key]) {
             cierres[key] = {
               caja,
-              fecha: fecha.toString().split('T')[0], // Fecha sin hora
+              fecha: fechaObj.toISOString().split('T')[0], // Fecha sin hora
               efectivo: 0,
               tarjeta: 0,
               sinpe: 0,
@@ -106,8 +106,22 @@ export function parseQVetExcel(file, periodo) {
           if (salida > 0) cierres[key].salidas = salida;
         });
 
-        const result = Object.values(cierres);
+        const result = Object.values(cierres).map(cierre => ({
+          ...cierre,
+          fecha: typeof cierre.fecha === 'string' ? cierre.fecha : new Date(cierre.fecha).toISOString().split('T')[0],
+          caja: normalizarCaja(cierre.caja)
+        }));
+
+        console.log('Final parsed cierres:', result.map(c => ({ caja: c.caja, fecha: c.fecha })));
         resolve(result);
+
+      function normalizarCaja(caja) {
+        if (!caja) return caja;
+        const lower = caja.toLowerCase().trim();
+        if (lower.includes('clínica') || lower.includes('clinica')) return 'Caja 1 (clínica)';
+        if (lower.includes('caja 2')) return 'Caja 2';
+        return caja;
+      }
       } catch (err) {
         reject(new Error(`Error parsing Excel: ${err.message}`));
       }
