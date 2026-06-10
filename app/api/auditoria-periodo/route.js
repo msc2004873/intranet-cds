@@ -34,8 +34,7 @@ export async function GET(req) {
       6, 0, 0
     ) + (24 * 60 * 60 * 1000) - 1000).toISOString();
 
-    // Get audit rows with related closure info
-    // Filter by revision_caja.cierre_caja.fecha_hora, not revision_auditoria.created_at
+    // Get ALL audit rows with related closure info
     const { data, error } = await supabase
       .from('revision_auditoria')
       .select(`
@@ -49,14 +48,24 @@ export async function GET(req) {
             caja
           )
         )
-      `)
-      .gte('revision_caja.cierre_caja.fecha_hora', crDayStart)
-      .lte('revision_caja.cierre_caja.fecha_hora', crDayEnd)
-      .order('revision_caja.cierre_caja.fecha_hora', { ascending: true });
+      `);
 
     if (error) throw error;
 
-    return Response.json(data || []);
+    // Filter by closure date in client (Supabase doesn't support nested filters well)
+    const filtered = data.filter(row => {
+      const fechaCierre = new Date(row.revision_caja?.cierre_caja?.fecha_hora);
+      return fechaCierre >= new Date(crDayStart) && fechaCierre <= new Date(crDayEnd);
+    });
+
+    // Sort by closure date
+    filtered.sort((a, b) => {
+      const fechaA = new Date(a.revision_caja?.cierre_caja?.fecha_hora);
+      const fechaB = new Date(b.revision_caja?.cierre_caja?.fecha_hora);
+      return fechaA - fechaB;
+    });
+
+    return Response.json(filtered || []);
   } catch (error) {
     console.error('Error fetching audit rows by period:', error);
     return Response.json({ error: error.message }, { status: 500 });
