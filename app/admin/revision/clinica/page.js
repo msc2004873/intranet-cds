@@ -459,6 +459,14 @@ export default function RevisionClinicaPage() {
         {/* Tab: Auditoría */}
         {tabActivo === 'auditoria' && (
           <>
+            {revisionBloqueada ? (
+              <div style={{ background: '#FFF3CD', border: '1px solid #F39C12', borderRadius: '12px', padding: '32px 24px', textAlign: 'center', marginBottom: '24px' }}>
+                <div style={{ fontSize: '32px', marginBottom: '12px' }}>⏳</div>
+                <div style={{ fontSize: '16px', fontWeight: '700', color: '#F39C12', marginBottom: '8px' }}>Período en curso</div>
+                <div style={{ fontSize: '13px', color: '#9C9590' }}>La auditoría estará disponible una vez que termine el período</div>
+              </div>
+            ) : (
+            <>
             {/* Upload or Summary */}
             {auditRows.length === 0 ? (
               <div style={{ background: '#fff', border: '2px dashed #2a78a5', borderRadius: '12px', padding: '32px 24px', marginBottom: '24px', textAlign: 'center', cursor: 'pointer' }}
@@ -955,6 +963,8 @@ export default function RevisionClinicaPage() {
               <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', padding: '24px', textAlign: 'center', color: '#9C9590' }}>
                 ⬆️ Sube un Excel para ver el comparativo
               </div>
+            )}
+            </>
             )}
           </>
         )}
