@@ -26,31 +26,42 @@ export function generateAuditRows(cierreCaja, revisionCaja, qvetData) {
       montoQvet = qvetData.tarjeta || 0;
     } else if (tipo === 'SINPE') {
       // Cajera
-      const sinpeArray = cierreCaja.sinpe_json || [];
+      const sinpeArray = parsearJSON(cierreCaja.sinpe_json) || [];
       montoCajera = sinpeArray.reduce((sum, item) => sum + (item.monto || 0), 0);
       // Revisora
-      const sinpeRevisadoArray = revisionCaja.sinpe_revisado_json || [];
+      const sinpeRevisadoArray = parsearJSON(revisionCaja.sinpe_revisado_json) || [];
       montoRevisora = sinpeRevisadoArray.reduce((sum, item) => sum + (item.monto_revisado || item.monto || 0), 0);
       // QVet
       montoQvet = qvetData.sinpe || 0;
     } else if (tipo === 'TRANSFERENCIA') {
       // Cajera
-      const deposArray = cierreCaja.depositos_json || [];
+      const deposArray = parsearJSON(cierreCaja.depositos_json) || [];
       montoCajera = deposArray.reduce((sum, item) => sum + (item.monto || 0), 0);
       // Revisora
-      const deposRevisadoArray = revisionCaja.depositos_revisados_json || [];
+      const deposRevisadoArray = parsearJSON(revisionCaja.depositos_revisados_json) || [];
       montoRevisora = deposRevisadoArray.reduce((sum, item) => sum + (item.monto_revisado || item.monto || 0), 0);
       // QVet
       montoQvet = qvetData.transferencia || 0;
     } else if (tipo === 'SALIDAS') {
       // Cajera
-      const salidasArray = cierreCaja.salidas_json || [];
+      const salidasArray = parsearJSON(cierreCaja.salidas_json) || [];
       montoCajera = salidasArray.reduce((sum, item) => sum + (item.monto || 0), 0);
       // Revisora
-      const salidasRevisadoArray = revisionCaja.salidas_revisadas_json || [];
+      const salidasRevisadoArray = parsearJSON(revisionCaja.salidas_revisadas_json) || [];
       montoRevisora = salidasRevisadoArray.reduce((sum, item) => sum + (item.monto_revisado || item.monto || 0), 0);
       // QVet
       montoQvet = qvetData.salidas || 0;
+    }
+
+    function parsearJSON(value) {
+      if (typeof value === 'string') {
+        try {
+          return JSON.parse(value);
+        } catch (e) {
+          return [];
+        }
+      }
+      return Array.isArray(value) ? value : [];
     }
 
     // Calcular diferencias y severidad
