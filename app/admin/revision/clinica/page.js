@@ -37,6 +37,16 @@ export default function RevisionClinicaPage() {
   const [modalComentario, setModalComentario] = useState('');
   const [qvetRawData, setQvetRawData] = useState(null);
   const [showQvetDebug, setShowQvetDebug] = useState(false);
+  const [usuarioActual, setUsuarioActual] = useState(null);
+  const [modalDenominaciones, setModalDenominaciones] = useState({});
+  const [conteosPeriodo, setConteosPeriodo] = useState({});
+  const [guardandoConteo, setGuardandoConteo] = useState({});
+  const [conteoGuardado, setConteoGuardado] = useState({});
+
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('user') || '{}');
+    if (user?.nombre) setUsuarioActual(user);
+  }, []);
 
   useEffect(() => {
     const hoy = new Date();
@@ -89,6 +99,19 @@ export default function RevisionClinicaPage() {
             }
           } else {
             console.error('ℹ️ NO AUDIT DATA FOR THIS PERIOD');
+          }
+          // Load existing period denomination counts
+          const cRes = await fetch(`/api/conteo-auditoria-periodo?inicio=${periodo.inicio.toISOString().split('T')[0]}&fin=${periodo.fin.toISOString().split('T')[0]}`);
+          if (cRes.ok) {
+            const cData = await cRes.json();
+            const byKey = {};
+            cData.forEach(c => { byKey[c.caja] = c; });
+            if (Object.keys(byKey).length > 0) {
+              setConteosPeriodo(byKey);
+              const initDenoms = {};
+              cData.forEach(c => { initDenoms[c.caja] = c.denominaciones || {}; });
+              setConteoGuardado(Object.fromEntries(cData.map(c => [c.caja, true])));
+            }
           }
         } catch (err) {
           console.error('❌ Error loading audit data:', err);
@@ -882,8 +905,13 @@ export default function RevisionClinicaPage() {
 
                                   return (
                                     <tr
-                                      key={i}
-                                      onClick={() => hasDiff && setModalAuditRow(row)}
+                                                      key={i}
+                                      onClick={() => {
+                                        if (!hasDiff) return;
+                                        setModalAuditRow(row);
+                                        setModalComentario(row.comentario_auditoria || '');
+                                        setModalDenominaciones(row.denominaciones_auditoria || {});
+                                      }}
                                       style={{
                                         borderBottom: '1px solid #E2DDD4',
                                         background: hasDiff ? '#FDE8E8' : 'transparent',
@@ -1114,6 +1142,162 @@ export default function RevisionClinicaPage() {
                 )}
               </>
             )}
+
+            {/* Conteo de denominaciones del período */}
+            {auditRows.length > 0 && (() => {
+              const DENOMS = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 25, 10, 5];
+              const cajas = ['Caja 1 (clínica)', 'Caja 2'];
+              const totalQvetPorCaja = {};
+              cajas.forEach(c => {
+                totalQvetPorCaja[c] = auditRows
+                  .filter(r => r.caja === c && r.tipo_movimiento === 'EFECTIVO')
+                  .reduce((s, r) => s + (r.monto_qvet || 0), 0);
+              });
+
+              return (
+                <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
+                  <div style={{ fontSize: '15px', fontWeight: '700', color: '#1A1714', marginBottom: '4px' }}>
+                    Conteo de Denominaciones del Período
+                  </div>
+                  <div style={{ fontSize: '12px', color: '#9C9590', marginBottom: '20px' }}>
+                    Conteo físico del efectivo acumulado en el período — independiente de las denominaciones por cierre
+                  </div>
+
+                  {cajas.map(cajaName => {
+                    const denoms = conteosPeriodo[cajaName]?.denominaciones || {};
+                    const totalContado = DENOMS.reduce((s, d) => s + (parseInt(denoms[`c_${d}`] || 0) * d), 0);
+                    const diffVsQvet = totalContado - totalQvetPorCaja[cajaName];
+                    const diffColor = Math.abs(diffVsQvet) < 5 ? '#27AE60' : Math.abs(diffVsQvet) < 500 ? '#F39C12' : '#E74C3C';
+                    const yaGuardado = conteoGuardado[cajaName];
+
+                    return (
+                      <div key={cajaName} style={{ marginBottom: '24px', paddingBottom: '24px', borderBottom: '1px solid #E2DDD4' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
+                          <div style={{ fontSize: '13px', fontWeight: '700', color: '#1A1714' }}>{cajaName}</div>
+                          {yaGuardado && <div style={{ fontSize: '11px', color: '#27AE60', fontWeight: '600' }}>✅ Guardado · por {conteosPeriodo[cajaName]?.contado_por}</div>}
+                        </div>
+
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '8px', marginBottom: '12px' }}>
+                          {DENOMS.map((denom, idx) => {
+                            const key = `c_${denom}`;
+                            const qty = denoms[key] || 0;
+                            return (
+                              <div key={denom} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: '#F0EDE6', borderRadius: '6px', padding: '6px 10px' }}>
+                                <span style={{ fontSize: '11px', color: '#6B6560', fontWeight: '600', minWidth: '52px' }}>
+                                  ₡{denom.toLocaleString('es-CR')}
+                                </span>
+                                <span style={{ fontSize: '11px', color: '#9C9590' }}>×</span>
+                                <input
+                                  type="text"
+                                  inputMode="numeric"
+                                  value={qty === 0 ? '' : qty.toLocaleString('es-CR')}
+                                  placeholder="0"
+                                  onChange={(e) => {
+                                    const val = parseInt(e.target.value.replace(/\s/g, '')) || 0;
+                                    setConteosPeriodo(prev => ({
+                                      ...prev,
+                                      [cajaName]: {
+                                        ...(prev[cajaName] || {}),
+                                        denominaciones: {
+                                          ...(prev[cajaName]?.denominaciones || {}),
+                                          [key]: val
+                                        }
+                                      }
+                                    }));
+                                    setConteoGuardado(prev => ({ ...prev, [cajaName]: false }));
+                                  }}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === 'ArrowDown') {
+                                      e.preventDefault();
+                                      const inputs = document.querySelectorAll(`[data-conteo="${cajaName}"]`);
+                                      if (inputs[idx + 1]) inputs[idx + 1].focus();
+                                    }
+                                    if (e.key === 'ArrowUp') {
+                                      e.preventDefault();
+                                      const inputs = document.querySelectorAll(`[data-conteo="${cajaName}"]`);
+                                      if (inputs[idx - 1]) inputs[idx - 1].focus();
+                                    }
+                                  }}
+                                  data-conteo={cajaName}
+                                  style={{ width: '60px', padding: '4px 6px', border: '1px solid #E2DDD4', borderRadius: '4px', fontSize: '12px', fontFamily: 'inherit', background: '#fff', textAlign: 'right' }}
+                                />
+                                {qty > 0 && (
+                                  <span style={{ fontSize: '10px', color: '#9C9590', marginLeft: '2px' }}>
+                                    = ₡{(qty * denom).toLocaleString('es-CR')}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#F0EDE6', padding: '10px 14px', borderRadius: '8px', marginBottom: '12px' }}>
+                          <div>
+                            <span style={{ fontSize: '12px', color: '#6B6560' }}>Total contado: </span>
+                            <span style={{ fontSize: '14px', fontWeight: '700', color: '#1A1714' }}>₡{Math.round(totalContado).toLocaleString('es-CR')}</span>
+                          </div>
+                          <div>
+                            <span style={{ fontSize: '12px', color: '#6B6560' }}>QVet efectivo: </span>
+                            <span style={{ fontSize: '14px', fontWeight: '700', color: '#1A1714' }}>₡{Math.round(totalQvetPorCaja[cajaName]).toLocaleString('es-CR')}</span>
+                          </div>
+                          <div>
+                            <span style={{ fontSize: '12px', color: '#6B6560' }}>Diferencia: </span>
+                            <span style={{ fontSize: '14px', fontWeight: '700', color: diffColor }}>
+                              {Math.abs(diffVsQvet) < 5 ? '✓ Cuadra' : (diffVsQvet > 0 ? '+' : '') + '₡' + Math.abs(Math.round(diffVsQvet)).toLocaleString('es-CR')}
+                            </span>
+                          </div>
+                        </div>
+
+                        <button
+                          disabled={guardandoConteo[cajaName]}
+                          onClick={async () => {
+                            setGuardandoConteo(prev => ({ ...prev, [cajaName]: true }));
+                            try {
+                              const inicio = periodo.inicio.toISOString().split('T')[0];
+                              const fin = periodo.fin.toISOString().split('T')[0];
+                              const denominaciones = conteosPeriodo[cajaName]?.denominaciones || {};
+                              const total = DENOMS.reduce((s, d) => s + (parseInt(denominaciones[`c_${d}`] || 0) * d), 0);
+                              const res = await fetch('/api/conteo-auditoria-periodo', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  periodo_inicio: inicio,
+                                  periodo_fin: fin,
+                                  caja: cajaName,
+                                  denominaciones,
+                                  total_efectivo: total,
+                                  contado_por: usuarioActual?.nombre || 'Sistema'
+                                })
+                              });
+                              if (!res.ok) throw new Error('Error al guardar');
+                              const saved = await res.json();
+                              setConteosPeriodo(prev => ({ ...prev, [cajaName]: saved }));
+                              setConteoGuardado(prev => ({ ...prev, [cajaName]: true }));
+                            } catch (err) {
+                              alert('Error: ' + err.message);
+                            } finally {
+                              setGuardandoConteo(prev => ({ ...prev, [cajaName]: false }));
+                            }
+                          }}
+                          style={{
+                            padding: '10px 20px',
+                            background: conteoGuardado[cajaName] ? '#27AE60' : '#2a78a5',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '13px',
+                            fontWeight: '600',
+                            cursor: guardandoConteo[cajaName] ? 'wait' : 'pointer'
+                          }}
+                        >
+                          {guardandoConteo[cajaName] ? '⏳ Guardando...' : conteoGuardado[cajaName] ? '✅ Guardado' : '💾 Guardar conteo'}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
 
             {auditRows.length === 0 && !loadingAudit && (
               <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', padding: '24px', textAlign: 'center', color: '#9C9590' }}>

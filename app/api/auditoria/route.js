@@ -102,7 +102,7 @@ export async function GET(req) {
 
 export async function PUT(req) {
   try {
-    const { id, comentario_auditoria, archivo_url_comprobante } = await req.json();
+    const { id, comentario_auditoria, archivo_url_comprobante, comentado_por, denominaciones_auditoria } = await req.json();
 
     if (!id) {
       return new Response(
@@ -116,6 +116,8 @@ export async function PUT(req) {
       .update({
         comentario_auditoria,
         archivo_url_comprobante,
+        comentado_por,
+        denominaciones_auditoria,
       })
       .eq('id', id);
 
