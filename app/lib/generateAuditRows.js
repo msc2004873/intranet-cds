@@ -67,15 +67,21 @@ export function generateAuditRows(cierreCaja, revisionCaja, qvetData) {
     // Calcular diferencias y severidad
     const diferenciaRevision = montoRevisora - montoCajera;
     const diferenciaAuditoria = montoQvet - montoRevisora;
+    const diferenciaCajeraQvet = montoQvet - montoCajera; // La diferencia real
 
     const calcularSeveridad = (diferencia) => {
-      if (Math.abs(diferencia) < 50) return 'GREEN';
-      if (Math.abs(diferencia) < 500) return 'YELLOW';
+      const abs = Math.abs(diferencia);
+      if (abs < 50) return 'GREEN';
+      if (abs < 500) return 'YELLOW';
       return 'RED';
     };
 
     const severidadRevision = calcularSeveridad(diferenciaRevision);
-    const severidadAuditoria = calcularSeveridad(diferenciaAuditoria);
+    // Severidad de auditoría basada en la mayor diferencia encontrada
+    const severidadAuditoria = calcularSeveridad(Math.max(
+      Math.abs(diferenciaAuditoria),
+      Math.abs(diferenciaCajeraQvet)
+    ));
 
     rows.push({
       revision_caja_id: revisionCaja.id,

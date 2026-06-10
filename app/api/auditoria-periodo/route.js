@@ -38,9 +38,11 @@ export async function GET(req) {
       .from('revision_auditoria')
       .select(`
         *,
-        revision_caja (
+        revision_caja!inner (
+          id,
           cierre_caja_id,
-          cierre_caja (
+          cierre_caja!inner (
+            id,
             fecha_hora,
             caja
           )
@@ -48,7 +50,7 @@ export async function GET(req) {
       `)
       .gte('created_at', crDayStart)
       .lte('created_at', crDayEnd)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: true });
 
     if (error) throw error;
 
