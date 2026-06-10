@@ -534,15 +534,16 @@ export default function RevisionClinicaPage() {
                       return match;
                     });
                     if (!qvetCierre) {
-                      console.error(`❌ NO MATCH: caja="${cierre.caja}", fecha="${cierreFecha}"`);
-                      continue;
+                      console.error(`⚠️ NO MATCH in Excel: ${cierre.caja}|${cierreFecha} — se incluye con QVet=0`);
                     }
+                    // Always include the cierre, even without QVet data, so no day goes invisible
+                    const qvetParaComparar = qvetCierre || { efectivo: 0, tarjeta: 0, sinpe: 0, transferencia: 0, salidas: 0, sinMatchQvet: true };
 
                     const revRes = await fetch(`/api/revision?cierre_id=${cierre.id}`);
                     if (!revRes.ok) continue;
                     const revision = await revRes.json();
 
-                    const rows = generateAuditRows(cierre, revision, qvetCierre);
+                    const rows = generateAuditRows(cierre, revision, qvetParaComparar);
                     allAuditRows.push(...rows);
                   }
 
@@ -628,7 +629,11 @@ export default function RevisionClinicaPage() {
                       // Use CR date for comparison (Supabase stores UTC, parser stores CR date)
                       const cierreFechaCR = toCRDate(cierre.fecha_hora);
                       const qvetCierre = qvetData.find(q => q.caja === cierre.caja && q.fecha === cierreFechaCR);
-                      if (!qvetCierre) continue;
+                      if (!qvetCierre) {
+                        console.error(`⚠️ NO MATCH in Excel: ${cierre.caja}|${cierreFechaCR} — se incluye con QVet=0`);
+                      }
+                      // Always include, even without QVet match
+                      const qvetParaComparar = qvetCierre || { efectivo: 0, tarjeta: 0, sinpe: 0, transferencia: 0, salidas: 0, sinMatchQvet: true };
 
                       // Buscar revision_caja
                       const revRes = await fetch(`/api/revision?cierre_id=${cierre.id}`);
@@ -636,7 +641,7 @@ export default function RevisionClinicaPage() {
                       const revision = await revRes.json();
 
                       // Generar filas
-                      const rows = generateAuditRows(cierre, revision, qvetCierre);
+                      const rows = generateAuditRows(cierre, revision, qvetParaComparar);
                       allAuditRows.push(...rows);
                     }
 

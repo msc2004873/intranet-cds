@@ -106,24 +106,14 @@ export function parseQVetExcel(file, periodo) {
           const periodoStart = periodo.inicio.toISOString().split('T')[0];
           const periodoEnd = periodo.fin.toISOString().split('T')[0];
 
-          // Compute CR date FIRST, then filter by it.
-          // XLSX with cellDates:true returns Excel serials as UTC, treating the stored
-          // CR local time value as UTC. So "18:54 CR" comes in as hour=18 UTC (not 0).
-          // For pure date cells (midnight, hour=0), +18h stays on the same day.
-          // For all other times (>=6), subtract 6h to get CR date.
-          const hour = fechaObj.getUTCHours();
-          let fechaKey;
-          if (hour < 6) {
-            // Pure date cell (midnight UTC) or very early CR time stored as UTC.
-            // +18h keeps us on the correct same day without crossing into previous day.
-            const fechaCR = new Date(fechaObj.getTime() + 18 * 60 * 60 * 1000);
-            fechaKey = fechaCR.toISOString().split('T')[0];
-          } else {
-            // Date+time cell: XLSX stored CR local time as UTC value.
-            // Subtract 6h gives the correct CR date (e.g., 18:54 UTC → 12:54 UTC → same date).
-            const fechaCR = new Date(fechaObj.getTime() - 6 * 60 * 60 * 1000);
-            fechaKey = fechaCR.toISOString().split('T')[0];
-          }
+          // XLSX 0.18.x creates Date objects using LOCAL timezone (setFullYear/setHours local).
+          // In a CR browser (UTC-6) the local date components ARE the CR date.
+          // "June 1, 18:54 CR" → local .getDate()=1 → "2026-06-01" ✓
+          // Do NOT use getUTCHours() — evenings in CR cross UTC midnight, breaking UTC math.
+          const y = fechaObj.getFullYear();
+          const mo = String(fechaObj.getMonth() + 1).padStart(2, '0');
+          const dd = String(fechaObj.getDate()).padStart(2, '0');
+          const fechaKey = `${y}-${mo}-${dd}`;
 
           console.error(`📍 Row ${idx}: ${caja} | CR:${fechaKey} | ${forma} | ₡${monto}`);
 
