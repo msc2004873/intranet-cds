@@ -1146,12 +1146,11 @@ export default function RevisionClinicaPage() {
             {/* Conteo de denominaciones del período — Depósito CDS */}
             {auditRows.length > 0 && (() => {
               const DENOMS_CRC = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 25, 10, 5];
-              const DENOMS_USD = [100, 50, 20, 10, 5, 1];
               const totalRevCRC = auditRows
                 .filter(r => r.tipo_movimiento === 'EFECTIVO')
                 .reduce((s, r) => s + (r.monto_revisora || 0), 0);
               const totalContadoCRC = DENOMS_CRC.reduce((s, d) => s + ((denomsColones[d] || 0) * d), 0);
-              const totalContadoUSD = DENOMS_USD.reduce((s, d) => s + ((denomsUSD[d] || 0) * d), 0);
+              const totalContadoUSD = denomsUSD.total || 0;
               const diffCRC = totalContadoCRC - totalRevCRC;
               const diffColorCRC = Math.abs(diffCRC) < 5 ? '#27AE60' : Math.abs(diffCRC) < 500 ? '#F39C12' : '#E74C3C';
 
@@ -1215,32 +1214,25 @@ export default function RevisionClinicaPage() {
 
                     {/* USD */}
                     <div style={{ fontSize: '12px', fontWeight: '700', color: '#6B6560', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.5px' }}>Dólares — ambas cajas</div>
-                    {DENOMS_USD.map((d, idx) => (
-                      <div key={d} style={{ display: 'grid', gridTemplateColumns: '100px 1fr 120px', alignItems: 'center', gap: '10px', padding: '6px 0', borderBottom: '1px solid #E2DDD4' }}>
-                        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#6B6560', fontWeight: '500' }}>${d}</div>
-                        <input
-                          type="text"
-                          inputMode="numeric"
-                          ref={el => { window[`inputDepUSD${idx}`] = el; }}
-                          value={denomsUSD[d] === 0 || !denomsUSD[d] ? '' : denomsUSD[d].toLocaleString('es-CR')}
-                          placeholder="0"
-                          onChange={(e) => {
-                            const val = parseInt(e.target.value.replace(/\s/g, '')) || 0;
-                            setDenomsUSD(prev => ({ ...prev, [d]: val }));
-                            setDepositoGuardado(false);
-                          }}
-                          onKeyDown={(e) => {
-                            if (e.key === 'Enter' || e.key === 'ArrowDown') { e.preventDefault(); window[`inputDepUSD${idx + 1}`]?.focus(); }
-                            if (e.key === 'ArrowUp') { e.preventDefault(); window[`inputDepUSD${idx - 1}`]?.focus(); }
-                          }}
-                          style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '15px', fontWeight: '500', textAlign: 'center', fontFamily: "'DM Mono', monospace" }}
-                        />
-                        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#C8A84B', fontWeight: '600', textAlign: 'right' }}>
-                          {(denomsUSD[d] || 0) > 0 ? fmtUSD((denomsUSD[d] || 0) * d) : '—'}
-                        </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '100px 1fr 120px', alignItems: 'center', gap: '10px', padding: '6px 0', borderBottom: '1px solid #E2DDD4', marginBottom: '12px' }}>
+                      <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#6B6560', fontWeight: '500' }}>Total US$</div>
+                      <input
+                        type="text"
+                        inputMode="decimal"
+                        value={denomsUSD.total === 0 || !denomsUSD.total ? '' : denomsUSD.total.toLocaleString('en-US')}
+                        placeholder="0"
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value.replace(/,/g, '')) || 0;
+                          setDenomsUSD({ total: val });
+                          setDepositoGuardado(false);
+                        }}
+                        style={{ width: '100%', padding: '8px 10px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '15px', fontWeight: '500', textAlign: 'center', fontFamily: "'DM Mono', monospace" }}
+                      />
+                      <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', color: '#C8A84B', fontWeight: '600', textAlign: 'right' }}>
+                        {totalContadoUSD > 0 ? fmtUSD(totalContadoUSD) : '—'}
                       </div>
-                    ))}
-                    <div style={{ marginTop: '12px', padding: '12px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#FBF6E9', marginBottom: '20px' }}>
+                    </div>
+                    <div style={{ padding: '12px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#FBF6E9', marginBottom: '20px' }}>
                       <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total USD</span>
                       <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '700', color: '#C8A84B' }}>{fmtUSD(totalContadoUSD)}</span>
                     </div>
