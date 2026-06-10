@@ -707,25 +707,6 @@ export default function RevisionClinicaPage() {
                     );
                   })()}
                 </div>
-
-                <button
-                  onClick={() => {
-                    setAuditRows([]);
-                    setAuditError(null);
-                  }}
-                  style={{
-                    padding: '10px 16px',
-                    background: '#2a78a5',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '6px',
-                    fontSize: '12px',
-                    fontWeight: '600',
-                    cursor: 'pointer'
-                  }}
-                >
-                  🔄 Subir otro Excel
-                </button>
               </div>
             )}
 
