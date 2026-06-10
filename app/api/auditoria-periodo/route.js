@@ -18,21 +18,17 @@ export async function GET(req) {
       );
     }
 
-    // Fetch audit rows for all closures in the period
-    // Filter by CLOSURE DATE (fecha_hora), not by when audit was created
-    const crDayStart = new Date(Date.UTC(
-      parseInt(inicio.split('-')[0]),
-      parseInt(inicio.split('-')[1]) - 1,
-      parseInt(inicio.split('-')[2]),
-      6, 0, 0
-    )).toISOString();
+    // CRITICAL: Filter by CLOSURE DATE (fecha_hora) in COSTA RICA timezone, not UTC
+    // A day in CR (2026-06-05 00:00 CR) spans from 06:00 UTC that day to 05:59 UTC next day
+    // This fixes the bug where Caja 1 closures at 00:54 UTC (18:54 CR) were assigned to wrong day
 
-    const crDayEnd = new Date(Date.UTC(
-      parseInt(fin.split('-')[0]),
-      parseInt(fin.split('-')[1]) - 1,
-      parseInt(fin.split('-')[2]),
-      6, 0, 0
-    ) + (24 * 60 * 60 * 1000) - 1000).toISOString();
+    // Parse inicio date (CR) and convert to UTC range
+    const inicioDate = new Date(`${inicio}T00:00:00`);
+    const crDayStart = new Date(inicioDate.getTime() + 6 * 60 * 60 * 1000).toISOString();
+
+    // Parse fin date (CR) and convert to UTC range (end of day)
+    const finDate = new Date(`${fin}T23:59:59`);
+    const crDayEnd = new Date(finDate.getTime() + 6 * 60 * 60 * 1000).toISOString();
 
     // Get ALL audit rows with related closure info
     const { data, error } = await supabase

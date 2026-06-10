@@ -2,7 +2,7 @@ import Script from 'next/script';
 import './globals.css';
 
 export const metadata = {
-  title: 'Corral del Sol - Cierre de Caja',
+  title: 'App Corral del Sol',
   description: 'Sistema de cierre de caja veterinaria',
   manifest: '/manifest.json',
   icons: {
