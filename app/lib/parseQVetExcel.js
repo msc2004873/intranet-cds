@@ -40,8 +40,9 @@ export function parseQVetExcel(file, periodo) {
         const formasPago = ['EFECTIVO', 'TARJETA', 'SINPE MOVIL', 'TRANSFERENCIA', 'OTRO'];
         const cierres = {};
 
-        console.log('Parser - Columns:', colMap);
-        console.log('Parser - Period:', { inicio: periodo.inicio, fin: periodo.fin });
+        console.log('🔍 PARSER - Total rows in Excel:', rows.length);
+        console.log('🔍 PARSER - Columns:', colMap);
+        console.log('🔍 PARSER - Period:', { inicio: periodo.inicio, fin: periodo.fin });
 
         rows.forEach((row, idx) => {
           const caja = row[colMap.caja]?.trim();
@@ -77,7 +78,7 @@ export function parseQVetExcel(file, periodo) {
           const periodoStart = periodo.inicio.toISOString().split('T')[0];
           const periodoEnd = periodo.fin.toISOString().split('T')[0];
 
-          console.log(`Row ${idx}: caja=${caja}, fecha=${fechaStr}, forma=${forma}, monto=${monto}`);
+          console.error(`📍 Row ${idx}: ${caja} | ${fechaStr} | ${forma} | ₡${monto}`);
 
           // Compare dates as strings (YYYY-MM-DD) to include FULL day (including end of day 5)
           if (fechaStr < periodoStart || fechaStr > periodoEnd) {
