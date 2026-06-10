@@ -557,9 +557,7 @@ export default function RevisionClinicaPage() {
 
                   // ✅ RELOAD from API to get complete structure with relations
                   console.error('🔄 RELOADING AUDIT DATA WITH RELATIONS...');
-                  const inicio = periodo.inicio.toISOString().split('T')[0];
-                  const fin = periodo.fin.toISOString().split('T')[0];
-                  const reloadRes = await fetch(`/api/auditoria-periodo?inicio=${inicio}&fin=${fin}`);
+                  const reloadRes = await fetch(`/api/auditoria-periodo?inicio=${periodo.inicio.toISOString().split('T')[0]}&fin=${periodo.fin.toISOString().split('T')[0]}`);
                   const reloadedData = reloadRes.ok ? await reloadRes.json() : [];
 
                   if (reloadedData.length > 0) {
