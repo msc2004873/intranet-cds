@@ -116,9 +116,22 @@ export function parseQVetExcel(file, periodo) {
           }
 
           // CRITICAL: Group by CR date, not UTC date
-          // Convert UTC to CR (UTC-6) to group correctly
-          const fechaCR = new Date(fechaObj.getTime() - 6 * 60 * 60 * 1000);
-          const fechaKey = fechaCR.toISOString().split('T')[0]; // YYYY-MM-DD in CR
+          // Caja 1 closures at 18:54 CR = 00:54 UTC NEXT day
+          // Closures < 06:00 UTC represent the NEXT day in CR (e.g., 00:54 UTC = 18:54 CR previous day)
+          // So: if closure < 06:00 UTC, ADD 1 day to get the CR date. Otherwise just convert.
+          const hour = fechaObj.getUTCHours();
+          let fechaKey;
+          if (hour < 6) {
+            // Madrugada UTC = represents previous CR day's evening
+            // 2026-06-05 00:54 UTC = 2026-06-04 18:54 CR, but Caja 1 closes at 18:54 CR on the NEXT day
+            // So ADD 1 day to get correct CR date
+            const fechaCR = new Date(fechaObj.getTime() + 18 * 60 * 60 * 1000); // +18 hours to skip to next day
+            fechaKey = fechaCR.toISOString().split('T')[0];
+          } else {
+            // Normal time, just subtract 6 hours for CR
+            const fechaCR = new Date(fechaObj.getTime() - 6 * 60 * 60 * 1000);
+            fechaKey = fechaCR.toISOString().split('T')[0];
+          }
           const key = `${caja}|${fechaKey}`;
 
           if (!cierres[key]) {
