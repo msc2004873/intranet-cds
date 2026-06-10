@@ -27,6 +27,7 @@ export default function RevisionClinicaPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [cierreEnRevision, setCierreEnRevision] = useState(null);
+  const [revisionAVer, setRevisionAVer] = useState(null);
   const [periodoActualAlMontar, setPeriodoActualAlMontar] = useState(null);
   const [tabActivo, setTabActivo] = useState('cierres');
   const [auditRows, setAuditRows] = useState([]);
@@ -298,9 +299,99 @@ export default function RevisionClinicaPage() {
                         <div style={{ fontSize: '12px', color: '#9C9590', whiteSpace: 'nowrap' }}>
                           {cierre.fecha_hora ? new Date(cierre.fecha_hora).toLocaleDateString('es-CR') + ' — ' + new Date(cierre.fecha_hora).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }) : 'Fecha inválida'}
                         </div>
+                        <button
+                          onClick={async () => {
+                            const rev = await fetch(`/api/revision?cierre_id=${cierre.id}`).then(r => r.json());
+                            setRevisionAVer({ ...rev, cierre });
+                          }}
+                          style={{
+                            padding: '8px 16px',
+                            background: '#27AE60',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            whiteSpace: 'nowrap'
+                          }}
+                          onMouseEnter={(e) => e.currentTarget.style.background = '#1e7e42'}
+                          onMouseLeave={(e) => e.currentTarget.style.background = '#27AE60'}
+                        >
+                          👁️ Ver
+                        </button>
                       </div>
                     </div>
                   ))}
+                </div>
+              </div>
+            )}
+
+            {/* Modal: Ver Resumen de Revisión */}
+            {revisionAVer && (
+              <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+                <div style={{ background: '#fff', borderRadius: '12px', maxWidth: '600px', width: '90%', maxHeight: '80vh', overflowY: 'auto', padding: '24px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                    <div style={{ fontSize: '18px', fontWeight: '700', color: '#1A1714' }}>Resumen de Revisión</div>
+                    <button onClick={() => setRevisionAVer(null)} style={{ background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer', color: '#9C9590' }}>✕</button>
+                  </div>
+
+                  {/* Info del Cierre */}
+                  <div style={{ background: '#F0EDE6', padding: '16px', borderRadius: '8px', marginBottom: '16px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', marginBottom: '8px' }}>Cierre</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '14px' }}>
+                      <div><span style={{ fontWeight: '600' }}>Cajera:</span> {revisionAVer.cierre.cajera}</div>
+                      <div><span style={{ fontWeight: '600' }}>Caja:</span> {revisionAVer.cierre.caja}</div>
+                      <div style={{ gridColumn: '1/-1' }}><span style={{ fontWeight: '600' }}>Fecha:</span> {new Date(revisionAVer.cierre.fecha_hora).toLocaleDateString('es-CR')} {new Date(revisionAVer.cierre.fecha_hora).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' })}</div>
+                    </div>
+                  </div>
+
+                  {/* Info de la Revisión */}
+                  <div style={{ background: '#E8F3EC', padding: '16px', borderRadius: '8px', marginBottom: '16px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: '600', color: '#27AE60', textTransform: 'uppercase', marginBottom: '8px' }}>Revisión</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '14px' }}>
+                      <div><span style={{ fontWeight: '600' }}>Revisora:</span> {revisionAVer.revisora}</div>
+                      <div><span style={{ fontWeight: '600' }}>TC Período:</span> {revisionAVer.tc || 'N/A'}</div>
+                      <div style={{ gridColumn: '1/-1' }}><span style={{ fontWeight: '600' }}>Efectivo Revisado:</span> ₡{(revisionAVer.efectivo_revisado || 0).toLocaleString('es-CR')}</div>
+                    </div>
+                  </div>
+
+                  {/* Comparativo */}
+                  <div style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', marginBottom: '12px' }}>Comparativo</div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', fontSize: '13px', marginBottom: '16px' }}>
+                    <div style={{ background: '#F0EDE6', padding: '12px', borderRadius: '6px' }}>
+                      <div style={{ fontWeight: '600', marginBottom: '4px' }}>Cajera</div>
+                      <div style={{ color: '#6B6560' }}>Tarjeta: ₡{((revisionAVer.cierre.tarjeta_bac || 0) + (revisionAVer.cierre.tarjeta_bn || 0)).toLocaleString('es-CR')}</div>
+                    </div>
+                    <div style={{ background: '#E8F3EC', padding: '12px', borderRadius: '6px' }}>
+                      <div style={{ fontWeight: '600', marginBottom: '4px', color: '#27AE60' }}>Revisora</div>
+                      <div style={{ color: '#6B6560' }}>Tarjeta: ₡{((revisionAVer.tarjeta_bac_revisado || 0) + (revisionAVer.tarjeta_bn_revisado || 0)).toLocaleString('es-CR')}</div>
+                    </div>
+                    <div style={{ background: '#FDE8E8', padding: '12px', borderRadius: '6px' }}>
+                      <div style={{ fontWeight: '600', marginBottom: '4px', color: '#E74C3C' }}>Diferencia</div>
+                      <div style={{ color: '#6B6560' }}>
+                        Δ ₡{(Math.abs(((revisionAVer.tarjeta_bac_revisado || 0) + (revisionAVer.tarjeta_bn_revisado || 0)) - ((revisionAVer.cierre.tarjeta_bac || 0) + (revisionAVer.cierre.tarjeta_bn || 0)))).toLocaleString('es-CR')}
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setRevisionAVer(null)}
+                    style={{
+                      width: '100%',
+                      padding: '12px',
+                      background: '#2a78a5',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '8px',
+                      fontSize: '14px',
+                      fontWeight: '600',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    Cerrar
+                  </button>
                 </div>
               </div>
             )}
