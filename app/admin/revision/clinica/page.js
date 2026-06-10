@@ -1228,12 +1228,6 @@ export default function RevisionClinicaPage() {
                           <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total Dólares</span>
                           <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '20px', fontWeight: '700', color: '#C8A84B' }}>{fmtUSD(totalContadoUSD)}</span>
                         </div>
-                        <button
-                          onClick={() => setDepositoGuardado(false)}
-                          style={{ padding: '8px 16px', background: 'transparent', color: '#9C9590', border: '1px solid #E2DDD4', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
-                        >
-                          Editar conteo
-                        </button>
                       </>
                     ) : (
                     <>
