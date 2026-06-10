@@ -118,6 +118,18 @@ export default function RevisionClinicaPage() {
     periodo.inicio.getMonth() === mesHoy &&
     periodo.inicio.getFullYear() === anoHoy;
 
+  const revisionVencida = (() => {
+    if (!periodo) return false;
+    const hoy = new Date();
+    const hoyNorm = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+    const ano = periodo.inicio.getFullYear();
+    const mes = periodo.inicio.getMonth();
+    const deadline = periodo.num < 6
+      ? new Date(ano, mes, [6, 11, 16, 21, 26][periodo.num - 1])
+      : new Date(ano, mes + 1, 1);
+    return hoyNorm > deadline;
+  })();
+
   const cierresPendientes = cierres.filter(c => !cierresRevisadosIds.has(c.id));
   const cierresRevisados = cierres.filter(c => cierresRevisadosIds.has(c.id));
 
@@ -189,8 +201,8 @@ export default function RevisionClinicaPage() {
         {periodo && (
           <>
             <div style={{
-              background: esActual ? '#E8F3EC' : '#FDE8E8',
-              border: `1px solid ${esActual ? '#27AE60' : '#E74C3C'}`,
+              background: esActual ? '#E8F3EC' : revisionVencida ? '#F0EDE6' : '#FDE8E8',
+              border: `1px solid ${esActual ? '#27AE60' : revisionVencida ? '#9C9590' : '#E74C3C'}`,
               borderRadius: '12px',
               padding: '16px',
               marginBottom: '24px'
@@ -198,8 +210,9 @@ export default function RevisionClinicaPage() {
               <div style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', marginBottom: '6px' }}>
                 Período seleccionado
               </div>
-              <div style={{ fontSize: '16px', fontWeight: '700', color: esActual ? '#27AE60' : '#E74C3C' }}>
+              <div style={{ fontSize: '16px', fontWeight: '700', color: esActual ? '#27AE60' : revisionVencida ? '#9C9590' : '#E74C3C' }}>
                 P{periodo.num}: {periodo.inicio.toLocaleDateString('es-CR')} — {periodo.fin.toLocaleDateString('es-CR')}
+                {revisionVencida && <span style={{ fontSize: '13px', marginLeft: '8px' }}>🔒 Vencido</span>}
               </div>
             </div>
 
@@ -245,7 +258,8 @@ export default function RevisionClinicaPage() {
             {cierresPendientes.length > 0 && (
               <div style={{ marginBottom: '24px' }}>
                 <div style={{ fontSize: '14px', fontWeight: '700', color: '#1A1714', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  ⏳ Pendientes ({cierresPendientes.length})
+                  {revisionVencida ? '🔒' : '⏳'} {revisionVencida ? 'Sin revisar' : 'Pendientes'} ({cierresPendientes.length})
+                  {revisionVencida && <span style={{ fontSize: '11px', fontWeight: '500', color: '#9C9590' }}>— período vencido</span>}
                 </div>
                 <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden' }}>
                   {cierresPendientes.map((cierre, i) => (
@@ -257,25 +271,39 @@ export default function RevisionClinicaPage() {
                         <div style={{ fontSize: '12px', color: '#9C9590', whiteSpace: 'nowrap' }}>
                           {cierre.fecha_hora ? new Date(cierre.fecha_hora).toLocaleDateString('es-CR') + ' — ' + new Date(cierre.fecha_hora).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }) : 'Fecha inválida'}
                         </div>
-                        <button
-                          onClick={() => setCierreEnRevision(cierre)}
-                          style={{
+                        {revisionVencida ? (
+                          <span style={{
                             padding: '8px 16px',
-                            background: '#2a78a5',
-                            color: 'white',
-                            border: 'none',
+                            background: '#F0EDE6',
+                            color: '#9C9590',
                             borderRadius: '6px',
                             fontSize: '12px',
                             fontWeight: '600',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
                             whiteSpace: 'nowrap'
-                          }}
-                          onMouseEnter={(e) => e.currentTarget.style.background = '#1f5a7d'}
-                          onMouseLeave={(e) => e.currentTarget.style.background = '#2a78a5'}
-                        >
-                          Revisar
-                        </button>
+                          }}>
+                            🔒 Vencido
+                          </span>
+                        ) : (
+                          <button
+                            onClick={() => setCierreEnRevision(cierre)}
+                            style={{
+                              padding: '8px 16px',
+                              background: '#2a78a5',
+                              color: 'white',
+                              border: 'none',
+                              borderRadius: '6px',
+                              fontSize: '12px',
+                              fontWeight: '600',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              whiteSpace: 'nowrap'
+                            }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = '#1f5a7d'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = '#2a78a5'}
+                          >
+                            Revisar
+                          </button>
+                        )}
                       </div>
                     </div>
                   ))}

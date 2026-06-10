@@ -248,6 +248,18 @@ export default function RevisionGloryPage() {
     );
   }
 
+  const revisionVencida = (() => {
+    if (!periodo) return false;
+    const hoy = new Date();
+    const hoyNorm = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
+    const ano = periodo.inicio.getFullYear();
+    const mes = periodo.inicio.getMonth();
+    const deadline = periodo.num < 6
+      ? new Date(ano, mes, [6, 11, 16, 21, 26][periodo.num - 1])
+      : new Date(ano, mes + 1, 1);
+    return hoyNorm > deadline;
+  })();
+
   // Agrupar días por estado (pendientes/revisados)
   const diasOrdenados = Object.keys(cobrosPorDia).sort((a, b) => {
     // Parsear fechas en formato CR (31/5/2026) a ISO
@@ -282,12 +294,19 @@ export default function RevisionGloryPage() {
 
         {/* Período actual */}
         {periodo && (
-          <div style={{ background: '#FBF6E9', border: '1px solid #C8A84B', borderRadius: '12px', padding: '16px', marginBottom: '24px' }}>
+          <div style={{
+            background: revisionVencida ? '#F0EDE6' : '#FBF6E9',
+            border: `1px solid ${revisionVencida ? '#9C9590' : '#C8A84B'}`,
+            borderRadius: '12px',
+            padding: '16px',
+            marginBottom: '24px'
+          }}>
             <div style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', marginBottom: '6px' }}>
               Período seleccionado
             </div>
-            <div style={{ fontSize: '16px', fontWeight: '700', color: '#C8A84B' }}>
+            <div style={{ fontSize: '16px', fontWeight: '700', color: revisionVencida ? '#9C9590' : '#C8A84B' }}>
               P{periodo.num}: {periodo.inicio.toLocaleDateString('es-CR')} — {periodo.fin.toLocaleDateString('es-CR')}
+              {revisionVencida && <span style={{ fontSize: '13px', marginLeft: '8px' }}>🔒 Vencido</span>}
             </div>
           </div>
         )}
@@ -301,7 +320,8 @@ export default function RevisionGloryPage() {
             {diasPendientes.length > 0 && (
               <div style={{ marginBottom: '24px' }}>
                 <div style={{ fontSize: '14px', fontWeight: '700', color: '#1A1714', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  ⏳ Pendientes ({diasPendientes.length})
+                  {revisionVencida ? '🔒' : '⏳'} {revisionVencida ? 'Sin revisar' : 'Pendientes'} ({diasPendientes.length})
+                  {revisionVencida && <span style={{ fontSize: '11px', fontWeight: '500', color: '#9C9590' }}>— período vencido</span>}
                 </div>
                 <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden' }}>
                   {diasPendientes.map((fecha, idx) => {
@@ -326,32 +346,46 @@ export default function RevisionGloryPage() {
                               {fmt(totalDia)}
                             </div>
                           </div>
-                          <button
-                            onClick={() => {
-                              const cajera = cajerasEnDia[0];
-                              setDiaEnRevision({
-                                fecha,
-                                cajera,
-                                cobros: cobrosPorDia[fecha][cajera] || [],
-                              });
-                            }}
-                            style={{
+                          {revisionVencida ? (
+                            <span style={{
                               padding: '8px 16px',
-                              background: '#C8A84B',
-                              color: 'white',
-                              border: 'none',
+                              background: '#F0EDE6',
+                              color: '#9C9590',
                               borderRadius: '6px',
                               fontSize: '12px',
                               fontWeight: '600',
-                              cursor: 'pointer',
-                              transition: 'all 0.2s',
                               whiteSpace: 'nowrap'
-                            }}
-                            onMouseEnter={(e) => e.currentTarget.style.background = '#A88A38'}
-                            onMouseLeave={(e) => e.currentTarget.style.background = '#C8A84B'}
-                          >
-                            Revisar
-                          </button>
+                            }}>
+                              🔒 Vencido
+                            </span>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                const cajera = cajerasEnDia[0];
+                                setDiaEnRevision({
+                                  fecha,
+                                  cajera,
+                                  cobros: cobrosPorDia[fecha][cajera] || [],
+                                });
+                              }}
+                              style={{
+                                padding: '8px 16px',
+                                background: '#C8A84B',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s',
+                                whiteSpace: 'nowrap'
+                              }}
+                              onMouseEnter={(e) => e.currentTarget.style.background = '#A88A38'}
+                              onMouseLeave={(e) => e.currentTarget.style.background = '#C8A84B'}
+                            >
+                              Revisar
+                            </button>
+                          )}
                         </div>
                       </div>
                     );
