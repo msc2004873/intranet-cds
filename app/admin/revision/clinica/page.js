@@ -1206,6 +1206,37 @@ export default function RevisionClinicaPage() {
                   </div>
 
                   <div style={{ padding: '20px' }}>
+                    {depositoGuardado ? (
+                      <>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+                          <div style={{ background: '#F0EDE6', padding: '14px 16px', borderRadius: '8px' }}>
+                            <div style={{ fontSize: '10px', color: '#6B6560', fontWeight: '600', textTransform: 'uppercase', marginBottom: '6px' }}>Total contado</div>
+                            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '700', color: '#1A1714' }}>{fmtCRC(totalContadoCRC)}</div>
+                          </div>
+                          <div style={{ background: '#F0EDE6', padding: '14px 16px', borderRadius: '8px' }}>
+                            <div style={{ fontSize: '10px', color: '#6B6560', fontWeight: '600', textTransform: 'uppercase', marginBottom: '6px' }}>Revisora registró</div>
+                            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '700', color: '#1A1714' }}>{fmtCRC(totalRevCRC)}</div>
+                          </div>
+                          <div style={{ background: Math.abs(diffCRC) < 5 ? '#E8F3EC' : Math.abs(diffCRC) < 500 ? '#FFF3CD' : '#FDE8E8', padding: '14px 16px', borderRadius: '8px' }}>
+                            <div style={{ fontSize: '10px', color: '#6B6560', fontWeight: '600', textTransform: 'uppercase', marginBottom: '6px' }}>Diferencia</div>
+                            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '700', color: diffColorCRC }}>
+                              {Math.abs(diffCRC) < 5 ? '✓ Cuadra' : (diffCRC > 0 ? '+' : '') + fmtCRC(Math.abs(diffCRC))}
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ background: '#FBF6E9', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                          <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total Dólares</span>
+                          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '20px', fontWeight: '700', color: '#C8A84B' }}>{fmtUSD(totalContadoUSD)}</span>
+                        </div>
+                        <button
+                          onClick={() => setDepositoGuardado(false)}
+                          style={{ padding: '8px 16px', background: 'transparent', color: '#9C9590', border: '1px solid #E2DDD4', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}
+                        >
+                          Editar conteo
+                        </button>
+                      </>
+                    ) : (
+                    <>
                     {/* Colones */}
                     <div style={{ fontSize: '12px', fontWeight: '700', color: '#6B6560', textTransform: 'uppercase', marginBottom: '12px', letterSpacing: '0.5px' }}>Colones — ambas cajas</div>
                     {DENOMS_CRC.map((d, idx) => (
@@ -1317,8 +1348,10 @@ export default function RevisionClinicaPage() {
                         cursor: guardandoDeposito ? 'wait' : 'pointer'
                       }}
                     >
-                      {guardandoDeposito ? 'Guardando...' : depositoGuardado ? 'Conteo guardado' : 'Guardar conteo del período'}
+                      {guardandoDeposito ? 'Guardando...' : 'Guardar conteo del período'}
                     </button>
+                    </>
+                    )}
                   </div>
                 </div>
               );
