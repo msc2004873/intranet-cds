@@ -729,7 +729,7 @@ export default function RevisionClinicaPage() {
                     const withDiff = auditRows.filter(row => {
                       const diffRevision = row.monto_revisora - row.monto_cajera;
                       const diffAuditoria = row.monto_qvet - row.monto_revisora;
-                      return Math.abs(diffRevision) > 0 || Math.abs(diffAuditoria) > 0;
+                      return Math.abs(diffRevision) >= 5 || Math.abs(diffAuditoria) >= 5;
                     });
                     return (
                       <div style={{ background: '#FDE8E8', padding: '16px', borderRadius: '8px', borderLeft: '4px solid #E74C3C' }}>
@@ -747,7 +747,7 @@ export default function RevisionClinicaPage() {
                     const needsComment = auditRows.filter(row => {
                       const diffRevision = row.monto_revisora - row.monto_cajera;
                       const diffAuditoria = row.monto_qvet - row.monto_revisora;
-                      const hasDiff = Math.abs(diffRevision) > 0 || Math.abs(diffAuditoria) > 0;
+                      const hasDiff = Math.abs(diffRevision) >= 5 || Math.abs(diffAuditoria) >= 5;
                       return hasDiff && !row.comentario_auditoria;
                     });
                     return (
@@ -858,19 +858,19 @@ export default function RevisionClinicaPage() {
                                   const diffRevision = row.monto_revisora - row.monto_cajera;
                                   const diffAuditoria = row.monto_qvet - row.monto_revisora;
                                   const maxDiff = Math.max(Math.abs(diffRevision), Math.abs(diffAuditoria));
-                                  const hasDiff = maxDiff > 0;
+                                  const hasDiff = maxDiff >= 5;
 
                                   // Calcular severidad basada en la MAYOR diferencia
                                   let severidad = 'GREEN';
                                   if (maxDiff >= 500) severidad = 'RED';
-                                  else if (maxDiff >= 50) severidad = 'YELLOW';
+                                  else if (maxDiff >= 5) severidad = 'YELLOW';
 
                                   const color = severidad === 'RED' ? '#E74C3C' : severidad === 'YELLOW' ? '#F39C12' : '#27AE60';
                                   const icon = severidad === 'RED' ? '🔴' : severidad === 'YELLOW' ? '🟡' : '✅';
 
                                   const diffColor = (diff) => {
                                     const abs = Math.abs(diff);
-                                    if (abs === 0) return '#27AE60';
+                                    if (abs < 5) return '#27AE60';
                                     if (abs < 500) return '#F39C12';
                                     return '#E74C3C';
                                   };

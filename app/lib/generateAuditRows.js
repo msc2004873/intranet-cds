@@ -71,7 +71,7 @@ export function generateAuditRows(cierreCaja, revisionCaja, qvetData) {
 
     const calcularSeveridad = (diferencia) => {
       const abs = Math.abs(diferencia);
-      if (abs < 50) return 'GREEN';
+      if (abs < 5) return 'GREEN';
       if (abs < 500) return 'YELLOW';
       return 'RED';
     };
