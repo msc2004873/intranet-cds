@@ -488,12 +488,19 @@ export default function RevisionClinicaPage() {
                     throw new Error('Excel vacío o sin datos válidos para este período');
                   }
 
+                  // Load ALL cierres for the period (not just the selected caja)
+                  const inicio = periodo.inicio.toISOString().split('T')[0];
+                  const fin = periodo.fin.toISOString().split('T')[0];
+                  const todosLosRes = await fetch(`/api/cierreCaja?fecha=${inicio}&hasta=${fin}`);
+                  const todosCierres = todosLosRes.ok ? await todosLosRes.json() : [];
+                  console.error('📦 ALL CIERRES FOR PERIOD:', todosCierres.length, 'total');
+
                   const allAuditRows = [];
-                  const dbCierres = cierres.filter(c => cierresRevisadosIds.has(c.id)).map(c => ({ caja: c.caja, fecha: new Date(c.fecha_hora).toISOString().split('T')[0] }));
-                  console.error('🗄️ DB CIERRES:', dbCierres);
+                  const dbCierres = todosCierres.filter(c => cierresRevisadosIds.has(c.id)).map(c => ({ caja: c.caja, fecha: new Date(c.fecha_hora).toISOString().split('T')[0] }));
+                  console.error('🗄️ DB CIERRES REVIEWED:', dbCierres);
                   console.error('📑 EXCEL DATA:', qvetData.map(q => ({ caja: q.caja, fecha: q.fecha })));
 
-                  for (const cierre of cierres) {
+                  for (const cierre of todosCierres) {
                     if (!cierresRevisadosIds.has(cierre.id)) continue;
 
                     const cierreFecha = new Date(cierre.fecha_hora).toISOString().split('T')[0];
