@@ -47,7 +47,7 @@ export function parseQVetExcel(file, periodo) {
         rows.forEach((row, idx) => {
           const caja = row[colMap.caja]?.trim();
           let fecha = row[colMap.fecha];
-          const forma = row[colMap.formaPago]?.trim();
+          const forma = row[colMap.formaPago]?.trim?.().toUpperCase?.() || '';
           const monto = parseFloat(row[colMap.monto]) || 0;
           const salida = Math.abs(parseFloat(row[colMap.salidas])) || 0;
 
@@ -120,7 +120,10 @@ export function parseQVetExcel(file, periodo) {
           caja: normalizarCaja(cierre.caja)
         }));
 
-        console.log('Final parsed cierres:', result.map(c => ({ caja: c.caja, fecha: c.fecha })));
+        console.error('📦 FINAL GROUPED CIERRES:');
+        result.forEach(c => {
+          console.error(`  ${c.caja} | ${c.fecha}: EFECTIVO=${c.efectivo}, TARJETA=${c.tarjeta}, SINPE=${c.sinpe}, TRANS=${c.transferencia}, SALIDAS=${c.salidas}`);
+        });
         resolve(result);
 
       function normalizarCaja(caja) {

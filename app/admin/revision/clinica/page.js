@@ -556,7 +556,11 @@ export default function RevisionClinicaPage() {
                   if (!saveRes.ok) throw new Error('Error al guardar auditoría');
 
                   setAuditRows(allAuditRows);
-                  console.log('✅ Auditoría guardada:', allAuditRows.length, 'filas');
+                  console.error('✅ AUDIT ROWS STRUCTURE:', {
+                    total: allAuditRows.length,
+                    firstRow: allAuditRows[0],
+                    hasRelations: allAuditRows[0]?.revision_caja ? 'YES' : 'NO'
+                  });
                 } catch (err) {
                   console.error('Error en drop:', err);
                   setAuditError(err.message || 'Error al procesar archivo');
