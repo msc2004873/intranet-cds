@@ -248,16 +248,16 @@ export default function RevisionGloryPage() {
     );
   }
 
-  const revisionVencida = (() => {
-    if (!periodo) return false;
+  const revisionBloqueada = (() => {
+    if (!periodo) return true;
     const hoy = new Date();
     const hoyNorm = new Date(hoy.getFullYear(), hoy.getMonth(), hoy.getDate());
     const ano = periodo.inicio.getFullYear();
     const mes = periodo.inicio.getMonth();
-    const deadline = periodo.num < 6
+    const apertura = periodo.num < 6
       ? new Date(ano, mes, [6, 11, 16, 21, 26][periodo.num - 1])
       : new Date(ano, mes + 1, 1);
-    return hoyNorm > deadline;
+    return hoyNorm < apertura;
   })();
 
   // Agrupar días por estado (pendientes/revisados)
@@ -295,8 +295,8 @@ export default function RevisionGloryPage() {
         {/* Período actual */}
         {periodo && (
           <div style={{
-            background: revisionVencida ? '#F0EDE6' : '#FBF6E9',
-            border: `1px solid ${revisionVencida ? '#9C9590' : '#C8A84B'}`,
+            background: revisionBloqueada ? '#FFF3CD' : '#FBF6E9',
+            border: `1px solid ${revisionBloqueada ? '#F39C12' : '#C8A84B'}`,
             borderRadius: '12px',
             padding: '16px',
             marginBottom: '24px'
@@ -304,9 +304,9 @@ export default function RevisionGloryPage() {
             <div style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', marginBottom: '6px' }}>
               Período seleccionado
             </div>
-            <div style={{ fontSize: '16px', fontWeight: '700', color: revisionVencida ? '#9C9590' : '#C8A84B' }}>
+            <div style={{ fontSize: '16px', fontWeight: '700', color: revisionBloqueada ? '#F39C12' : '#C8A84B' }}>
               P{periodo.num}: {periodo.inicio.toLocaleDateString('es-CR')} — {periodo.fin.toLocaleDateString('es-CR')}
-              {revisionVencida && <span style={{ fontSize: '13px', marginLeft: '8px' }}>🔒 Vencido</span>}
+              {revisionBloqueada && <span style={{ fontSize: '13px', marginLeft: '8px' }}>⏳ En curso</span>}
             </div>
           </div>
         )}
@@ -320,8 +320,8 @@ export default function RevisionGloryPage() {
             {diasPendientes.length > 0 && (
               <div style={{ marginBottom: '24px' }}>
                 <div style={{ fontSize: '14px', fontWeight: '700', color: '#1A1714', marginBottom: '12px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                  {revisionVencida ? '🔒' : '⏳'} {revisionVencida ? 'Sin revisar' : 'Pendientes'} ({diasPendientes.length})
-                  {revisionVencida && <span style={{ fontSize: '11px', fontWeight: '500', color: '#9C9590' }}>— período vencido</span>}
+                  ⏳ Pendientes ({diasPendientes.length})
+                  {revisionBloqueada && <span style={{ fontSize: '11px', fontWeight: '500', color: '#F39C12' }}>— período en curso</span>}
                 </div>
                 <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden' }}>
                   {diasPendientes.map((fecha, idx) => {
@@ -346,17 +346,17 @@ export default function RevisionGloryPage() {
                               {fmt(totalDia)}
                             </div>
                           </div>
-                          {revisionVencida ? (
+                          {revisionBloqueada ? (
                             <span style={{
                               padding: '8px 16px',
-                              background: '#F0EDE6',
-                              color: '#9C9590',
+                              background: '#FFF3CD',
+                              color: '#F39C12',
                               borderRadius: '6px',
                               fontSize: '12px',
                               fontWeight: '600',
                               whiteSpace: 'nowrap'
                             }}>
-                              🔒 Vencido
+                              ⏳ En curso
                             </span>
                           ) : (
                             <button
