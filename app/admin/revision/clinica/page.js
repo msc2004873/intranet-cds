@@ -555,12 +555,24 @@ export default function RevisionClinicaPage() {
 
                   if (!saveRes.ok) throw new Error('Error al guardar auditoría');
 
-                  setAuditRows(allAuditRows);
-                  console.error('✅ AUDIT ROWS STRUCTURE:', {
-                    total: allAuditRows.length,
-                    firstRow: allAuditRows[0],
-                    hasRelations: allAuditRows[0]?.revision_caja ? 'YES' : 'NO'
-                  });
+                  // ✅ RELOAD from API to get complete structure with relations
+                  console.error('🔄 RELOADING AUDIT DATA WITH RELATIONS...');
+                  const inicio = periodo.inicio.toISOString().split('T')[0];
+                  const fin = periodo.fin.toISOString().split('T')[0];
+                  const reloadRes = await fetch(`/api/auditoria-periodo?inicio=${inicio}&fin=${fin}`);
+                  const reloadedData = reloadRes.ok ? await reloadRes.json() : [];
+
+                  if (reloadedData.length > 0) {
+                    setAuditRows(reloadedData);
+                    console.error('✅ AUDIT ROWS RELOADED WITH RELATIONS:', {
+                      total: reloadedData.length,
+                      firstRow: reloadedData[0],
+                      hasRelations: reloadedData[0]?.revision_caja ? 'YES' : 'NO'
+                    });
+                  } else {
+                    console.error('⚠️ Reload returned 0 rows, using local data');
+                    setAuditRows(allAuditRows);
+                  }
                 } catch (err) {
                   console.error('Error en drop:', err);
                   setAuditError(err.message || 'Error al procesar archivo');
