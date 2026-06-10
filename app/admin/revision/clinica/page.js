@@ -409,7 +409,10 @@ export default function RevisionClinicaPage() {
           <>
             {/* Upload */}
             <div style={{ background: '#fff', border: '2px dashed #2a78a5', borderRadius: '12px', padding: '32px 24px', marginBottom: '24px', textAlign: 'center', cursor: 'pointer' }}
-              onClick={() => document.getElementById('auditExcelInput').click()}
+              onClick={() => {
+                const input = document.querySelector('input[accept=".xlsx,.xls"]');
+                if (input) input.click();
+              }}
               onDragOver={(e) => {
                 e.preventDefault();
                 e.currentTarget.style.background = '#E8F3EC';
@@ -488,7 +491,6 @@ export default function RevisionClinicaPage() {
               </div>
 
               <input
-                id="auditExcelInput"
                 type="file"
                 accept=".xlsx,.xls"
                 style={{ display: 'none' }}

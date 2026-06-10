@@ -4,10 +4,19 @@ export function parseQVetExcel(file, periodo) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
 
+    // Helper to convert Excel serial numbers to Date
+    const excelSerialToDate = (serial) => {
+      // Excel date serial: day 1 = Jan 1, 1900
+      // JavaScript epoch: Jan 1, 1970
+      // Days between: 25569
+      if (typeof serial !== 'number') return null;
+      return new Date((serial - 25569) * 86400 * 1000);
+    };
+
     reader.onload = (e) => {
       try {
         const data = e.target.result;
-        const workbook = XLSX.read(data, { type: 'array' });
+        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
         const sheet = workbook.Sheets[workbook.SheetNames[0]];
         const rows = XLSX.utils.sheet_to_json(sheet);
 
@@ -36,7 +45,7 @@ export function parseQVetExcel(file, periodo) {
 
         rows.forEach((row, idx) => {
           const caja = row[colMap.caja]?.trim();
-          const fecha = row[colMap.fecha];
+          let fecha = row[colMap.fecha];
           const forma = row[colMap.formaPago]?.trim();
           const monto = parseFloat(row[colMap.monto]) || 0;
           const salida = Math.abs(parseFloat(row[colMap.salidas])) || 0;
@@ -46,12 +55,28 @@ export function parseQVetExcel(file, periodo) {
             return;
           }
 
-          // Validar que la fecha está en el período
-          const fechaObj = new Date(fecha);
-          console.log(`Row ${idx}: caja=${caja}, fecha=${fecha} (${fechaObj}), forma=${forma}, monto=${monto}`);
+          // Convertir fecha si es un número serial de Excel
+          let fechaObj;
+          if (typeof fecha === 'number') {
+            fechaObj = excelSerialToDate(fecha);
+          } else if (typeof fecha === 'string') {
+            fechaObj = new Date(fecha);
+          } else if (fecha instanceof Date) {
+            fechaObj = fecha;
+          } else {
+            console.log(`Row ${idx}: Unknown date format:`, fecha);
+            return;
+          }
+
+          if (!fechaObj || isNaN(fechaObj.getTime())) {
+            console.log(`Row ${idx}: Invalid date after conversion`);
+            return;
+          }
+
+          console.log(`Row ${idx}: caja=${caja}, fecha=${fecha} → ${fechaObj.toISOString()}, forma=${forma}, monto=${monto}`);
 
           if (fechaObj < periodo.inicio || fechaObj > periodo.fin) {
-            console.log(`Row ${idx}: Outside period range`);
+            console.log(`Row ${idx}: Outside period range [${periodo.inicio.toISOString()} - ${periodo.fin.toISOString()}]`);
             return; // Ignorar filas fuera del período
           }
 
