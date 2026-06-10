@@ -407,6 +407,24 @@ export default function RevisionClinicaPage() {
         {/* Tab: Auditoría */}
         {tabActivo === 'auditoria' && (
           <>
+            {/* Cargar auditRows al abrir tab */}
+            {!auditRows.length && !loadingAudit && !auditError && (
+              <div style={{ display: 'none' }}>
+                {(() => {
+                  // Cargar automáticamente cuando se abre el tab
+                  fetch(`/api/auditoria-periodo?inicio=${periodo?.inicio.toISOString().split('T')[0]}&fin=${periodo?.fin.toISOString().split('T')[0]}`)
+                    .then(r => r.json())
+                    .then(data => {
+                      if (data && data.length > 0) {
+                        setAuditRows(data);
+                      }
+                    })
+                    .catch(err => console.error('Error loading audit rows:', err));
+                  return null;
+                })()}
+              </div>
+            )}
+
             {/* Upload */}
             <div style={{ background: '#fff', border: '2px dashed #2a78a5', borderRadius: '12px', padding: '32px 24px', marginBottom: '24px', textAlign: 'center', cursor: 'pointer' }}
               onClick={() => {
@@ -624,54 +642,72 @@ export default function RevisionClinicaPage() {
                   const rowsPorCaja = auditRows.filter(r => r.caja === cajaName);
                   if (rowsPorCaja.length === 0) return null;
 
+                  // Agrupar por día
+                  const porDia = {};
+                  rowsPorCaja.forEach(row => {
+                    const fecha = row.revision_caja?.cierre_caja?.fecha_hora
+                      ? new Date(row.revision_caja.cierre_caja.fecha_hora).toLocaleDateString('es-CR')
+                      : 'Sin fecha';
+                    if (!porDia[fecha]) porDia[fecha] = [];
+                    porDia[fecha].push(row);
+                  });
+
                   return (
                     <div key={cajaName} style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
                       <div style={{ fontSize: '16px', fontWeight: '700', color: '#1A1714', marginBottom: '16px' }}>
                         {cajaName}
                       </div>
 
-                      <div style={{ overflowX: 'auto' }}>
-                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
-                          <thead>
-                            <tr style={{ borderBottom: '2px solid #E2DDD4' }}>
-                              <th style={{ padding: '10px', textAlign: 'left', fontWeight: '700', color: '#1A1714' }}>Tipo</th>
-                              <th style={{ padding: '10px', textAlign: 'right', fontWeight: '700', color: '#1A1714' }}>Cajera</th>
-                              <th style={{ padding: '10px', textAlign: 'right', fontWeight: '700', color: '#1A1714' }}>Revisora</th>
-                              <th style={{ padding: '10px', textAlign: 'right', fontWeight: '700', color: '#1A1714' }}>QVet</th>
-                              <th style={{ padding: '10px', textAlign: 'center', fontWeight: '700', color: '#1A1714' }}>Estado</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {rowsPorCaja.map((row, i) => {
-                              const hasDiff = Math.abs(row.diferencia_auditoria) > 0;
-                              const severidad = row.severidad_auditoria;
-                              const color = severidad === 'RED' ? '#E74C3C' : severidad === 'YELLOW' ? '#F39C12' : '#27AE60';
-                              const icon = severidad === 'RED' ? '🔴' : severidad === 'YELLOW' ? '🟡' : '✅';
+                      {Object.entries(porDia).map(([fecha, rowsDelDia]) => (
+                        <div key={fecha} style={{ marginBottom: '20px' }}>
+                          <div style={{ fontSize: '13px', fontWeight: '600', color: '#6B6560', marginBottom: '10px', paddingBottom: '8px', borderBottom: '1px solid #E2DDD4' }}>
+                            📅 {fecha}
+                          </div>
 
-                              return (
-                                <tr
-                                  key={i}
-                                  onClick={() => hasDiff && setModalAuditRow(row)}
-                                  style={{
-                                    borderBottom: '1px solid #E2DDD4',
-                                    background: hasDiff ? '#FDE8E8' : 'transparent',
-                                    cursor: hasDiff ? 'pointer' : 'default',
-                                    transition: 'all 0.2s'
-                                  }}
-                                  onMouseEnter={(e) => hasDiff && (e.currentTarget.style.background = '#FDEDEC')}
-                                  onMouseLeave={(e) => hasDiff && (e.currentTarget.style.background = '#FDE8E8')}
-                                >
-                                  <td style={{ padding: '10px', color: '#1A1714', fontWeight: '600' }}>{row.tipo_movimiento}</td>
-                                  <td style={{ padding: '10px', textAlign: 'right', color: '#6B6560' }}>₡{row.monto_cajera.toLocaleString('es-CR')}</td>
-                                  <td style={{ padding: '10px', textAlign: 'right', color: '#6B6560' }}>₡{row.monto_revisora.toLocaleString('es-CR')}</td>
-                                  <td style={{ padding: '10px', textAlign: 'right', color: '#6B6560' }}>₡{row.monto_qvet.toLocaleString('es-CR')}</td>
-                                  <td style={{ padding: '10px', textAlign: 'center', color, fontWeight: '700' }}>{icon}</td>
+                          <div style={{ overflowX: 'auto' }}>
+                            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
+                              <thead>
+                                <tr style={{ borderBottom: '1px solid #E2DDD4' }}>
+                                  <th style={{ padding: '8px', textAlign: 'left', fontWeight: '700', color: '#1A1714' }}>Tipo</th>
+                                  <th style={{ padding: '8px', textAlign: 'right', fontWeight: '700', color: '#1A1714' }}>Cajera</th>
+                                  <th style={{ padding: '8px', textAlign: 'right', fontWeight: '700', color: '#1A1714' }}>Revisora</th>
+                                  <th style={{ padding: '8px', textAlign: 'right', fontWeight: '700', color: '#1A1714' }}>QVet</th>
+                                  <th style={{ padding: '8px', textAlign: 'center', fontWeight: '700', color: '#1A1714' }}>Estado</th>
                                 </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
+                              </thead>
+                              <tbody>
+                                {rowsDelDia.map((row, i) => {
+                                  const hasDiff = Math.abs(row.diferencia_auditoria) > 0;
+                                  const severidad = row.severidad_auditoria;
+                                  const color = severidad === 'RED' ? '#E74C3C' : severidad === 'YELLOW' ? '#F39C12' : '#27AE60';
+                                  const icon = severidad === 'RED' ? '🔴' : severidad === 'YELLOW' ? '🟡' : '✅';
+
+                                  return (
+                                    <tr
+                                      key={i}
+                                      onClick={() => hasDiff && setModalAuditRow(row)}
+                                      style={{
+                                        borderBottom: '1px solid #E2DDD4',
+                                        background: hasDiff ? '#FDE8E8' : 'transparent',
+                                        cursor: hasDiff ? 'pointer' : 'default',
+                                        transition: 'all 0.2s'
+                                      }}
+                                      onMouseEnter={(e) => hasDiff && (e.currentTarget.style.background = '#FDEDEC')}
+                                      onMouseLeave={(e) => hasDiff && (e.currentTarget.style.background = '#FDE8E8')}
+                                    >
+                                      <td style={{ padding: '8px', color: '#1A1714', fontWeight: '600' }}>{row.tipo_movimiento}</td>
+                                      <td style={{ padding: '8px', textAlign: 'right', color: '#6B6560' }}>₡{row.monto_cajera.toLocaleString('es-CR')}</td>
+                                      <td style={{ padding: '8px', textAlign: 'right', color: '#6B6560' }}>₡{row.monto_revisora.toLocaleString('es-CR')}</td>
+                                      <td style={{ padding: '8px', textAlign: 'right', color: '#6B6560' }}>₡{row.monto_qvet.toLocaleString('es-CR')}</td>
+                                      <td style={{ padding: '8px', textAlign: 'center', color, fontWeight: '700' }}>{icon}</td>
+                                    </tr>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   );
                 })}
