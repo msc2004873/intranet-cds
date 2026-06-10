@@ -668,19 +668,30 @@ export default function RevisionClinicaPage() {
                             <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '12px' }}>
                               <thead>
                                 <tr style={{ borderBottom: '1px solid #E2DDD4' }}>
-                                  <th style={{ padding: '8px', textAlign: 'left', fontWeight: '700', color: '#1A1714' }}>Tipo</th>
-                                  <th style={{ padding: '8px', textAlign: 'right', fontWeight: '700', color: '#1A1714' }}>Cajera</th>
-                                  <th style={{ padding: '8px', textAlign: 'right', fontWeight: '700', color: '#1A1714' }}>Revisora</th>
-                                  <th style={{ padding: '8px', textAlign: 'right', fontWeight: '700', color: '#1A1714' }}>QVet</th>
-                                  <th style={{ padding: '8px', textAlign: 'center', fontWeight: '700', color: '#1A1714' }}>Estado</th>
+                                  <th style={{ padding: '8px', textAlign: 'left', fontWeight: '700', color: '#1A1714', fontSize: '12px' }}>Tipo</th>
+                                  <th style={{ padding: '4px', textAlign: 'right', fontWeight: '700', color: '#1A1714', fontSize: '11px' }}>Cajera</th>
+                                  <th style={{ padding: '4px', textAlign: 'center', fontWeight: '600', color: '#9C9590', fontSize: '9px' }}>vs Rev</th>
+                                  <th style={{ padding: '4px', textAlign: 'right', fontWeight: '700', color: '#1A1714', fontSize: '11px' }}>Revisora</th>
+                                  <th style={{ padding: '4px', textAlign: 'center', fontWeight: '600', color: '#9C9590', fontSize: '9px' }}>vs QVet</th>
+                                  <th style={{ padding: '4px', textAlign: 'right', fontWeight: '700', color: '#1A1714', fontSize: '11px' }}>QVet</th>
+                                  <th style={{ padding: '4px', textAlign: 'center', fontWeight: '700', color: '#1A1714' }}>✓</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {rowsDelDia.map((row, i) => {
-                                  const hasDiff = Math.abs(row.diferencia_auditoria) > 0;
+                                  const diffRevision = row.monto_revisora - row.monto_cajera;
+                                  const diffAuditoria = row.monto_qvet - row.monto_revisora;
+                                  const hasDiff = Math.abs(diffRevision) > 0 || Math.abs(diffAuditoria) > 0;
                                   const severidad = row.severidad_auditoria;
                                   const color = severidad === 'RED' ? '#E74C3C' : severidad === 'YELLOW' ? '#F39C12' : '#27AE60';
                                   const icon = severidad === 'RED' ? '🔴' : severidad === 'YELLOW' ? '🟡' : '✅';
+
+                                  const diffColor = (diff) => {
+                                    const abs = Math.abs(diff);
+                                    if (abs === 0) return '#27AE60';
+                                    if (abs < 500) return '#F39C12';
+                                    return '#E74C3C';
+                                  };
 
                                   return (
                                     <tr
@@ -695,11 +706,17 @@ export default function RevisionClinicaPage() {
                                       onMouseEnter={(e) => hasDiff && (e.currentTarget.style.background = '#FDEDEC')}
                                       onMouseLeave={(e) => hasDiff && (e.currentTarget.style.background = '#FDE8E8')}
                                     >
-                                      <td style={{ padding: '8px', color: '#1A1714', fontWeight: '600' }}>{row.tipo_movimiento}</td>
-                                      <td style={{ padding: '8px', textAlign: 'right', color: '#6B6560' }}>₡{row.monto_cajera.toLocaleString('es-CR')}</td>
-                                      <td style={{ padding: '8px', textAlign: 'right', color: '#6B6560' }}>₡{row.monto_revisora.toLocaleString('es-CR')}</td>
-                                      <td style={{ padding: '8px', textAlign: 'right', color: '#6B6560' }}>₡{row.monto_qvet.toLocaleString('es-CR')}</td>
-                                      <td style={{ padding: '8px', textAlign: 'center', color, fontWeight: '700' }}>{icon}</td>
+                                      <td style={{ padding: '6px 8px', color: '#1A1714', fontWeight: '600', fontSize: '12px' }}>{row.tipo_movimiento}</td>
+                                      <td style={{ padding: '4px', textAlign: 'right', color: '#1A1714', fontSize: '11px', fontWeight: '500' }}>₡{Math.round(row.monto_cajera).toLocaleString('es-CR')}</td>
+                                      <td style={{ padding: '4px', textAlign: 'center', color: diffColor(diffRevision), fontWeight: '600', fontSize: '10px' }}>
+                                        {Math.abs(diffRevision) === 0 ? '✓' : (diffRevision > 0 ? '+' : '') + '₡' + Math.abs(Math.round(diffRevision)).toLocaleString('es-CR')}
+                                      </td>
+                                      <td style={{ padding: '4px', textAlign: 'right', color: '#1A1714', fontSize: '11px', fontWeight: '500' }}>₡{Math.round(row.monto_revisora).toLocaleString('es-CR')}</td>
+                                      <td style={{ padding: '4px', textAlign: 'center', color: diffColor(diffAuditoria), fontWeight: '600', fontSize: '10px' }}>
+                                        {Math.abs(diffAuditoria) === 0 ? '✓' : (diffAuditoria > 0 ? '+' : '') + '₡' + Math.abs(Math.round(diffAuditoria)).toLocaleString('es-CR')}
+                                      </td>
+                                      <td style={{ padding: '4px', textAlign: 'right', color: '#1A1714', fontSize: '11px', fontWeight: '500' }}>₡{Math.round(row.monto_qvet).toLocaleString('es-CR')}</td>
+                                      <td style={{ padding: '4px', textAlign: 'center', color, fontWeight: '700', fontSize: '14px' }}>{icon}</td>
                                     </tr>
                                   );
                                 })}
