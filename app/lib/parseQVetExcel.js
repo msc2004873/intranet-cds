@@ -13,6 +13,34 @@ export function parseQVetExcel(file, periodo) {
       return new Date((serial - 25569) * 86400 * 1000);
     };
 
+    // Helper to parse fecha robustly (handles Excel serials, strings, Date objects)
+    const parseFecha = (valor) => {
+      // If already a Date, return it
+      if (valor instanceof Date) return valor;
+
+      // If it's a number (Excel serial)
+      if (typeof valor === 'number') {
+        return excelSerialToDate(valor);
+      }
+
+      // If it's a string, try to parse it
+      if (typeof valor === 'string') {
+        // Try DD/MM/YY format first (European: 1/6/26)
+        const match = valor.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+        if (match) {
+          let [, day, month, year] = match.map(Number);
+          if (year < 100) year += 2000; // 26 → 2026
+          // Assume DD/MM/YY (European format)
+          return new Date(year, month - 1, day);
+        }
+
+        // Fallback: try standard parsing
+        return new Date(valor);
+      }
+
+      return null;
+    };
+
     reader.onload = (e) => {
       try {
         const data = e.target.result;
@@ -56,21 +84,11 @@ export function parseQVetExcel(file, periodo) {
             return;
           }
 
-          // Convertir fecha si es un número serial de Excel
-          let fechaObj;
-          if (typeof fecha === 'number') {
-            fechaObj = excelSerialToDate(fecha);
-          } else if (typeof fecha === 'string') {
-            fechaObj = new Date(fecha);
-          } else if (fecha instanceof Date) {
-            fechaObj = fecha;
-          } else {
-            console.log(`Row ${idx}: Unknown date format:`, fecha);
-            return;
-          }
+          // Parse fecha using robust helper
+          const fechaObj = parseFecha(fecha);
 
           if (!fechaObj || isNaN(fechaObj.getTime())) {
-            console.log(`Row ${idx}: Invalid date after conversion`);
+            console.error(`❌ Row ${idx}: Failed to parse fecha="${fecha}"`);
             return;
           }
 
