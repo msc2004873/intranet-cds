@@ -16,30 +16,39 @@ export function parseQVetExcel(file, periodo) {
     // Helper to parse fecha robustly (handles Excel serials, strings, Date objects)
     const parseFecha = (valor) => {
       // If already a Date, return it
-      if (valor instanceof Date) return valor;
+      if (valor instanceof Date) {
+        console.error(`📅 parseFecha received Date: ${valor.toISOString()}`);
+        return valor;
+      }
 
       // If it's a number (Excel serial)
       if (typeof valor === 'number') {
-        return excelSerialToDate(valor);
+        const result = excelSerialToDate(valor);
+        console.error(`📅 parseFecha received NUMBER ${valor} → ${result.toISOString()}`);
+        return result;
       }
 
       // If it's a string, try to parse it
       if (typeof valor === 'string') {
+        console.error(`📅 parseFecha received STRING: "${valor}"`);
         // Try DD/MM/YY format first (European: 1/6/26 or 1/6/26 18:41 with optional time)
-        // CRITICAL BUG FIX: Regex must NOT require $ end-of-string (allows optional time)
         const match = valor.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})/);
         if (match) {
           let [, day, month, year] = match.map(Number);
+          console.error(`   Regex matched: day=${day}, month=${month}, year=${year}`);
           if (year < 100) year += 2000; // 26 → 2026
           // Assume DD/MM/YY (European format)
-          // Set time to 00:00:00 to avoid timezone issues
-          return new Date(year, month - 1, day, 0, 0, 0);
+          const result = new Date(year, month - 1, day, 0, 0, 0);
+          console.error(`   Result: ${result.toISOString().split('T')[0]}`);
+          return result;
         }
 
-        // Fallback: try standard parsing (should not reach here for well-formatted dates)
+        // Fallback: try standard parsing
+        console.error(`   No regex match, using new Date()`);
         return new Date(valor);
       }
 
+      console.error(`📅 parseFecha received UNKNOWN type`);
       return null;
     };
 
