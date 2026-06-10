@@ -442,11 +442,22 @@ export default function RevisionClinicaPage() {
                   }
 
                   const allAuditRows = [];
+                  console.log('Cierres revisados en DB:', cierres.filter(c => cierresRevisadosIds.has(c.id)).map(c => ({ caja: c.caja, fecha: new Date(c.fecha_hora).toISOString().split('T')[0] })));
+                  console.log('Datos en Excel:', qvetData.map(q => ({ caja: q.caja, fecha: q.fecha })));
+
                   for (const cierre of cierres) {
                     if (!cierresRevisadosIds.has(cierre.id)) continue;
 
-                    const qvetCierre = qvetData.find(q => q.caja === cierre.caja && q.fecha === new Date(cierre.fecha_hora).toISOString().split('T')[0]);
-                    if (!qvetCierre) continue;
+                    const cierreFecha = new Date(cierre.fecha_hora).toISOString().split('T')[0];
+                    const qvetCierre = qvetData.find(q => {
+                      const match = q.caja === cierre.caja && q.fecha === cierreFecha;
+                      console.log(`Intentando matchear DB(${cierre.caja}|${cierreFecha}) con Excel(${q.caja}|${q.fecha}): ${match}`);
+                      return match;
+                    });
+                    if (!qvetCierre) {
+                      console.log(`No encontrado: caja=${cierre.caja}, fecha=${cierreFecha}`);
+                      continue;
+                    }
 
                     const revRes = await fetch(`/api/revision?cierre_id=${cierre.id}`);
                     if (!revRes.ok) continue;
