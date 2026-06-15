@@ -286,6 +286,76 @@ export default function Home() {
               }}
             />
           </div>
+
+          {/* Resumen del día */}
+          {!loading && (() => {
+            const logsDelDia = logs.filter(l => l.fecha === selectedDate);
+            const cajas = ['Caja 1 (clínica)', 'Caja 2'];
+            const sumar = (tipo, caja) => logsDelDia
+              .filter(l => l.tipo === tipo && l.caja === caja)
+              .reduce((acc, l) => acc + (Number(l.data?.monto) || 0), 0);
+            const ultimoConteo = (caja) => logsDelDia
+              .filter(l => l.tipo === 'Conteo de Caja' && l.caja === caja)
+              .sort((a, b) => b.timestamp - a.timestamp)[0];
+            const fmtMonto = (n) => n > 0 ? '₡' + n.toLocaleString('es-CR') : '—';
+            const filas = [
+              { label: 'SINPE', tipo: 'SINPE', color: '#2a78a5', bg: '#E8F3EC' },
+              { label: 'Transferencias', tipo: 'TRANSFERENCIA', color: '#8B6914', bg: '#FBF6E9' },
+              { label: 'Salidas', tipo: 'SALIDA', color: '#C0392B', bg: '#FDEDEC' },
+            ];
+            return (
+              <div style={{ marginBottom: '16px', background: '#FFFFFF', border: '1.5px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: '#F0EDE6', borderBottom: '1.5px solid #E2DDD4' }}>
+                      <th style={{ padding: '10px 16px', textAlign: 'left', fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Resumen del día</th>
+                      {cajas.map(c => (
+                        <th key={c} style={{ padding: '10px 16px', textAlign: 'right', fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>{c}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filas.map(({ label, tipo, color, bg }) => (
+                      <tr key={tipo} style={{ borderBottom: '1px solid #E2DDD4' }}>
+                        <td style={{ padding: '10px 16px' }}>
+                          <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: '12px', background: bg, fontSize: '12px', fontWeight: '600', color }}>{label}</span>
+                        </td>
+                        {cajas.map(caja => {
+                          const total = sumar(tipo, caja);
+                          return (
+                            <td key={caja} style={{ padding: '10px 16px', textAlign: 'right', fontSize: '13px', fontWeight: '600', color: total > 0 ? color : '#C4BFB9', fontFamily: "'DM Mono', monospace" }}>
+                              {tipo === 'SALIDA' && total > 0 ? '-₡' + total.toLocaleString('es-CR') : fmtMonto(total)}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                    <tr style={{ background: '#F7F5F0', borderTop: '1.5px solid #E2DDD4', borderBottom: '1px solid #E2DDD4' }}>
+                      <td style={{ padding: '10px 16px' }}>
+                        <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: '12px', background: '#FBF6E9', fontSize: '12px', fontWeight: '600', color: '#C8A84B' }}>Efectivo (último conteo)</span>
+                      </td>
+                      {cajas.map(caja => {
+                        const conteo = ultimoConteo(caja);
+                        return (
+                          <td key={caja} style={{ padding: '10px 16px', textAlign: 'right', fontFamily: "'DM Mono', monospace" }}>
+                            {conteo ? (
+                              <>
+                                <div style={{ fontSize: '13px', fontWeight: '600', color: '#C8A84B' }}>₡{(conteo.data?.total_colones || 0).toLocaleString('es-CR')}</div>
+                                <div style={{ fontSize: '10px', color: '#9C9590', marginTop: '1px' }}>{conteo.hora}</div>
+                              </>
+                            ) : (
+                              <span style={{ fontSize: '13px', color: '#C4BFB9' }}>—</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            );
+          })()}
+
           <div style={{
             background: '#FFFFFF',
             border: '1.5px solid #E2DDD4',
