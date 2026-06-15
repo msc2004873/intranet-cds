@@ -347,22 +347,55 @@ export default function Home() {
                     ))}
                     <tr style={{ background: '#F7F5F0', borderTop: '1.5px solid #E2DDD4', borderBottom: '1px solid #E2DDD4' }}>
                       <td style={{ padding: '10px 16px' }}>
-                        <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: '12px', background: '#FBF6E9', fontSize: '12px', fontWeight: '600', color: '#C8A84B' }}>Efectivo (último conteo)</span>
+                        <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: '12px', background: '#FBF6E9', fontSize: '12px', fontWeight: '600', color: '#C8A84B' }}>Efectivo ₡ (último conteo)</span>
+                      </td>
+                      {cajas.map(caja => {
+                        const conteo = ultimoConteo(caja);
+                        const horaDisplay = conteo?.hora
+                          ? new Date(conteo.hora.replace(' ', 'T') + 'Z').toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Costa_Rica' })
+                          : null;
+                        return (
+                          <td key={caja} style={{ padding: '10px 16px', textAlign: 'right', fontFamily: "'DM Mono', monospace" }}>
+                            {conteo ? (
+                              <>
+                                <div style={{ fontSize: '13px', fontWeight: '600', color: '#C8A84B' }}>₡{(conteo.total_colones || 0).toLocaleString('es-CR')}</div>
+                                <div style={{ fontSize: '10px', color: '#9C9590', marginTop: '1px' }}>{horaDisplay}</div>
+                              </>
+                            ) : (
+                              <span style={{ fontSize: '13px', color: '#C4BFB9' }}>—</span>
+                            )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                    <tr style={{ background: '#F7F5F0', borderBottom: '1px solid #E2DDD4' }}>
+                      <td style={{ padding: '10px 16px' }}>
+                        <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: '12px', background: '#FBF6E9', fontSize: '12px', fontWeight: '600', color: '#C8A84B' }}>Efectivo $ (último conteo)</span>
                       </td>
                       {cajas.map(caja => {
                         const conteo = ultimoConteo(caja);
                         return (
                           <td key={caja} style={{ padding: '10px 16px', textAlign: 'right', fontFamily: "'DM Mono', monospace" }}>
                             {conteo ? (
-                              <>
-                                <div style={{ fontSize: '13px', fontWeight: '600', color: '#C8A84B' }}>₡{(conteo.total_colones || 0).toLocaleString('es-CR')}</div>
-                                <div style={{ fontSize: '10px', color: '#9C9590', marginTop: '1px' }}>
-                                  {new Date(conteo.hora).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Costa_Rica' })}
-                                </div>
-                              </>
+                              <div style={{ fontSize: '13px', fontWeight: '600', color: '#C8A84B' }}>${(conteo.dolares || 0).toLocaleString('es-CR')}</div>
                             ) : (
                               <span style={{ fontSize: '13px', color: '#C4BFB9' }}>—</span>
                             )}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                    <tr style={{ background: '#F0EDE6', borderTop: '1.5px solid #E2DDD4' }}>
+                      <td style={{ padding: '10px 16px' }}>
+                        <span style={{ display: 'inline-block', padding: '2px 10px', borderRadius: '12px', background: '#E8F3EC', fontSize: '12px', fontWeight: '600', color: '#2a78a5' }}>Total en ₡ (dólares × TC)</span>
+                      </td>
+                      {cajas.map(caja => {
+                        const conteo = ultimoConteo(caja);
+                        if (!conteo) return <td key={caja} style={{ padding: '10px 16px', textAlign: 'right', fontFamily: "'DM Mono', monospace" }}><span style={{ fontSize: '13px', color: '#C4BFB9' }}>—</span></td>;
+                        const totalColones = (conteo.total_colones || 0) + (conteo.dolares || 0) * (tcActual || 0);
+                        return (
+                          <td key={caja} style={{ padding: '10px 16px', textAlign: 'right', fontFamily: "'DM Mono', monospace" }}>
+                            <div style={{ fontSize: '13px', fontWeight: '700', color: '#2a78a5' }}>₡{Math.round(totalColones).toLocaleString('es-CR')}</div>
                           </td>
                         );
                       })}

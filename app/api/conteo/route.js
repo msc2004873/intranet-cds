@@ -13,7 +13,7 @@ export async function GET(req) {
 
     const { data, error } = await supabase
       .from('conteo_caja')
-      .select('id, cajera, caja, fecha, hora, total_colones')
+      .select('id, cajera, caja, fecha, hora, total_colones, dolares')
       .eq('fecha', fecha)
       .order('hora', { ascending: false });
 
