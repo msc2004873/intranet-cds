@@ -42,6 +42,7 @@ export default function RevisionGloryPage() {
   const [comparativoActivo, setComparativoActivo] = useState(null);
   const [revisionActual, setRevisionActual] = useState(null);
   const [loadingRev, setLoadingRev] = useState(false);
+  const [revisionesMes, setRevisionesMes] = useState([]);
 
   useEffect(() => {
     const hoy = new Date();
@@ -67,6 +68,17 @@ export default function RevisionGloryPage() {
     }
   }, [periodo]);
 
+  async function cargarResumenMes() {
+    const hoy = new Date();
+    const mes = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
+    try {
+      const res = await fetch(`/api/revisionGlory?mes=${mes}`);
+      if (res.ok) setRevisionesMes(await res.json());
+    } catch (err) {
+      console.error('Error cargando resumen mes:', err);
+    }
+  }
+
   async function cargarCobros() {
     if (!periodo) return;
 
@@ -79,9 +91,12 @@ export default function RevisionGloryPage() {
       const data = await res.json();
       setCobros(Array.isArray(data) ? data : []);
 
-      // Cargar cajas revisadas
+      // Cargar cajas revisadas y resumen del mes en paralelo
       try {
-        const revisRes = await fetch('/api/revision-caja-glory-ids');
+        const [revisRes] = await Promise.all([
+          fetch('/api/revision-caja-glory-ids'),
+          cargarResumenMes(),
+        ]);
         if (revisRes.ok) {
           const revisadas = await revisRes.json();
           const cajasRevisadas = new Set(revisadas.map(r => r.fecha));
@@ -141,101 +156,99 @@ export default function RevisionGloryPage() {
   };
 
   if (comparativoActivo && revisionActual) {
-    const totalCajera = revisionActual.total_cajera || 0;
-    const totalRevisora = revisionActual.total_revisado || 0;
-    const diferencia = Math.abs(totalCajera - totalRevisora);
+    const rv = revisionActual;
+    const totalCajera = rv.total_cajera || 0;
+    const totalRevisora = rv.total_revisado || 0;
+    const diferencia = totalCajera - totalRevisora;
+    const difAbs = Math.abs(diferencia);
+
+    const filas = [
+      { label: 'Efectivo',      cajera: null, revisora: rv.efectivo_revisado || 0 },
+      { label: 'Datafono BAC',  cajera: null, revisora: rv.datafono_glory || 0 },
+      { label: 'SINPE',         cajera: null, revisora: rv.sinpe_revisado || 0 },
+      { label: 'Transferencias',cajera: null, revisora: rv.transferencias_revisadas || 0 },
+    ];
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
-        <Header title="Comparativo — Glory" subtitle={`${fmtFecha(comparativoActivo)} • ${revisionActual.cajera}`} showLogout={false} homeLink="#" />
+        <Header title="Revisión Glory" subtitle={`${fmtFecha(comparativoActivo)} • ${rv.cajera}`} showLogout={false} homeLink="#" />
 
         <div style={{ flex: 1, maxWidth: '720px', margin: '0 auto', padding: '24px 16px', width: '100%' }}>
-          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
-            <div style={{ fontSize: '16px', fontWeight: '700', color: '#1A1714', marginBottom: '20px' }}>
-              📊 Comparativo por Día
+
+          {/* Totales */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '16px' }}>
+            <div style={{ background: '#FBF6E9', border: '1px solid #C8A84B', borderRadius: '12px', padding: '16px' }}>
+              <div style={{ fontSize: '11px', fontWeight: '600', color: '#9C9590', textTransform: 'uppercase', marginBottom: '6px' }}>Cajera cobró</div>
+              <div style={{ fontSize: '20px', fontWeight: '700', color: '#C8A84B', fontFamily: "'DM Mono', monospace" }}>{fmt(totalCajera)}</div>
             </div>
-
-            {/* Comparación de totales */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '24px' }}>
-              <div style={{ background: '#FBF6E9', border: '1px solid #C8A84B', borderRadius: '8px', padding: '16px' }}>
-                <div style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', marginBottom: '6px' }}>
-                  Lo que cobró la cajera
-                </div>
-                <div style={{ fontSize: '18px', fontWeight: '700', color: '#C8A84B', fontFamily: "'DM Mono', monospace" }}>
-                  {fmt(totalCajera)}
-                </div>
-              </div>
-
-              <div style={{ background: '#E8F3EC', border: '1px solid #27AE60', borderRadius: '8px', padding: '16px' }}>
-                <div style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', marginBottom: '6px' }}>
-                  Lo que contó la revisora
-                </div>
-                <div style={{ fontSize: '18px', fontWeight: '700', color: '#27AE60', fontFamily: "'DM Mono', monospace" }}>
-                  {fmt(totalRevisora)}
-                </div>
-              </div>
-            </div>
-
-            {/* Estado */}
-            <div style={{
-              background: diferencia === 0 ? '#E8F3EC' : '#FDE8E8',
-              border: `1px solid ${diferencia === 0 ? '#27AE60' : '#E74C3C'}`,
-              borderRadius: '8px',
-              padding: '16px',
-              marginBottom: '24px'
-            }}>
-              <div style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', marginBottom: '8px' }}>
-                Estado
-              </div>
-              <div style={{ fontSize: '16px', fontWeight: '700', color: diferencia === 0 ? '#27AE60' : '#E74C3C' }}>
-                {diferencia === 0 ? '✅ Coinciden perfectamente' : `⚠️ Diferencia: ${fmt(diferencia)}`}
-              </div>
-            </div>
-
-            {/* Detalles de la revisión */}
-            <div style={{ background: '#f9f9f9', borderRadius: '8px', padding: '16px', marginBottom: '24px' }}>
-              <div style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', marginBottom: '12px' }}>
-                Detalles
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px' }}>
-                <div>
-                  <div style={{ color: '#9C9590', marginBottom: '4px' }}>Revisora</div>
-                  <div style={{ fontWeight: '600', color: '#1A1714' }}>{revisionActual.revisora}</div>
-                </div>
-                <div>
-                  <div style={{ color: '#9C9590', marginBottom: '4px' }}>Hora de cierre</div>
-                  <div style={{ fontWeight: '600', color: '#1A1714' }}>{revisionActual.hora_revision || 'N/A'}</div>
-                </div>
-                <div>
-                  <div style={{ color: '#9C9590', marginBottom: '4px' }}>Efectivo revisado</div>
-                  <div style={{ fontWeight: '600', color: '#1A1714' }}>{fmt(revisionActual.efectivo_revisado || 0)}</div>
-                </div>
-                <div>
-                  <div style={{ color: '#9C9590', marginBottom: '4px' }}>Datafono (BAC)</div>
-                  <div style={{ fontWeight: '600', color: '#1A1714' }}>{fmt(revisionActual.bac_revisado || 0)}</div>
-                </div>
-              </div>
+            <div style={{ background: '#E8F3EC', border: '1px solid #27AE60', borderRadius: '12px', padding: '16px' }}>
+              <div style={{ fontSize: '11px', fontWeight: '600', color: '#9C9590', textTransform: 'uppercase', marginBottom: '6px' }}>Revisora contó</div>
+              <div style={{ fontSize: '20px', fontWeight: '700', color: '#27AE60', fontFamily: "'DM Mono', monospace" }}>{fmt(totalRevisora)}</div>
             </div>
           </div>
 
-          {/* Botón volver */}
+          {/* Estado */}
+          <div style={{ background: difAbs === 0 ? '#E8F3EC' : '#FDE8E8', border: `1px solid ${difAbs === 0 ? '#27AE60' : '#E74C3C'}`, borderRadius: '12px', padding: '14px 18px', marginBottom: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: '14px', fontWeight: '700', color: difAbs === 0 ? '#27AE60' : '#E74C3C' }}>
+              {difAbs === 0 ? '✅ Coinciden perfectamente' : `⚠️ Diferencia de ${fmt(difAbs)}`}
+            </span>
+            {difAbs > 0 && (
+              <span style={{ fontSize: '12px', color: '#E74C3C', fontWeight: '600' }}>
+                {diferencia > 0 ? 'Cajera cobró más' : 'Revisora contó más'}
+              </span>
+            )}
+          </div>
+
+          {/* Desglose por método */}
+          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+            <div style={{ padding: '14px 20px', background: '#F0EDE6', borderBottom: '1px solid #E2DDD4' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px' }}>
+                <div style={{ fontSize: '10px', fontWeight: '700', color: '#9C9590', textTransform: 'uppercase' }}>Método</div>
+                <div style={{ fontSize: '10px', fontWeight: '700', color: '#9C9590', textTransform: 'uppercase', textAlign: 'right' }}>Cajera</div>
+                <div style={{ fontSize: '10px', fontWeight: '700', color: '#9C9590', textTransform: 'uppercase', textAlign: 'right' }}>Revisora</div>
+              </div>
+            </div>
+            {filas.map(({ label, revisora: r }) => (
+              <div key={label} style={{ padding: '12px 20px', borderBottom: '1px solid #F0EDE6', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', alignItems: 'center' }}>
+                <div style={{ fontSize: '13px', color: '#6B6560' }}>{label}</div>
+                <div style={{ fontSize: '13px', color: '#9C9590', textAlign: 'right', fontFamily: "'DM Mono', monospace" }}>—</div>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714', textAlign: 'right', fontFamily: "'DM Mono', monospace" }}>{fmt(r)}</div>
+              </div>
+            ))}
+          </div>
+
+          {/* Meta */}
+          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+            <div style={{ padding: '14px 20px', background: '#F0EDE6', borderBottom: '1px solid #E2DDD4', fontSize: '13px', fontWeight: '600', color: '#1A1714' }}>Datos de revisión</div>
+            <div style={{ padding: '16px 20px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '13px' }}>
+              <div>
+                <div style={{ color: '#9C9590', marginBottom: '3px', fontSize: '11px', textTransform: 'uppercase', fontWeight: '600' }}>Cajeras</div>
+                <div style={{ fontWeight: '600', color: '#1A1714' }}>{rv.cajera}</div>
+              </div>
+              <div>
+                <div style={{ color: '#9C9590', marginBottom: '3px', fontSize: '11px', textTransform: 'uppercase', fontWeight: '600' }}>Revisora</div>
+                <div style={{ fontWeight: '600', color: '#1A1714' }}>{rv.revisora}</div>
+              </div>
+              <div>
+                <div style={{ color: '#9C9590', marginBottom: '3px', fontSize: '11px', textTransform: 'uppercase', fontWeight: '600' }}>Hora</div>
+                <div style={{ fontWeight: '600', color: '#1A1714' }}>{rv.hora_revision || '—'}</div>
+              </div>
+              <div>
+                <div style={{ color: '#9C9590', marginBottom: '3px', fontSize: '11px', textTransform: 'uppercase', fontWeight: '600' }}>Fecha revisión</div>
+                <div style={{ fontWeight: '600', color: '#1A1714' }}>{rv.created_at ? new Date(rv.created_at).toLocaleDateString('es-CR') : '—'}</div>
+              </div>
+            </div>
+            {rv.comentario && (
+              <div style={{ padding: '0 20px 16px', borderTop: '1px solid #F0EDE6', paddingTop: '12px' }}>
+                <div style={{ color: '#9C9590', marginBottom: '4px', fontSize: '11px', textTransform: 'uppercase', fontWeight: '600' }}>Comentario</div>
+                <div style={{ fontSize: '13px', color: '#1A1714', background: '#FBF6E9', borderRadius: '8px', padding: '10px 12px', border: '1px solid #E8D99A' }}>{rv.comentario}</div>
+              </div>
+            )}
+          </div>
+
           <button
-            onClick={() => {
-              setComparativoActivo(null);
-              setRevisionActual(null);
-            }}
-            style={{
-              width: '100%',
-              padding: '12px',
-              background: '#F0EDE6',
-              color: '#6B6560',
-              border: '1.5px solid #E2DDD4',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: '600',
-              cursor: 'pointer',
-              marginTop: '24px'
-            }}
+            onClick={() => { setComparativoActivo(null); setRevisionActual(null); }}
+            style={{ width: '100%', padding: '12px', background: '#F0EDE6', color: '#6B6560', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer' }}
             onMouseEnter={(e) => e.currentTarget.style.background = '#E2DDD4'}
             onMouseLeave={(e) => e.currentTarget.style.background = '#F0EDE6'}
           >
@@ -403,22 +416,7 @@ export default function RevisionGloryPage() {
                     }, 0);
 
                     return (
-                      <div
-                        key={fecha}
-                        style={{
-                          padding: '16px 20px',
-                          borderBottom: idx < diasRevisados.length - 1 ? '1px solid #E2DDD4' : 'none',
-                          opacity: 0.7,
-                          cursor: 'pointer',
-                          transition: 'all 0.2s'
-                        }}
-                        onClick={() => {
-                          setComparativoActivo(fecha);
-                          abrirComparativo(fecha, cajerasEnDia.join(' / '));
-                        }}
-                        onMouseEnter={(e) => e.currentTarget.style.background = '#f9f9f9'}
-                        onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
-                      >
+                      <div key={fecha} style={{ padding: '16px 20px', borderBottom: idx < diasRevisados.length - 1 ? '1px solid #E2DDD4' : 'none' }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
                           <div style={{ flex: 1 }}>
                             <div style={{ fontSize: '16px', fontWeight: '700', color: '#1A1714', marginBottom: '4px' }}>
@@ -428,11 +426,17 @@ export default function RevisionGloryPage() {
                               {cajerasEnDia.join(', ')}
                             </div>
                           </div>
-                          <div style={{ textAlign: 'right' }}>
-                            <div style={{ fontSize: '14px', fontWeight: '700', color: '#1A1714' }}>
-                              {fmt(totalDia)}
-                            </div>
+                          <div style={{ fontSize: '14px', fontWeight: '700', color: '#27AE60', marginRight: '12px', fontFamily: "'DM Mono', monospace" }}>
+                            {fmt(totalDia)}
                           </div>
+                          <button
+                            onClick={() => { setComparativoActivo(fecha); abrirComparativo(fecha, cajerasEnDia.join(' / ')); }}
+                            style={{ padding: '8px 16px', background: '#E8F3EC', color: '#27AE60', border: '1.5px solid #27AE60', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                            onMouseEnter={(e) => e.currentTarget.style.background = '#d4edda'}
+                            onMouseLeave={(e) => e.currentTarget.style.background = '#E8F3EC'}
+                          >
+                            Ver
+                          </button>
                         </div>
                       </div>
                     );
@@ -445,6 +449,50 @@ export default function RevisionGloryPage() {
               <div style={{ textAlign: 'center', padding: '40px', color: '#9C9590' }}>No hay cobros para este período</div>
             )}
           </>
+        )}
+
+        {/* Resumen del mes */}
+        {revisionesMes.length > 0 && (
+          <div style={{ marginBottom: '24px' }}>
+            <div style={{ fontSize: '14px', fontWeight: '700', color: '#1A1714', marginBottom: '12px' }}>
+              📅 Resumen del mes ({new Date().toLocaleDateString('es-CR', { month: 'long', year: 'numeric' })})
+            </div>
+            <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden' }}>
+              {/* Header */}
+              <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1fr 90px', gap: '8px', padding: '10px 16px', background: '#F0EDE6', borderBottom: '1px solid #E2DDD4' }}>
+                {['Fecha', 'Cajera', 'Revisora', 'Diferencia'].map(h => (
+                  <div key={h} style={{ fontSize: '10px', fontWeight: '700', color: '#9C9590', textTransform: 'uppercase' }}>{h}</div>
+                ))}
+              </div>
+              {revisionesMes.map((rev, idx) => {
+                const dif = (rev.total_cajera || 0) - (rev.total_revisado || 0);
+                const difAbs = Math.abs(dif);
+                return (
+                  <div key={rev.id || idx} style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1fr 90px', gap: '8px', padding: '10px 16px', borderBottom: idx < revisionesMes.length - 1 ? '1px solid #F0EDE6' : 'none', alignItems: 'center' }}>
+                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714' }}>{fmtFecha(rev.fecha)}</div>
+                    <div style={{ fontSize: '12px', color: '#6B6560', fontFamily: "'DM Mono', monospace" }}>{fmt(rev.total_cajera || 0)}</div>
+                    <div style={{ fontSize: '12px', color: '#6B6560', fontFamily: "'DM Mono', monospace" }}>{fmt(rev.total_revisado || 0)}</div>
+                    <div style={{ fontSize: '12px', fontWeight: '700', color: difAbs === 0 ? '#27AE60' : '#E74C3C', fontFamily: "'DM Mono', monospace" }}>
+                      {difAbs === 0 ? '✅ ₡0' : `${dif > 0 ? '-' : '+'}${fmt(difAbs)}`}
+                    </div>
+                  </div>
+                );
+              })}
+              {/* Totales */}
+              <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1fr 90px', gap: '8px', padding: '12px 16px', background: '#F0EDE6', borderTop: '2px solid #E2DDD4' }}>
+                <div style={{ fontSize: '12px', fontWeight: '700', color: '#1A1714' }}>Total</div>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: '#C8A84B', fontFamily: "'DM Mono', monospace" }}>
+                  {fmt(revisionesMes.reduce((s, r) => s + (r.total_cajera || 0), 0))}
+                </div>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: '#27AE60', fontFamily: "'DM Mono', monospace" }}>
+                  {fmt(revisionesMes.reduce((s, r) => s + (r.total_revisado || 0), 0))}
+                </div>
+                <div style={{ fontSize: '13px', fontWeight: '700', color: '#1A1714', fontFamily: "'DM Mono', monospace" }}>
+                  {(() => { const d = revisionesMes.reduce((s, r) => s + (r.total_cajera || 0) - (r.total_revisado || 0), 0); return d === 0 ? '✅ ₡0' : fmt(Math.abs(d)); })()}
+                </div>
+              </div>
+            </div>
+          </div>
         )}
 
         {/* Botón volver */}

@@ -53,12 +53,29 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const fecha = searchParams.get('fecha');
+    const mes = searchParams.get('mes'); // formato "2026-06"
+
+    // Resumen del mes: devuelve todas las revisiones del mes
+    if (mes) {
+      const inicio = `${mes}-01`;
+      const finDate = new Date(mes + '-01');
+      finDate.setMonth(finDate.getMonth() + 1);
+      finDate.setDate(0);
+      const fin = finDate.toISOString().split('T')[0];
+
+      const { data, error } = await supabase
+        .from('revision_glory')
+        .select('*')
+        .gte('fecha', inicio)
+        .lte('fecha', fin)
+        .order('fecha', { ascending: true });
+
+      if (error) throw error;
+      return Response.json(data || [], { status: 200 });
+    }
 
     if (!fecha) {
-      return Response.json(
-        { error: 'Falta fecha' },
-        { status: 400 }
-      );
+      return Response.json({ error: 'Falta fecha o mes' }, { status: 400 });
     }
 
     const { data, error } = await supabase

@@ -16,6 +16,7 @@ export default function FormularioRevisionGlory({ fecha, cajera, cobros, periodo
     500: 0, 100: 0, 50: 0, 25: 0, 10: 0, 5: 0,
   });
   const [datafonoGlory, setDatafonoGlory] = useState(0);
+  const [comentario, setComentario] = useState('');
   const [loading, setLoading] = useState(false);
   const [toast, setToast] = useState(null);
   const [usuarioActual, setUsuarioActual] = useState(null);
@@ -87,6 +88,7 @@ export default function FormularioRevisionGlory({ fecha, cajera, cobros, periodo
           transferencias_revisadas: totalTransf,
           total_revisado: totalRevisado,
           total_cajera: totalCajera,
+          comentario: comentario.trim() || null,
         }),
       });
 
@@ -348,6 +350,22 @@ export default function FormularioRevisionGlory({ fecha, cajera, cobros, periodo
                 </span>
               )}
             </div>
+          </div>
+        </div>
+
+        {/* Comentario */}
+        <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
+          <div style={{ padding: '14px 20px', borderBottom: '1px solid #E2DDD4', background: '#F0EDE6', fontSize: '13px', fontWeight: '600', color: '#1A1714' }}>
+            Comentario (opcional)
+          </div>
+          <div style={{ padding: '16px' }}>
+            <textarea
+              value={comentario}
+              onChange={(e) => setComentario(e.target.value)}
+              placeholder="Observaciones, discrepancias, notas..."
+              rows={3}
+              style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '13px', fontFamily: "'DM Sans', sans-serif", resize: 'vertical', boxSizing: 'border-box', outline: 'none' }}
+            />
           </div>
         </div>
 
