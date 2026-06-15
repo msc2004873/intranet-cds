@@ -84,19 +84,17 @@ export default function RevisionGloryPage() {
         const revisRes = await fetch('/api/revision-caja-glory-ids');
         if (revisRes.ok) {
           const revisadas = await revisRes.json();
-          const cajasRevisadas = new Set(revisadas.map(r => `${r.fecha}-${r.cajera}`));
+          const cajasRevisadas = new Set(revisadas.map(r => r.fecha));
           setCajerasRevisadas(cajasRevisadas);
         }
       } catch (err) {
         console.error('Error loading reviewed cajas:', err);
       }
 
-      // Agrupar por día y cajera
+      // Agrupar por día y cajera — usar ISO como key para que coincida con revision_glory
       const agrupado = {};
       (Array.isArray(data) ? data : []).forEach(cobro => {
-        // cobro.fecha es DATE, ya está en CR — no pasar por new Date() para evitar shift de timezone
-        const fechaObj = new Date(`${cobro.fecha}T00:00:00`);
-        const fecha = fechaObj.toLocaleDateString('es-CR');
+        const fecha = cobro.fecha; // ISO: "2026-06-01"
         if (!agrupado[fecha]) agrupado[fecha] = {};
         if (!agrupado[fecha][cobro.cajera]) agrupado[fecha][cobro.cajera] = [];
         agrupado[fecha][cobro.cajera].push(cobro);
@@ -130,7 +128,7 @@ export default function RevisionGloryPage() {
   const abrirComparativo = async (fecha, cajera) => {
     setLoadingRev(true);
     try {
-      const res = await fetch(`/api/revisionGlory?fecha=${fecha}&cajera=${cajera}`);
+      const res = await fetch(`/api/revisionGlory?fecha=${fecha}`);
       if (res.ok) {
         const data = await res.json();
         setRevisionActual(data);
@@ -149,7 +147,7 @@ export default function RevisionGloryPage() {
 
     return (
       <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
-        <Header title="Comparativo — Glory" subtitle={`${comparativoActivo} • ${revisionActual.cajera}`} showLogout={false} homeLink="#" />
+        <Header title="Comparativo — Glory" subtitle={`${fmtFecha(comparativoActivo)} • ${revisionActual.cajera}`} showLogout={false} homeLink="#" />
 
         <div style={{ flex: 1, maxWidth: '720px', margin: '0 auto', padding: '24px 16px', width: '100%' }}>
           <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', padding: '20px', marginBottom: '24px' }}>
@@ -262,19 +260,16 @@ export default function RevisionGloryPage() {
 
   // Agrupar días por estado (pendientes/revisados)
   const diasOrdenados = Object.keys(cobrosPorDia).sort((a, b) => {
-    // Parsear fechas en formato CR (31/5/2026) a ISO
-    const parseaCR = (fechaStr) => {
-      const [dia, mes, ano] = fechaStr.split('/');
-      return new Date(`${ano}-${mes}-${dia}`);
-    };
-    return parseaCR(a) - parseaCR(b);
+    return new Date(a) - new Date(b); // keys son ISO "2026-06-01"
   });
+
+  const fmtFecha = (isoFecha) => new Date(`${isoFecha}T00:00:00`).toLocaleDateString('es-CR');
   const diasPendientes = [];
   const diasRevisados = [];
 
   diasOrdenados.forEach(fecha => {
     const cajerasEnDia = Object.keys(cobrosPorDia[fecha]);
-    const allRevisadas = cajerasEnDia.every(cajera => cajerasRevisadas.has(`${fecha}-${cajera}`));
+    const allRevisadas = cajerasRevisadas.has(fecha);
 
     if (allRevisadas) {
       diasRevisados.push(fecha);
@@ -335,7 +330,7 @@ export default function RevisionGloryPage() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
                           <div style={{ flex: 1 }}>
                             <div style={{ fontSize: '16px', fontWeight: '700', color: '#1A1714', marginBottom: '4px' }}>
-                              {fecha}
+                              {fmtFecha(fecha)}
                             </div>
                             <div style={{ fontSize: '12px', color: '#9C9590' }}>
                               {cajerasEnDia.join(', ')}
@@ -361,11 +356,11 @@ export default function RevisionGloryPage() {
                           ) : (
                             <button
                               onClick={() => {
-                                const cajera = cajerasEnDia[0];
+                                const todosCobros = cajerasEnDia.flatMap(c => cobrosPorDia[fecha][c] || []);
                                 setDiaEnRevision({
                                   fecha,
-                                  cajera,
-                                  cobros: cobrosPorDia[fecha][cajera] || [],
+                                  cajera: cajerasEnDia.join(' / '),
+                                  cobros: todosCobros,
                                 });
                               }}
                               style={{
@@ -418,9 +413,8 @@ export default function RevisionGloryPage() {
                           transition: 'all 0.2s'
                         }}
                         onClick={() => {
-                          const cajera = cajerasEnDia[0];
                           setComparativoActivo(fecha);
-                          abrirComparativo(fecha, cajera);
+                          abrirComparativo(fecha, cajerasEnDia.join(' / '));
                         }}
                         onMouseEnter={(e) => e.currentTarget.style.background = '#f9f9f9'}
                         onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
@@ -428,7 +422,7 @@ export default function RevisionGloryPage() {
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
                           <div style={{ flex: 1 }}>
                             <div style={{ fontSize: '16px', fontWeight: '700', color: '#1A1714', marginBottom: '4px' }}>
-                              {fecha}
+                              {fmtFecha(fecha)}
                             </div>
                             <div style={{ fontSize: '12px', color: '#9C9590' }}>
                               {cajerasEnDia.join(', ')}

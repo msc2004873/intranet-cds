@@ -40,10 +40,12 @@ export default function FormularioRevisionGlory({ fecha, cajera, cobros, periodo
 
   // Cobros por método
   const cobrosArray = Array.isArray(cobros) ? cobros : [];
+  const METODOS_CONOCIDOS = ['Efectivo', 'Tarjeta BAC', 'SINPE', 'Transferencia'];
   const cobrosEfectivo = cobrosArray.filter(c => c.metodo === 'Efectivo');
   const cobrosBac = cobrosArray.filter(c => c.metodo === 'Tarjeta BAC');
   const cobrosSinpe = cobrosArray.filter(c => c.metodo === 'SINPE');
   const cobrosTransf = cobrosArray.filter(c => c.metodo === 'Transferencia');
+  const cobrosOtros = cobrosArray.filter(c => !METODOS_CONOCIDOS.includes(c.metodo));
 
   // Totales cajera por método
   const totalCajera = cobrosArray.reduce((s, c) => s + (c.monto || 0), 0);
@@ -51,14 +53,15 @@ export default function FormularioRevisionGlory({ fecha, cajera, cobros, periodo
   const totalCajeraBac = cobrosBac.reduce((s, c) => s + (c.monto || 0), 0);
   const totalCajeraSinpe = cobrosSinpe.reduce((s, c) => s + (c.monto || 0), 0);
   const totalCajeraTransf = cobrosTransf.reduce((s, c) => s + (c.monto || 0), 0);
+  const totalCajeraOtros = cobrosOtros.reduce((s, c) => s + (c.monto || 0), 0);
 
   // Totales revisora
   const totalEfectivo = Object.entries(denominaciones).reduce((s, [d, c]) => s + parseInt(d) * c, 0);
   const totalDatafono = datafonoGlory;
-  // SINPE y Transferencias se toman directo de los cobros (solo lectura)
+  // SINPE, Transferencias y Otros se toman directo de los cobros (solo lectura)
   const totalSinpe = totalCajeraSinpe;
   const totalTransf = totalCajeraTransf;
-  const totalRevisado = totalEfectivo + totalDatafono + totalSinpe + totalTransf;
+  const totalRevisado = totalEfectivo + totalDatafono + totalSinpe + totalTransf + totalCajeraOtros;
   const diferencia = totalCajera - totalRevisado;
 
   async function guardarRevision() {
@@ -132,7 +135,7 @@ export default function FormularioRevisionGlory({ fecha, cajera, cobros, periodo
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: "'DM Sans', sans-serif" }}>
-      <Header title="Revisión — Glory" subtitle={`${fecha} • ${cajera}`} showLogout={false} homeLink="#" />
+      <Header title="Revisión — Glory" subtitle={`${new Date(`${fecha}T00:00:00`).toLocaleDateString('es-CR')} • ${cajera}`} showLogout={false} homeLink="#" />
 
       <div style={{ flex: 1, maxWidth: '720px', margin: '0 auto', padding: '24px 16px', width: '100%' }}>
 
@@ -153,7 +156,7 @@ export default function FormularioRevisionGlory({ fecha, cajera, cobros, periodo
             </div>
             <div>
               <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Fecha</label>
-              <div style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px', background: '#F0EDE6', color: '#6B6560', fontFamily: "'DM Mono', monospace" }}>{fecha}</div>
+              <div style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px', background: '#F0EDE6', color: '#6B6560', fontFamily: "'DM Mono', monospace" }}>{new Date(`${fecha}T00:00:00`).toLocaleDateString('es-CR')}</div>
             </div>
             <div>
               <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Caja</label>
@@ -317,6 +320,7 @@ export default function FormularioRevisionGlory({ fecha, cajera, cobros, periodo
               { label: 'Datafono Glory', cajera: totalCajeraBac, revisora: totalDatafono },
               { label: 'SINPE', cajera: totalCajeraSinpe, revisora: totalSinpe },
               { label: 'Transferencias', cajera: totalCajeraTransf, revisora: totalTransf },
+              ...(totalCajeraOtros > 0 ? [{ label: 'Otros', cajera: totalCajeraOtros, revisora: totalCajeraOtros }] : []),
             ].map(({ label, cajera: c, revisora: r }) => (
               <div key={label} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', padding: '6px 0', borderBottom: '1px solid #F0EDE6', alignItems: 'center' }}>
                 <div style={{ fontSize: '12px', color: '#6B6560' }}>{label}</div>

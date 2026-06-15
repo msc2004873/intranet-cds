@@ -53,11 +53,10 @@ export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const fecha = searchParams.get('fecha');
-    const cajera = searchParams.get('cajera');
 
-    if (!fecha || !cajera) {
+    if (!fecha) {
       return Response.json(
-        { error: 'Falta fecha o cajera' },
+        { error: 'Falta fecha' },
         { status: 400 }
       );
     }
@@ -66,7 +65,6 @@ export async function GET(request) {
       .from('revision_glory')
       .select('*')
       .eq('fecha', fecha)
-      .eq('cajera', cajera)
       .order('created_at', { ascending: false })
       .limit(1)
       .single();
@@ -77,7 +75,7 @@ export async function GET(request) {
 
     if (!data) {
       return Response.json(
-        { id: null, fecha, cajera, total_revisado: 0, total_cajera: 0 },
+        { id: null, fecha, total_revisado: 0, total_cajera: 0 },
         { status: 200 }
       );
     }

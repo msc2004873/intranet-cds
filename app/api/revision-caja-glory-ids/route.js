@@ -9,7 +9,7 @@ export async function GET(req) {
   try {
     const { data, error } = await supabase
       .from('revision_glory')
-      .select('fecha, cajera');
+      .select('fecha');
 
     if (error) throw error;
 
