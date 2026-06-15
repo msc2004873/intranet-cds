@@ -5,6 +5,25 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+export async function GET(req) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const fecha = searchParams.get('fecha');
+    if (!fecha) return Response.json({ error: 'Falta fecha' }, { status: 400 });
+
+    const { data, error } = await supabase
+      .from('conteo_caja')
+      .select('id, cajera, caja, fecha, hora, total_colones')
+      .eq('fecha', fecha)
+      .order('hora', { ascending: false });
+
+    if (error) throw error;
+    return Response.json(data || []);
+  } catch (err) {
+    return Response.json({ error: err.message }, { status: 500 });
+  }
+}
+
 export async function POST(req) {
   try {
     const body = await req.json();

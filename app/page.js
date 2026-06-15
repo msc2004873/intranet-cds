@@ -58,6 +58,7 @@ export default function Home() {
   const [periodsTC, setPeriodsTC] = useState([]);
   const [mesModalOffset, setMesModalOffset] = useState(0);
   const [userName, setUserName] = useState('');
+  const [conteosDia, setConteosDia] = useState([]);
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -69,6 +70,20 @@ export default function Home() {
     fetchLogs();
     fetchPeriodoActual();
   }, []);
+
+  useEffect(() => {
+    fetchConteosDia(selectedDate);
+  }, [selectedDate]);
+
+  async function fetchConteosDia(fecha) {
+    try {
+      const res = await fetch(`/api/conteo?fecha=${fecha}`);
+      const data = await res.json();
+      setConteosDia(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error('Error conteos:', err);
+    }
+  }
 
   async function fetchPeriodoActual() {
     try {
@@ -294,9 +309,9 @@ export default function Home() {
             const sumar = (tipo, caja) => logsDelDia
               .filter(l => l.tipo === tipo && l.caja === caja)
               .reduce((acc, l) => acc + (Number(l.data?.monto) || 0), 0);
-            const ultimoConteo = (caja) => logs
-              .filter(l => l.tipo === 'Conteo de Caja' && l.caja === caja && (l.data?.fecha === selectedDate || l.fecha === selectedDate))
-              .sort((a, b) => b.timestamp - a.timestamp)[0];
+            const ultimoConteo = (caja) => conteosDia
+              .filter(c => c.caja === caja)
+              .sort((a, b) => new Date(b.hora) - new Date(a.hora))[0];
             const fmtMonto = (n) => n > 0 ? '₡' + n.toLocaleString('es-CR') : '—';
             const filas = [
               { label: 'SINPE', tipo: 'SINPE', color: '#2a78a5', bg: '#E8F3EC' },
@@ -340,8 +355,10 @@ export default function Home() {
                           <td key={caja} style={{ padding: '10px 16px', textAlign: 'right', fontFamily: "'DM Mono', monospace" }}>
                             {conteo ? (
                               <>
-                                <div style={{ fontSize: '13px', fontWeight: '600', color: '#C8A84B' }}>₡{(conteo.data?.total_colones || 0).toLocaleString('es-CR')}</div>
-                                <div style={{ fontSize: '10px', color: '#9C9590', marginTop: '1px' }}>{conteo.hora}</div>
+                                <div style={{ fontSize: '13px', fontWeight: '600', color: '#C8A84B' }}>₡{(conteo.total_colones || 0).toLocaleString('es-CR')}</div>
+                                <div style={{ fontSize: '10px', color: '#9C9590', marginTop: '1px' }}>
+                                  {new Date(conteo.hora).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Costa_Rica' })}
+                                </div>
                               </>
                             ) : (
                               <span style={{ fontSize: '13px', color: '#C4BFB9' }}>—</span>
