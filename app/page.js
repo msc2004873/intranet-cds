@@ -309,9 +309,12 @@ export default function Home() {
             const sumar = (tipo, caja) => logsDelDia
               .filter(l => l.tipo === tipo && l.caja === caja)
               .reduce((acc, l) => acc + (Number(l.data?.monto) || 0), 0);
-            const ultimoConteo = (caja) => conteosDia
-              .filter(c => c.caja === caja)
-              .sort((a, b) => new Date(b.hora) - new Date(a.hora))[0];
+            const ultimoConteo = (caja) => {
+              const sorted = conteosDia
+                .filter(c => c.caja === caja)
+                .sort((a, b) => new Date(b.hora) - new Date(a.hora));
+              return sorted.find(c => Number(c.total_colones) > 0) || sorted[0];
+            };
             const fmtMonto = (n) => n > 0 ? '₡' + n.toLocaleString('es-CR') : '—';
             const filas = [
               { label: 'SINPE', tipo: 'SINPE', color: '#2a78a5', bg: '#E8F3EC' },
