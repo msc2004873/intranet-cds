@@ -294,8 +294,8 @@ export default function Home() {
             const sumar = (tipo, caja) => logsDelDia
               .filter(l => l.tipo === tipo && l.caja === caja)
               .reduce((acc, l) => acc + (Number(l.data?.monto) || 0), 0);
-            const ultimoConteo = (caja) => logsDelDia
-              .filter(l => l.tipo === 'Conteo de Caja' && l.caja === caja)
+            const ultimoConteo = (caja) => logs
+              .filter(l => l.tipo === 'Conteo de Caja' && l.caja === caja && (l.data?.fecha === selectedDate || l.fecha === selectedDate))
               .sort((a, b) => b.timestamp - a.timestamp)[0];
             const fmtMonto = (n) => n > 0 ? '₡' + n.toLocaleString('es-CR') : '—';
             const filas = [
