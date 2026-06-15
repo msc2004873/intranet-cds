@@ -503,7 +503,7 @@ export default function RevisionGloryPage() {
                       <div style={{ fontSize: '12px', fontWeight: '700', color: Math.abs(difTotal) === 0 ? '#27AE60' : '#E74C3C' }}>
                         {Math.abs(difTotal) === 0 ? '✅ Sin diferencia' : `⚠️ Dif: ${fmt(Math.abs(difTotal))}`}
                       </div>
-                      {rev.hora_revision && <div style={{ fontSize: '11px', color: '#9C9590', marginTop: '2px' }}>Revisado a las {rev.hora_revision}</div>}
+                      {rev.hora_revision && <div style={{ fontSize: '11px', color: '#9C9590', marginTop: '2px' }}>Revisado el {rev.created_at ? new Date(rev.created_at).toLocaleDateString('es-CR') : fmtFecha(rev.fecha)} a las {rev.hora_revision}</div>}
                     </div>
                   </div>
 
