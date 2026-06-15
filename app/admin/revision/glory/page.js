@@ -43,6 +43,7 @@ export default function RevisionGloryPage() {
   const [revisionActual, setRevisionActual] = useState(null);
   const [loadingRev, setLoadingRev] = useState(false);
   const [revisionesMes, setRevisionesMes] = useState([]);
+  const [cobrosMesPorFecha, setCobrosMesPorFecha] = useState({});
 
   useEffect(() => {
     const hoy = new Date();
@@ -73,10 +74,32 @@ export default function RevisionGloryPage() {
 
   async function cargarResumenMes() {
     const hoy = new Date();
-    const mes = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
+    const ano = hoy.getFullYear();
+    const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+    const mesStr = `${ano}-${mes}`;
+    const ultimoDia = new Date(ano, hoy.getMonth() + 1, 0).getDate();
+    const inicio = `${mesStr}-01`;
+    const fin = `${mesStr}-${String(ultimoDia).padStart(2, '0')}`;
+
     try {
-      const res = await fetch(`/api/revisionGlory?mes=${mes}`);
-      if (res.ok) setRevisionesMes(await res.json());
+      const [revRes, cobrosRes] = await Promise.all([
+        fetch(`/api/revisionGlory?mes=${mesStr}`),
+        fetch(`/api/cobros-glory?cobrado=true&inicio=${inicio}&fin=${fin}`),
+      ]);
+
+      if (revRes.ok) setRevisionesMes(await revRes.json());
+
+      if (cobrosRes.ok) {
+        const cobros = await cobrosRes.json();
+        // Agrupar por fecha → método → suma de montos
+        const porFecha = {};
+        (Array.isArray(cobros) ? cobros : []).forEach(c => {
+          if (!porFecha[c.fecha]) porFecha[c.fecha] = {};
+          const m = c.metodo || 'Otros';
+          porFecha[c.fecha][m] = (porFecha[c.fecha][m] || 0) + (c.monto || 0);
+        });
+        setCobrosMesPorFecha(porFecha);
+      }
     } catch (err) {
       console.error('Error cargando resumen mes:', err);
     }
@@ -457,12 +480,12 @@ export default function RevisionGloryPage() {
               📅 Resumen del mes ({new Date().toLocaleDateString('es-CR', { month: 'long', year: 'numeric' })})
             </div>
             {revisionesMes.map((rev, idx) => {
-              const tieneCajeraDetalle = (rev.efectivo_cajera || 0) + (rev.datafono_cajera || 0) + (rev.sinpe_cajera || 0) + (rev.transferencias_cajera || 0) > 0;
+              const cobDia = cobrosMesPorFecha[rev.fecha] || {};
               const metodos = [
-                { label: 'Efectivo',       cajera: rev.efectivo_cajera || 0,       revisora: rev.efectivo_revisado || 0 },
-                { label: 'Datafono BAC',   cajera: rev.datafono_cajera || 0,       revisora: rev.datafono_glory || 0 },
-                { label: 'SINPE',          cajera: rev.sinpe_cajera || 0,          revisora: rev.sinpe_revisado || 0 },
-                { label: 'Transferencias', cajera: rev.transferencias_cajera || 0, revisora: rev.transferencias_revisadas || 0 },
+                { label: 'Efectivo',       cajera: cobDia['Efectivo'] || 0,    revisora: rev.efectivo_revisado || 0 },
+                { label: 'Datafono BAC',   cajera: cobDia['Tarjeta BAC'] || 0, revisora: rev.datafono_glory || 0 },
+                { label: 'SINPE',          cajera: cobDia['SINPE'] || 0,       revisora: rev.sinpe_revisado || 0 },
+                { label: 'Transferencias', cajera: cobDia['Transferencia'] || 0, revisora: rev.transferencias_revisadas || 0 },
               ];
               const difTotal = (rev.total_cajera || 0) - (rev.total_revisado || 0);
 
@@ -492,16 +515,14 @@ export default function RevisionGloryPage() {
                       ))}
                     </div>
                     {metodos.map(({ label, cajera: c, revisora: r }) => {
-                      const d = tieneCajeraDetalle ? c - r : null;
+                      const d = c - r;
                       return (
                         <div key={label} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 80px', gap: '8px', padding: '8px 0', borderBottom: '1px solid #F0EDE6', alignItems: 'center' }}>
                           <div style={{ fontSize: '12px', color: '#6B6560' }}>{label}</div>
-                          <div style={{ fontSize: '12px', fontFamily: "'DM Mono', monospace", color: tieneCajeraDetalle ? '#1A1714' : '#C0BAB5' }}>
-                            {tieneCajeraDetalle ? fmt(c) : '—'}
-                          </div>
+                          <div style={{ fontSize: '12px', fontFamily: "'DM Mono', monospace", color: '#1A1714' }}>{fmt(c)}</div>
                           <div style={{ fontSize: '12px', fontFamily: "'DM Mono', monospace", color: '#1A1714' }}>{fmt(r)}</div>
-                          <div style={{ fontSize: '12px', fontWeight: '600', fontFamily: "'DM Mono', monospace", color: d === null ? '#C0BAB5' : (Math.abs(d) === 0 ? '#27AE60' : '#E74C3C') }}>
-                            {d === null ? '—' : (Math.abs(d) === 0 ? '✅' : fmt(Math.abs(d)))}
+                          <div style={{ fontSize: '12px', fontWeight: '600', fontFamily: "'DM Mono', monospace", color: Math.abs(d) === 0 ? '#27AE60' : '#E74C3C' }}>
+                            {Math.abs(d) === 0 ? '✅' : fmt(Math.abs(d))}
                           </div>
                         </div>
                       );
