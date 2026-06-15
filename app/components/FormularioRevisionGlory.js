@@ -88,6 +88,10 @@ export default function FormularioRevisionGlory({ fecha, cajera, cobros, periodo
           transferencias_revisadas: totalTransf,
           total_revisado: totalRevisado,
           total_cajera: totalCajera,
+          efectivo_cajera: totalCajeraEfectivo,
+          datafono_cajera: totalCajeraBac,
+          sinpe_cajera: totalCajeraSinpe,
+          transferencias_cajera: totalCajeraTransf,
           comentario: comentario.trim() || null,
         }),
       });

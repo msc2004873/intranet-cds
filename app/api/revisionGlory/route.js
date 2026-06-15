@@ -4,7 +4,7 @@ export async function POST(request) {
   try {
     const data = await request.json();
 
-    const { fecha, cajera, revisora, hora_revision, caja, denominaciones, datafono_glory, efectivo_revisado, sinpe_revisado, transferencias_revisadas, total_revisado, total_cajera } = data;
+    const { fecha, cajera, revisora, hora_revision, caja, denominaciones, datafono_glory, efectivo_revisado, sinpe_revisado, transferencias_revisadas, total_revisado, total_cajera, efectivo_cajera, datafono_cajera, sinpe_cajera, transferencias_cajera, comentario } = data;
 
     if (!fecha || !cajera || !revisora) {
       return Response.json(
@@ -26,6 +26,11 @@ export async function POST(request) {
       transferencias_revisadas: transferencias_revisadas || 0,
       total_revisado: total_revisado || 0,
       total_cajera: total_cajera || 0,
+      efectivo_cajera: efectivo_cajera || 0,
+      datafono_cajera: datafono_cajera || 0,
+      sinpe_cajera: sinpe_cajera || 0,
+      transferencias_cajera: transferencias_cajera || 0,
+      comentario: comentario || null,
       estado: 'revisado',
     };
 

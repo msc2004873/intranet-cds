@@ -68,6 +68,9 @@ export default function RevisionGloryPage() {
     }
   }, [periodo]);
 
+  const fmt = n => '₡' + Math.round(n).toLocaleString('es-CR');
+  const fmtFecha = (isoFecha) => new Date(`${isoFecha}T00:00:00`).toLocaleDateString('es-CR');
+
   async function cargarResumenMes() {
     const hoy = new Date();
     const mes = `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}`;
@@ -137,8 +140,6 @@ export default function RevisionGloryPage() {
       />
     );
   }
-
-  const fmt = n => '₡' + Math.round(n).toLocaleString('es-CR');
 
   const abrirComparativo = async (fecha, cajera) => {
     setLoadingRev(true);
@@ -275,8 +276,6 @@ export default function RevisionGloryPage() {
   const diasOrdenados = Object.keys(cobrosPorDia).sort((a, b) => {
     return new Date(a) - new Date(b); // keys son ISO "2026-06-01"
   });
-
-  const fmtFecha = (isoFecha) => new Date(`${isoFecha}T00:00:00`).toLocaleDateString('es-CR');
   const diasPendientes = [];
   const diasRevisados = [];
 
@@ -457,39 +456,85 @@ export default function RevisionGloryPage() {
             <div style={{ fontSize: '14px', fontWeight: '700', color: '#1A1714', marginBottom: '12px' }}>
               📅 Resumen del mes ({new Date().toLocaleDateString('es-CR', { month: 'long', year: 'numeric' })})
             </div>
-            <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', overflow: 'hidden' }}>
-              {/* Header */}
-              <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1fr 90px', gap: '8px', padding: '10px 16px', background: '#F0EDE6', borderBottom: '1px solid #E2DDD4' }}>
-                {['Fecha', 'Cajera', 'Revisora', 'Diferencia'].map(h => (
-                  <div key={h} style={{ fontSize: '10px', fontWeight: '700', color: '#9C9590', textTransform: 'uppercase' }}>{h}</div>
-                ))}
-              </div>
-              {revisionesMes.map((rev, idx) => {
-                const dif = (rev.total_cajera || 0) - (rev.total_revisado || 0);
-                const difAbs = Math.abs(dif);
-                return (
-                  <div key={rev.id || idx} style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1fr 90px', gap: '8px', padding: '10px 16px', borderBottom: idx < revisionesMes.length - 1 ? '1px solid #F0EDE6' : 'none', alignItems: 'center' }}>
-                    <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714' }}>{fmtFecha(rev.fecha)}</div>
-                    <div style={{ fontSize: '12px', color: '#6B6560', fontFamily: "'DM Mono', monospace" }}>{fmt(rev.total_cajera || 0)}</div>
-                    <div style={{ fontSize: '12px', color: '#6B6560', fontFamily: "'DM Mono', monospace" }}>{fmt(rev.total_revisado || 0)}</div>
-                    <div style={{ fontSize: '12px', fontWeight: '700', color: difAbs === 0 ? '#27AE60' : '#E74C3C', fontFamily: "'DM Mono', monospace" }}>
-                      {difAbs === 0 ? '✅ ₡0' : `${dif > 0 ? '-' : '+'}${fmt(difAbs)}`}
+            {revisionesMes.map((rev, idx) => {
+              const metodos = [
+                { label: 'Efectivo',       cajera: rev.efectivo_cajera || 0,       revisora: rev.efectivo_revisado || 0 },
+                { label: 'Datafono BAC',   cajera: rev.datafono_cajera || 0,       revisora: rev.datafono_glory || 0 },
+                { label: 'SINPE',          cajera: rev.sinpe_cajera || 0,          revisora: rev.sinpe_revisado || 0 },
+                { label: 'Transferencias', cajera: rev.transferencias_cajera || 0, revisora: rev.transferencias_revisadas || 0 },
+              ].filter(m => m.cajera > 0 || m.revisora > 0);
+              const difTotal = (rev.total_cajera || 0) - (rev.total_revisado || 0);
+
+              return (
+                <div key={rev.id || idx} style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '12px', overflow: 'hidden' }}>
+                  {/* Header del día */}
+                  <div style={{ padding: '12px 16px', background: '#F0EDE6', borderBottom: '1px solid #E2DDD4', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px', flexWrap: 'wrap' }}>
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: '700', color: '#1A1714' }}>{fmtFecha(rev.fecha)}</div>
+                      <div style={{ fontSize: '11px', color: '#6B6560', marginTop: '2px' }}>
+                        <span style={{ fontWeight: '600' }}>Cajeras:</span> {rev.cajera} &nbsp;·&nbsp; <span style={{ fontWeight: '600' }}>Revisora:</span> {rev.revisora}
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '12px', fontWeight: '700', color: Math.abs(difTotal) === 0 ? '#27AE60' : '#E74C3C' }}>
+                        {Math.abs(difTotal) === 0 ? '✅ Sin diferencia' : `⚠️ Dif: ${fmt(Math.abs(difTotal))}`}
+                      </div>
+                      {rev.hora_revision && <div style={{ fontSize: '11px', color: '#9C9590', marginTop: '2px' }}>Revisado a las {rev.hora_revision}</div>}
                     </div>
                   </div>
-                );
-              })}
-              {/* Totales */}
-              <div style={{ display: 'grid', gridTemplateColumns: '90px 1fr 1fr 90px', gap: '8px', padding: '12px 16px', background: '#F0EDE6', borderTop: '2px solid #E2DDD4' }}>
-                <div style={{ fontSize: '12px', fontWeight: '700', color: '#1A1714' }}>Total</div>
-                <div style={{ fontSize: '13px', fontWeight: '700', color: '#C8A84B', fontFamily: "'DM Mono', monospace" }}>
-                  {fmt(revisionesMes.reduce((s, r) => s + (r.total_cajera || 0), 0))}
+
+                  {/* Filas por método */}
+                  <div style={{ padding: '0 16px' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 80px', gap: '8px', padding: '8px 0', borderBottom: '1px solid #F0EDE6' }}>
+                      {['Método', 'Cajera', 'Revisora', 'Dif'].map(h => (
+                        <div key={h} style={{ fontSize: '10px', fontWeight: '700', color: '#9C9590', textTransform: 'uppercase' }}>{h}</div>
+                      ))}
+                    </div>
+                    {metodos.map(({ label, cajera: c, revisora: r }) => {
+                      const d = c - r;
+                      return (
+                        <div key={label} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 80px', gap: '8px', padding: '8px 0', borderBottom: '1px solid #F0EDE6', alignItems: 'center' }}>
+                          <div style={{ fontSize: '12px', color: '#6B6560' }}>{label}</div>
+                          <div style={{ fontSize: '12px', fontFamily: "'DM Mono', monospace", color: '#1A1714' }}>{fmt(c)}</div>
+                          <div style={{ fontSize: '12px', fontFamily: "'DM Mono', monospace", color: '#1A1714' }}>{fmt(r)}</div>
+                          <div style={{ fontSize: '12px', fontWeight: '600', fontFamily: "'DM Mono', monospace", color: Math.abs(d) === 0 ? '#27AE60' : '#E74C3C' }}>
+                            {Math.abs(d) === 0 ? '✅' : fmt(Math.abs(d))}
+                          </div>
+                        </div>
+                      );
+                    })}
+                    {/* Total del día */}
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 80px', gap: '8px', padding: '8px 0', alignItems: 'center' }}>
+                      <div style={{ fontSize: '12px', fontWeight: '700', color: '#1A1714' }}>Total</div>
+                      <div style={{ fontSize: '12px', fontWeight: '700', fontFamily: "'DM Mono', monospace", color: '#C8A84B' }}>{fmt(rev.total_cajera || 0)}</div>
+                      <div style={{ fontSize: '12px', fontWeight: '700', fontFamily: "'DM Mono', monospace", color: '#27AE60' }}>{fmt(rev.total_revisado || 0)}</div>
+                      <div style={{ fontSize: '12px', fontWeight: '700', fontFamily: "'DM Mono', monospace", color: Math.abs(difTotal) === 0 ? '#27AE60' : '#E74C3C' }}>
+                        {Math.abs(difTotal) === 0 ? '✅' : fmt(Math.abs(difTotal))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Comentario */}
+                  {rev.comentario && (
+                    <div style={{ padding: '10px 16px', borderTop: '1px solid #F0EDE6', background: '#FFFEF5', fontSize: '12px', color: '#6B6560' }}>
+                      <span style={{ fontWeight: '600', color: '#9C9590' }}>Comentario: </span>{rev.comentario}
+                    </div>
+                  )}
                 </div>
-                <div style={{ fontSize: '13px', fontWeight: '700', color: '#27AE60', fontFamily: "'DM Mono', monospace" }}>
-                  {fmt(revisionesMes.reduce((s, r) => s + (r.total_revisado || 0), 0))}
-                </div>
-                <div style={{ fontSize: '13px', fontWeight: '700', color: '#1A1714', fontFamily: "'DM Mono', monospace" }}>
-                  {(() => { const d = revisionesMes.reduce((s, r) => s + (r.total_cajera || 0) - (r.total_revisado || 0), 0); return d === 0 ? '✅ ₡0' : fmt(Math.abs(d)); })()}
-                </div>
+              );
+            })}
+
+            {/* Total del mes */}
+            <div style={{ background: '#F0EDE6', border: '1px solid #E2DDD4', borderRadius: '12px', padding: '14px 16px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 80px', gap: '8px', alignItems: 'center' }}>
+              <div style={{ fontSize: '13px', fontWeight: '700', color: '#1A1714' }}>Total del mes</div>
+              <div style={{ fontSize: '13px', fontWeight: '700', color: '#C8A84B', fontFamily: "'DM Mono', monospace" }}>
+                {fmt(revisionesMes.reduce((s, r) => s + (r.total_cajera || 0), 0))}
+              </div>
+              <div style={{ fontSize: '13px', fontWeight: '700', color: '#27AE60', fontFamily: "'DM Mono', monospace" }}>
+                {fmt(revisionesMes.reduce((s, r) => s + (r.total_revisado || 0), 0))}
+              </div>
+              <div style={{ fontSize: '13px', fontWeight: '700', fontFamily: "'DM Mono', monospace", color: (() => { const d = revisionesMes.reduce((s, r) => s + (r.total_cajera || 0) - (r.total_revisado || 0), 0); return Math.abs(d) === 0 ? '#27AE60' : '#E74C3C'; })() }}>
+                {(() => { const d = revisionesMes.reduce((s, r) => s + (r.total_cajera || 0) - (r.total_revisado || 0), 0); return Math.abs(d) === 0 ? '✅ ₡0' : fmt(Math.abs(d)); })()}
               </div>
             </div>
           </div>
