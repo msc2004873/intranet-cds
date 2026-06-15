@@ -262,12 +262,13 @@ export default function RevisionGloryPage() {
                 <div style={{ fontWeight: '600', color: '#1A1714' }}>{rv.created_at ? new Date(rv.created_at).toLocaleDateString('es-CR') : '—'}</div>
               </div>
             </div>
-            {rv.comentario && (
-              <div style={{ padding: '0 20px 16px', borderTop: '1px solid #F0EDE6', paddingTop: '12px' }}>
-                <div style={{ color: '#9C9590', marginBottom: '4px', fontSize: '11px', textTransform: 'uppercase', fontWeight: '600' }}>Comentario</div>
-                <div style={{ fontSize: '13px', color: '#1A1714', background: '#FBF6E9', borderRadius: '8px', padding: '10px 12px', border: '1px solid #E8D99A' }}>{rv.comentario}</div>
-              </div>
-            )}
+            <div style={{ padding: '0 20px 16px', borderTop: '1px solid #F0EDE6', paddingTop: '12px' }}>
+              <div style={{ color: '#9C9590', marginBottom: '4px', fontSize: '11px', textTransform: 'uppercase', fontWeight: '600' }}>Comentario</div>
+              {rv.comentario
+                ? <div style={{ fontSize: '13px', color: '#1A1714', background: '#FBF6E9', borderRadius: '8px', padding: '10px 12px', border: '1px solid #E8D99A' }}>{rv.comentario}</div>
+                : <div style={{ fontSize: '13px', color: '#C0BAB5', fontStyle: 'italic' }}>Sin comentarios</div>
+              }
+            </div>
           </div>
 
           <button
@@ -539,11 +540,9 @@ export default function RevisionGloryPage() {
                   </div>
 
                   {/* Comentario */}
-                  {rev.comentario && (
-                    <div style={{ padding: '10px 16px', borderTop: '1px solid #F0EDE6', background: '#FFFEF5', fontSize: '12px', color: '#6B6560' }}>
-                      <span style={{ fontWeight: '600', color: '#9C9590' }}>Comentario: </span>{rev.comentario}
-                    </div>
-                  )}
+                  <div style={{ padding: '10px 16px', borderTop: '1px solid #F0EDE6', background: '#FFFEF5', fontSize: '12px', color: rev.comentario ? '#6B6560' : '#C0BAB5' }}>
+                    <span style={{ fontWeight: '600', color: '#9C9590' }}>Comentario: </span>{rev.comentario || 'Sin comentarios'}
+                  </div>
                 </div>
               );
             })}
