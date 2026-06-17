@@ -7,26 +7,28 @@ import Header from '../../components/Header';
 
 // ============================================================
 // CONSTANTES DE ETIQUETA — calibrar según impresora física
-// Todas las medidas en mm
+// fontSize en pt, resto en mm
 // ============================================================
 const TAMANOS = {
   grande: {
     label: 'Grande (50 × 26 mm)',
     ancho: 50,
     alto: 26,
-    nombre:     { fontSize: 6.5, maxChars: 36 },
-    barcode:    { ancho: 40, alto: 12, y: 5.5, lineWidth: 1.2, textFontSize: 7 },
-    precio:     { y: 22, fontSize: 9 },
-    codInterno: { y: 25.2, fontSize: 4.5 },
+    padding: 1.5,
+    nombre:     { fontSize: 7,   lineClamp: 2 },
+    barcode:    { maxAncho: 42,  maxAlto: 13  },
+    precio:     { fontSize: 9                 },
+    codInterno: { fontSize: 5                 },
   },
   pequena: {
     label: 'Pequeña (32 × 19 mm)',
     ancho: 32,
     alto: 19,
-    nombre:     { fontSize: 5.5, maxChars: 28 },
-    barcode:    { ancho: 26, alto: 8.5, y: 4.5, lineWidth: 0.9, textFontSize: 5 },
-    precio:     { y: 15.5, fontSize: 7 },
-    codInterno: { y: 18.5, fontSize: 4 },
+    padding: 1,
+    nombre:     { fontSize: 5.5, lineClamp: 2 },
+    barcode:    { maxAncho: 27,  maxAlto: 8.5 },
+    precio:     { fontSize: 7                 },
+    codInterno: { fontSize: 4                 },
   },
 };
 
@@ -49,12 +51,19 @@ function fmtPrecio(n) {
   return '₡' + Number(n).toLocaleString('es-CR');
 }
 
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
 let _uid = 1;
 function mkId() { return String(_uid++); }
 
 function parseNumero(str) {
-  const s = String(str).replace(/[₡$\s]/g, '').replace(/,/g, '.');
-  return parseFloat(s) || 0;
+  return parseFloat(String(str).replace(/[₡$\s]/g, '').replace(/,/g, '.')) || 0;
 }
 
 // ============================================================
@@ -69,19 +78,17 @@ function parsearExcel(buffer) {
 
   for (const row of rows) {
     const g = (k) => {
-      const found = Object.keys(row).find(rk => rk.trim().toLowerCase() === k.trim().toLowerCase());
+      const found = Object.keys(row).find(rk => rk.trim().toLowerCase() === k.toLowerCase());
       return found ? String(row[found]).trim() : '';
     };
 
-    const nombre = g('CONCEPTO');
+    const nombre = g('concepto');
     if (!nombre) continue;
 
-    const cantidad = Math.max(1, parseInt(g('CANTIDAD')) || 1);
-    const pvp = parseNumero(g('PVP'));
-    const codigoBarras = g('codigobarras');
+    const cantidad    = Math.max(1, parseInt(g('cantidad')) || 1);
+    const pvp         = parseNumero(g('pvp'));
+    const codigoBarras  = g('codigobarras');
     const codigoInterno = g('codigointerno');
-
-    // Agrupar por codigobarras > codigointerno > nombre
     const key = codigoBarras || codigoInterno || nombre;
 
     if (mapa.has(key)) {
@@ -103,90 +110,146 @@ function parsearExcel(buffer) {
 }
 
 // ============================================================
-// LAYOUT DE ETIQUETA — función fácil de ajustar
+// IMPRESIÓN
 // ============================================================
-async function dibujarEtiqueta(doc, producto, cfg, JsBarcode) {
-  const cx = cfg.ancho / 2;
-
-  // 1. Nombre (truncado si es muy largo)
-  let nombre = producto.nombre;
-  if (nombre.length > cfg.nombre.maxChars) {
-    nombre = nombre.substring(0, cfg.nombre.maxChars - 1) + '…';
-  }
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(cfg.nombre.fontSize);
-  doc.setTextColor(0, 0, 0);
-  const nombreY = cfg.nombre.fontSize * 0.3528 + 1.2;
-  doc.text(nombre, cx, nombreY, { align: 'center', maxWidth: cfg.ancho - 2 });
-
-  // 2. Código de barras
-  const bc = cfg.barcode;
-  const bx = cx - bc.ancho / 2;
-
-  if (esCodValido(producto.codigoBarras)) {
-    try {
-      const canvas = document.createElement('canvas');
-      JsBarcode(canvas, String(producto.codigoBarras).replace(/\s/g, ''), {
-        format: detectarFormato(producto.codigoBarras),
-        displayValue: true,
-        fontSize: bc.textFontSize * 3,
-        textMargin: 1,
-        margin: 0,
-        lineColor: '#000000',
-        background: '#ffffff',
-        width: bc.lineWidth,
-        height: 60,
-      });
-      doc.addImage(canvas.toDataURL('image/png'), 'PNG', bx, bc.y, bc.ancho, bc.alto);
-    } catch {
-      doc.setFontSize(4.5);
-      doc.setFont('helvetica', 'normal');
-      doc.text(String(producto.codigoBarras), cx, bc.y + bc.alto / 2, { align: 'center' });
-    }
-  } else {
-    doc.setFontSize(4.5);
-    doc.setFont('helvetica', 'normal');
-    doc.setTextColor(160, 0, 0);
-    doc.text('[ sin código de barras ]', cx, bc.y + bc.alto / 2, { align: 'center' });
-    doc.setTextColor(0, 0, 0);
-  }
-
-  // 3. Precio
-  doc.setFont('helvetica', 'bold');
-  doc.setFontSize(cfg.precio.fontSize);
-  doc.text(fmtPrecio(producto.pvp), cx, cfg.precio.y, { align: 'center' });
-
-  // 4. Código interno
-  if (producto.codigoInterno) {
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(cfg.codInterno.fontSize);
-    doc.text(`Cód: ${producto.codigoInterno}`, cx, cfg.codInterno.y, { align: 'center' });
-  }
-}
-
-// ============================================================
-// GENERACIÓN DE PDF
-// ============================================================
-async function generarPDF(productos, seleccionados, tamano) {
-  const { jsPDF } = await import('jspdf');
+async function imprimir(productos, seleccionados, tamano) {
   const JsBarcode = (await import('jsbarcode')).default;
-
   const cfg = TAMANOS[tamano];
-  const lista = productos.filter(p => seleccionados.has(p.id));
-  const paginas = lista.flatMap(p => Array.from({ length: Math.max(1, p.cantidad) }, () => p));
 
+  const lista = productos.filter(p => seleccionados.has(p.id));
+  const paginas = lista.flatMap(p =>
+    Array.from({ length: Math.max(1, p.cantidad) }, () => p)
+  );
   if (paginas.length === 0) return;
 
-  const ori = cfg.ancho >= cfg.alto ? 'l' : 'p';
-  const doc = new jsPDF({ unit: 'mm', format: [cfg.ancho, cfg.alto], orientation: ori });
+  const labelHtml = paginas.map((p, i) => {
+    let barcodeHtml = '';
+    if (esCodValido(p.codigoBarras)) {
+      try {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        JsBarcode(svg, String(p.codigoBarras).replace(/\s/g, ''), {
+          format:       detectarFormato(p.codigoBarras),
+          displayValue: true,
+          fontSize:     cfg.barcode.maxAlto < 10 ? 22 : 28,
+          textMargin:   1,
+          margin:       0,
+          lineColor:    '#000000',
+          background:   '#ffffff',
+          width:        cfg.ancho < 36 ? 1.2 : 1.6,
+          height:       60,
+        });
+        barcodeHtml = svg.outerHTML;
+      } catch {
+        barcodeHtml = `<span style="font-size:${cfg.codInterno.fontSize}pt;color:#999;">${escapeHtml(p.codigoBarras)}</span>`;
+      }
+    } else {
+      barcodeHtml = `<span style="font-size:${cfg.codInterno.fontSize}pt;color:#c00;">(sin código)</span>`;
+    }
 
-  for (let i = 0; i < paginas.length; i++) {
-    if (i > 0) doc.addPage([cfg.ancho, cfg.alto], ori);
-    await dibujarEtiqueta(doc, paginas[i], cfg, JsBarcode);
+    const isLast = i === paginas.length - 1;
+
+    return `<div class="etiqueta${isLast ? ' last' : ''}">
+  <div class="nombre">${escapeHtml(p.nombre)}</div>
+  <div class="barcode">${barcodeHtml}</div>
+  <div class="footer">
+    <span class="precio">${fmtPrecio(p.pvp)}</span>
+    ${p.codigoInterno ? `<span class="cod">${escapeHtml(p.codigoInterno)}</span>` : ''}
+  </div>
+</div>`;
+  }).join('\n');
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  @page {
+    size: ${cfg.ancho}mm ${cfg.alto}mm;
+    margin: 0;
   }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #fff; }
+  .etiqueta {
+    width: ${cfg.ancho}mm;
+    height: ${cfg.alto}mm;
+    padding: ${cfg.padding}mm;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    overflow: hidden;
+    page-break-after: always;
+    break-after: page;
+  }
+  .etiqueta.last {
+    page-break-after: avoid;
+    break-after: avoid;
+  }
+  .nombre {
+    font-family: Arial, sans-serif;
+    font-size: ${cfg.nombre.fontSize}pt;
+    font-weight: bold;
+    text-align: center;
+    line-height: 1.15;
+    max-width: 100%;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: ${cfg.nombre.lineClamp};
+    -webkit-box-orient: vertical;
+  }
+  .barcode {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: 1;
+    width: 100%;
+    overflow: hidden;
+  }
+  .barcode svg {
+    max-width: ${cfg.barcode.maxAncho}mm;
+    max-height: ${cfg.barcode.maxAlto}mm;
+    width: auto;
+    height: auto;
+    display: block;
+  }
+  .footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.2;
+  }
+  .precio {
+    font-family: Arial, sans-serif;
+    font-size: ${cfg.precio.fontSize}pt;
+    font-weight: bold;
+  }
+  .cod {
+    font-family: Arial, sans-serif;
+    font-size: ${cfg.codInterno.fontSize}pt;
+    color: #555;
+  }
+</style>
+</head>
+<body>${labelHtml}</body>
+</html>`;
 
-  const fecha = new Date().toLocaleDateString('es-CR').replace(/\//g, '-');
-  doc.save(`etiquetas_${fecha}.pdf`);
+  // Iframe silencioso — evita bloqueo de popup
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:0;';
+  document.body.appendChild(iframe);
+
+  const doc = iframe.contentWindow.document;
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  iframe.contentWindow.onafterprint = () => document.body.removeChild(iframe);
+
+  // Pequeño delay para que el browser renderice los SVGs antes de imprimir
+  setTimeout(() => {
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
+  }, 300);
 }
 
 // ============================================================
@@ -194,16 +257,16 @@ async function generarPDF(productos, seleccionados, tamano) {
 // ============================================================
 export default function EtiquetasPage() {
   const router = useRouter();
-  const [userRole, setUserRole] = useState('');
-  const [productos, setProductos] = useState([]);
+  const [userRole, setUserRole]       = useState('');
+  const [productos, setProductos]     = useState([]);
   const [seleccionados, setSeleccionados] = useState(new Set());
-  const [editando, setEditando] = useState(null);
-  const [editValues, setEditValues] = useState({});
-  const [busqueda, setBusqueda] = useState('');
-  const [tamano, setTamano] = useState('grande');
-  const [generando, setGenerando] = useState(false);
+  const [editando, setEditando]       = useState(null);
+  const [editValues, setEditValues]   = useState({});
+  const [busqueda, setBusqueda]       = useState('');
+  const [tamano, setTamano]           = useState('grande');
+  const [imprimiendo, setImprimiendo] = useState(false);
   const [arrastrando, setArrastrando] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError]             = useState('');
   const fileInputRef = useRef();
 
   useEffect(() => {
@@ -217,11 +280,10 @@ export default function EtiquetasPage() {
   if (!userRole) return <div style={{ padding: '40px', textAlign: 'center' }}>Cargando...</div>;
   if (userRole !== 'admin') return null;
 
-  // Filtro de búsqueda
   const productosFiltrados = productos.filter(p =>
     !busqueda ||
     p.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
-    (p.codigoBarras && p.codigoBarras.includes(busqueda)) ||
+    (p.codigoBarras  && p.codigoBarras.includes(busqueda)) ||
     (p.codigoInterno && p.codigoInterno.includes(busqueda))
   );
 
@@ -243,7 +305,7 @@ export default function EtiquetasPage() {
       try {
         const parsed = parsearExcel(new Uint8Array(e.target.result));
         if (parsed.length === 0) {
-          setError('No se encontraron productos. Verificá que el Excel tenga las columnas: CONCEPTO, CANTIDAD, PVP, codigobarras, codigointerno.');
+          setError('No se encontraron productos. Verificá columnas: CONCEPTO, CANTIDAD, PVP, codigobarras, codigointerno.');
           return;
         }
         setProductos(parsed);
@@ -290,11 +352,11 @@ export default function EtiquetasPage() {
   function iniciarEdicion(p) {
     setEditando(p.id);
     setEditValues({
-      nombre: p.nombre,
-      pvp: p.pvp,
+      nombre:       p.nombre,
+      pvp:          p.pvp,
       codigoBarras: p.codigoBarras,
-      codigoInterno: p.codigoInterno,
-      cantidad: p.cantidad,
+      codigoInterno:p.codigoInterno,
+      cantidad:     p.cantidad,
     });
   }
 
@@ -304,66 +366,39 @@ export default function EtiquetasPage() {
       const cb = String(editValues.codigoBarras || '').trim();
       return {
         ...p,
-        nombre: editValues.nombre,
-        pvp: parseNumero(editValues.pvp),
+        nombre:       editValues.nombre,
+        pvp:          parseNumero(editValues.pvp),
         codigoBarras: cb,
-        codigoInterno: String(editValues.codigoInterno || '').trim(),
-        cantidad: Math.max(1, parseInt(editValues.cantidad) || 1),
-        sinCodigo: !esCodValido(cb),
+        codigoInterno:String(editValues.codigoInterno || '').trim(),
+        cantidad:     Math.max(1, parseInt(editValues.cantidad) || 1),
+        sinCodigo:    !esCodValido(cb),
       };
     }));
     setEditando(null);
   }
 
-  async function handleGenerarPDF() {
+  async function handleImprimir() {
     if (seleccionados.size === 0) { setError('Seleccioná al menos un producto.'); return; }
-    setGenerando(true);
+    setImprimiendo(true);
     setError('');
     try {
-      await generarPDF(productos, seleccionados, tamano);
+      await imprimir(productos, seleccionados, tamano);
     } catch (e) {
-      setError('Error generando PDF: ' + e.message);
+      setError('Error al imprimir: ' + e.message);
     } finally {
-      setGenerando(false);
+      setImprimiendo(false);
     }
   }
 
   // ── Estilos ───────────────────────────────────────────────
 
-  const card = {
-    background: '#fff', borderRadius: '12px',
-    border: '1.5px solid #E2DDD4', marginBottom: '16px',
-  };
-  const th = {
-    padding: '10px 12px', textAlign: 'left',
-    borderBottom: '2px solid #E2DDD4', fontWeight: '600',
-    fontSize: '12px', color: '#6B6560', background: '#F7F5F0',
-    whiteSpace: 'nowrap',
-  };
-  const td = {
-    padding: '9px 12px', borderBottom: '1px solid #F0EDE6',
-    verticalAlign: 'middle', fontSize: '13px',
-  };
-  const inp = {
-    border: '1.5px solid #E2DDD4', borderRadius: '6px',
-    padding: '5px 8px', fontSize: '12px', width: '100%',
-    background: '#fff', outline: 'none', boxSizing: 'border-box',
-  };
-  const btnPrimary = {
-    background: '#2a78a5', color: '#fff', border: 'none',
-    borderRadius: '8px', padding: '11px 24px', cursor: 'pointer',
-    fontSize: '14px', fontWeight: '600', transition: 'background 0.15s',
-  };
-  const btnSec = {
-    background: '#F0EDE6', color: '#1A1714', border: '1px solid #E2DDD4',
-    borderRadius: '8px', padding: '8px 14px', cursor: 'pointer',
-    fontSize: '13px', fontWeight: '500',
-  };
-  const btnXS = {
-    background: '#F0EDE6', color: '#1A1714', border: '1px solid #E2DDD4',
-    borderRadius: '6px', padding: '4px 10px', cursor: 'pointer',
-    fontSize: '11px', fontWeight: '600',
-  };
+  const card = { background: '#fff', borderRadius: '12px', border: '1.5px solid #E2DDD4', marginBottom: '16px' };
+  const th   = { padding: '10px 12px', textAlign: 'left', borderBottom: '2px solid #E2DDD4', fontWeight: '600', fontSize: '12px', color: '#6B6560', background: '#F7F5F0', whiteSpace: 'nowrap' };
+  const td   = { padding: '9px 12px', borderBottom: '1px solid #F0EDE6', verticalAlign: 'middle', fontSize: '13px' };
+  const inp  = { border: '1.5px solid #E2DDD4', borderRadius: '6px', padding: '5px 8px', fontSize: '12px', width: '100%', background: '#fff', outline: 'none', boxSizing: 'border-box' };
+  const btnPrimary = { background: '#2a78a5', color: '#fff', border: 'none', borderRadius: '8px', padding: '11px 24px', cursor: 'pointer', fontSize: '14px', fontWeight: '600' };
+  const btnSec = { background: '#F0EDE6', color: '#1A1714', border: '1px solid #E2DDD4', borderRadius: '8px', padding: '8px 14px', cursor: 'pointer', fontSize: '13px', fontWeight: '500' };
+  const btnXS  = { background: '#F0EDE6', color: '#1A1714', border: '1px solid #E2DDD4', borderRadius: '6px', padding: '4px 10px', cursor: 'pointer', fontSize: '11px', fontWeight: '600' };
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#F7F5F0', color: '#1A1714' }}>
@@ -373,47 +408,28 @@ export default function EtiquetasPage() {
 
         {/* ── UPLOAD ─────────────────────────────────────────── */}
         {productos.length === 0 && (
-          <div style={{ ...card, padding: '28px 28px' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '20px', color: '#1A1714' }}>
-              Subir Excel de Q-VET
-            </h2>
-
+          <div style={{ ...card, padding: '28px' }}>
+            <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '20px' }}>Subir Excel de Q-VET</h2>
             <div
-              style={{
-                border: `2px dashed ${arrastrando ? '#2a78a5' : '#C8C0B4'}`,
-                borderRadius: '12px', padding: '52px 24px', textAlign: 'center',
-                cursor: 'pointer', transition: 'all 0.2s',
-                background: arrastrando ? '#EDF5FA' : '#FAFAF8',
-              }}
+              style={{ border: `2px dashed ${arrastrando ? '#2a78a5' : '#C8C0B4'}`, borderRadius: '12px', padding: '52px 24px', textAlign: 'center', cursor: 'pointer', background: arrastrando ? '#EDF5FA' : '#FAFAF8', transition: 'all 0.2s' }}
               onDragOver={(e) => { e.preventDefault(); setArrastrando(true); }}
               onDragLeave={() => setArrastrando(false)}
               onDrop={onDrop}
               onClick={() => fileInputRef.current?.click()}
             >
               <div style={{ fontSize: '44px', marginBottom: '12px' }}>📄</div>
-              <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', marginBottom: '6px' }}>
-                Arrastrá el Excel aquí o hacé click para seleccionar
-              </div>
+              <div style={{ fontSize: '15px', fontWeight: '600', marginBottom: '6px' }}>Arrastrá el Excel aquí o hacé click para seleccionar</div>
               <div style={{ fontSize: '12px', color: '#9C9590', marginTop: '12px', lineHeight: 1.8 }}>
                 Columnas requeridas: CONCEPTO · CANTIDAD · PVP · codigobarras · codigointerno
               </div>
             </div>
-
-            <input
-              ref={fileInputRef} type="file" accept=".xlsx,.xls"
-              style={{ display: 'none' }}
-              onChange={(e) => cargarArchivo(e.target.files[0])}
-            />
+            <input ref={fileInputRef} type="file" accept=".xlsx,.xls" style={{ display: 'none' }} onChange={(e) => cargarArchivo(e.target.files[0])} />
           </div>
         )}
 
         {/* ── ERROR ──────────────────────────────────────────── */}
         {error && (
-          <div style={{
-            background: '#FEE2E2', border: '1px solid #FCA5A5',
-            borderRadius: '8px', padding: '12px 16px', marginBottom: '16px',
-            color: '#7F1D1D', fontSize: '13px',
-          }}>
+          <div style={{ background: '#FEE2E2', border: '1px solid #FCA5A5', borderRadius: '8px', padding: '12px 16px', marginBottom: '16px', color: '#7F1D1D', fontSize: '13px' }}>
             ❌ {error}
           </div>
         )}
@@ -426,19 +442,14 @@ export default function EtiquetasPage() {
                 ← Cambiar archivo
               </button>
               <input
-                type="text" value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
+                type="text" value={busqueda} onChange={(e) => setBusqueda(e.target.value)}
                 placeholder="Buscar producto, código..."
                 style={{ ...inp, width: '220px', flex: 'none' }}
               />
-              <button style={btnSec} onClick={() => setSeleccionados(new Set(productosFiltrados.map(p => p.id)))}>
-                Seleccionar todos
-              </button>
-              <button style={btnSec} onClick={() => setSeleccionados(prev => { const n = new Set(prev); productosFiltrados.forEach(p => n.delete(p.id)); return n; })}>
-                Deseleccionar todos
-              </button>
+              <button style={btnSec} onClick={() => setSeleccionados(new Set(productosFiltrados.map(p => p.id)))}>Seleccionar todos</button>
+              <button style={btnSec} onClick={() => setSeleccionados(prev => { const n = new Set(prev); productosFiltrados.forEach(p => n.delete(p.id)); return n; })}>Deseleccionar todos</button>
               <div style={{ marginLeft: 'auto', fontSize: '12px', color: '#6B6560', whiteSpace: 'nowrap' }}>
-                {productos.length} productos&nbsp;·&nbsp;{seleccionados.size} seleccionados
+                {productos.length} productos · {seleccionados.size} seleccionados
                 {productos.some(p => p.sinCodigo) && (
                   <span style={{ marginLeft: '10px', color: '#856404', fontWeight: '600' }}>
                     ⚠ {productos.filter(p => p.sinCodigo).length} sin código
@@ -457,12 +468,7 @@ export default function EtiquetasPage() {
                 <thead>
                   <tr>
                     <th style={{ ...th, width: '36px', textAlign: 'center' }}>
-                      <input
-                        type="checkbox"
-                        checked={todosSeleccionados}
-                        onChange={toggleTodos}
-                        style={{ cursor: 'pointer' }}
-                      />
+                      <input type="checkbox" checked={todosSeleccionados} onChange={toggleTodos} style={{ cursor: 'pointer' }} />
                     </th>
                     <th style={th}>Producto</th>
                     <th style={{ ...th, width: '72px' }}>Cant.</th>
@@ -475,90 +481,41 @@ export default function EtiquetasPage() {
                 </thead>
                 <tbody>
                   {productosFiltrados.map(p => {
-                    const bg = seleccionados.has(p.id) ? '#fff' : '#FAFAF8';
                     const isEdit = editando === p.id;
-
                     return (
-                      <tr key={p.id} style={{ background: bg }}>
-                        {/* Checkbox */}
+                      <tr key={p.id} style={{ background: seleccionados.has(p.id) ? '#fff' : '#FAFAF8' }}>
                         <td style={{ ...td, textAlign: 'center' }}>
-                          <input
-                            type="checkbox"
-                            checked={seleccionados.has(p.id)}
-                            onChange={() => toggleSeleccion(p.id)}
-                            style={{ cursor: 'pointer' }}
-                          />
+                          <input type="checkbox" checked={seleccionados.has(p.id)} onChange={() => toggleSeleccion(p.id)} style={{ cursor: 'pointer' }} />
                         </td>
-
                         {isEdit ? (
-                          /* ── Modo edición ── */
                           <>
-                            <td style={td}>
-                              <input style={inp} value={editValues.nombre}
-                                onChange={(e) => setEditValues(v => ({ ...v, nombre: e.target.value }))} />
-                            </td>
-                            <td style={td}>
-                              <input style={{ ...inp, width: '58px' }}
-                                type="text" inputMode="numeric"
-                                value={editValues.cantidad}
-                                onChange={(e) => setEditValues(v => ({ ...v, cantidad: e.target.value }))} />
-                            </td>
-                            <td style={td}>
-                              <input style={inp} type="text" inputMode="numeric"
-                                value={editValues.pvp}
-                                onChange={(e) => setEditValues(v => ({ ...v, pvp: e.target.value }))} />
-                            </td>
-                            <td style={td}>
-                              <input style={{ ...inp, fontFamily: 'monospace' }}
-                                value={editValues.codigoBarras}
-                                onChange={(e) => setEditValues(v => ({ ...v, codigoBarras: e.target.value }))} />
-                            </td>
-                            <td style={td}>
-                              <input style={{ ...inp, fontFamily: 'monospace' }}
-                                value={editValues.codigoInterno}
-                                onChange={(e) => setEditValues(v => ({ ...v, codigoInterno: e.target.value }))} />
-                            </td>
+                            <td style={td}><input style={inp} value={editValues.nombre} onChange={(e) => setEditValues(v => ({ ...v, nombre: e.target.value }))} /></td>
+                            <td style={td}><input style={{ ...inp, width: '58px' }} type="text" inputMode="numeric" value={editValues.cantidad} onChange={(e) => setEditValues(v => ({ ...v, cantidad: e.target.value }))} /></td>
+                            <td style={td}><input style={inp} type="text" inputMode="numeric" value={editValues.pvp} onChange={(e) => setEditValues(v => ({ ...v, pvp: e.target.value }))} /></td>
+                            <td style={td}><input style={{ ...inp, fontFamily: 'monospace' }} value={editValues.codigoBarras} onChange={(e) => setEditValues(v => ({ ...v, codigoBarras: e.target.value }))} /></td>
+                            <td style={td}><input style={{ ...inp, fontFamily: 'monospace' }} value={editValues.codigoInterno} onChange={(e) => setEditValues(v => ({ ...v, codigoInterno: e.target.value }))} /></td>
                             <td style={td}></td>
                             <td style={{ ...td, display: 'flex', gap: '6px' }}>
-                              <button
-                                style={{ ...btnXS, background: '#2a78a5', color: '#fff', border: 'none' }}
-                                onClick={() => guardarEdicion(p.id)}
-                              >
-                                Guardar
-                              </button>
+                              <button style={{ ...btnXS, background: '#2a78a5', color: '#fff', border: 'none' }} onClick={() => guardarEdicion(p.id)}>Guardar</button>
                               <button style={btnXS} onClick={() => setEditando(null)}>✕</button>
                             </td>
                           </>
                         ) : (
-                          /* ── Modo lectura ── */
                           <>
                             <td style={td}>{p.nombre}</td>
                             <td style={td}>{p.cantidad}</td>
                             <td style={td}>{fmtPrecio(p.pvp)}</td>
                             <td style={{ ...td, fontFamily: 'monospace', fontSize: '11px', color: p.sinCodigo ? '#9C9590' : 'inherit' }}>
                               {p.codigoBarras || '—'}
-                              {p.codigoBarras && (
-                                <span style={{ marginLeft: '6px', fontSize: '10px', color: '#9C9590' }}>
-                                  {detectarFormato(p.codigoBarras)}
-                                </span>
-                              )}
+                              {p.codigoBarras && <span style={{ marginLeft: '6px', fontSize: '10px', color: '#9C9590' }}>{detectarFormato(p.codigoBarras)}</span>}
                             </td>
-                            <td style={{ ...td, fontFamily: 'monospace', fontSize: '11px' }}>
-                              {p.codigoInterno || '—'}
-                            </td>
+                            <td style={{ ...td, fontFamily: 'monospace', fontSize: '11px' }}>{p.codigoInterno || '—'}</td>
                             <td style={td}>
-                              <span style={{
-                                display: 'inline-block', padding: '2px 9px', borderRadius: '20px',
-                                fontSize: '11px', fontWeight: '600',
-                                background: p.sinCodigo ? '#FEF3CD' : '#E8F3EC',
-                                color: p.sinCodigo ? '#856404' : '#1a7a4a',
-                              }}>
+                              <span style={{ display: 'inline-block', padding: '2px 9px', borderRadius: '20px', fontSize: '11px', fontWeight: '600', background: p.sinCodigo ? '#FEF3CD' : '#E8F3EC', color: p.sinCodigo ? '#856404' : '#1a7a4a' }}>
                                 {p.sinCodigo ? '⚠ sin código' : '✓ ok'}
                               </span>
                             </td>
-                            <td style={td}>
-                              <button style={btnXS} onClick={() => iniciarEdicion(p)}>Editar</button>
-                            </td>
+                            <td style={td}><button style={btnXS} onClick={() => iniciarEdicion(p)}>Editar</button></td>
                           </>
                         )}
                       </tr>
@@ -570,12 +527,10 @@ export default function EtiquetasPage() {
           </div>
         )}
 
-        {/* ── BARRA INFERIOR: tamaño + generar ───────────────── */}
+        {/* ── BARRA INFERIOR ─────────────────────────────────── */}
         {productos.length > 0 && (
           <div style={{ ...card, padding: '20px 24px' }}>
             <div style={{ display: 'flex', gap: '32px', alignItems: 'center', flexWrap: 'wrap' }}>
-
-              {/* Selector de tamaño */}
               <div>
                 <div style={{ fontSize: '11px', fontWeight: '700', color: '#6B6560', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '10px' }}>
                   Tamaño de etiqueta
@@ -589,8 +544,8 @@ export default function EtiquetasPage() {
                         padding: '9px 18px', borderRadius: '8px', cursor: 'pointer',
                         fontSize: '13px', fontWeight: '600', transition: 'all 0.15s',
                         background: tamano === key ? '#2a78a5' : '#F0EDE6',
-                        color: tamano === key ? '#fff' : '#1A1714',
-                        border: tamano === key ? 'none' : '1px solid #E2DDD4',
+                        color:      tamano === key ? '#fff'    : '#1A1714',
+                        border:     tamano === key ? 'none'    : '1px solid #E2DDD4',
                       }}
                     >
                       {t.label}
@@ -599,27 +554,21 @@ export default function EtiquetasPage() {
                 </div>
               </div>
 
-              {/* Contador + botón generar */}
               <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '20px' }}>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '28px', fontWeight: '700', color: '#1A1714', fontFamily: "'DM Mono', monospace", letterSpacing: '-1px' }}>
                     {totalEtiquetas}
                   </div>
-                  <div style={{ fontSize: '11px', color: '#6B6560' }}>páginas en el PDF</div>
+                  <div style={{ fontSize: '11px', color: '#6B6560' }}>etiquetas a imprimir</div>
                 </div>
                 <button
-                  style={{
-                    ...btnPrimary,
-                    padding: '13px 32px', fontSize: '15px',
-                    opacity: (generando || seleccionados.size === 0) ? 0.6 : 1,
-                    cursor: (generando || seleccionados.size === 0) ? 'not-allowed' : 'pointer',
-                  }}
-                  disabled={generando || seleccionados.size === 0}
-                  onClick={handleGenerarPDF}
-                  onMouseEnter={(e) => { if (!generando) e.currentTarget.style.background = '#1f5780'; }}
+                  style={{ ...btnPrimary, padding: '13px 32px', fontSize: '15px', opacity: (imprimiendo || seleccionados.size === 0) ? 0.6 : 1, cursor: (imprimiendo || seleccionados.size === 0) ? 'not-allowed' : 'pointer' }}
+                  disabled={imprimiendo || seleccionados.size === 0}
+                  onClick={handleImprimir}
+                  onMouseEnter={(e) => { if (!imprimiendo) e.currentTarget.style.background = '#1f5780'; }}
                   onMouseLeave={(e) => { e.currentTarget.style.background = '#2a78a5'; }}
                 >
-                  {generando ? 'Generando…' : '🖨 Generar PDF'}
+                  {imprimiendo ? 'Preparando…' : '🖨 Imprimir'}
                 </button>
               </div>
             </div>
