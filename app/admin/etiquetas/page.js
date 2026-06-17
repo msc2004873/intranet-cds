@@ -111,8 +111,10 @@ function parsearExcel(buffer) {
 
 // ============================================================
 // IMPRESIÓN
+// win se abre sincrónicamente en el click handler ANTES del await
+// para que el popup blocker no lo frene
 // ============================================================
-async function imprimir(productos, seleccionados, tamano) {
+async function imprimir(productos, seleccionados, tamano, win) {
   const JsBarcode = (await import('jsbarcode')).default;
   const cfg = TAMANOS[tamano];
 
@@ -120,7 +122,7 @@ async function imprimir(productos, seleccionados, tamano) {
   const paginas = lista.flatMap(p =>
     Array.from({ length: Math.max(1, p.cantidad) }, () => p)
   );
-  if (paginas.length === 0) return;
+  if (paginas.length === 0) { win.close(); return; }
 
   const labelHtml = paginas.map((p, i) => {
     let barcodeHtml = '';
@@ -147,7 +149,6 @@ async function imprimir(productos, seleccionados, tamano) {
     }
 
     const isLast = i === paginas.length - 1;
-
     return `<div class="etiqueta${isLast ? ' last' : ''}">
   <div class="nombre">${escapeHtml(p.nombre)}</div>
   <div class="barcode">${barcodeHtml}</div>
@@ -168,7 +169,10 @@ async function imprimir(productos, seleccionados, tamano) {
     margin: 0;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: #fff; }
+  html, body {
+    width: ${cfg.ancho}mm;
+    background: #fff;
+  }
   .etiqueta {
     width: ${cfg.ancho}mm;
     height: ${cfg.alto}mm;
@@ -233,23 +237,16 @@ async function imprimir(productos, seleccionados, tamano) {
 <body>${labelHtml}</body>
 </html>`;
 
-  // Iframe silencioso — evita bloqueo de popup
-  const iframe = document.createElement('iframe');
-  iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:0;';
-  document.body.appendChild(iframe);
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+  win.onafterprint = () => win.close();
 
-  const doc = iframe.contentWindow.document;
-  doc.open();
-  doc.write(html);
-  doc.close();
-
-  iframe.contentWindow.onafterprint = () => document.body.removeChild(iframe);
-
-  // Pequeño delay para que el browser renderice los SVGs antes de imprimir
+  // Delay para que Chrome renderice los SVGs antes de abrir el diálogo
   setTimeout(() => {
-    iframe.contentWindow.focus();
-    iframe.contentWindow.print();
-  }, 300);
+    win.focus();
+    win.print();
+  }, 400);
 }
 
 // ============================================================
@@ -379,11 +376,21 @@ export default function EtiquetasPage() {
 
   async function handleImprimir() {
     if (seleccionados.size === 0) { setError('Seleccioná al menos un producto.'); return; }
+
+    // Abrir ventana SINCRÓNICAMENTE antes del primer await
+    // para que el popup blocker no la bloquee
+    const win = window.open('', '_blank');
+    if (!win) {
+      setError('El navegador bloqueó la ventana. Permitir popups para este sitio e intentar de nuevo.');
+      return;
+    }
+
     setImprimiendo(true);
     setError('');
     try {
-      await imprimir(productos, seleccionados, tamano);
+      await imprimir(productos, seleccionados, tamano, win);
     } catch (e) {
+      win.close();
       setError('Error al imprimir: ' + e.message);
     } finally {
       setImprimiendo(false);
