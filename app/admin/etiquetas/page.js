@@ -19,7 +19,7 @@ const TAMANOS = {
     nombre:     { top: 1.2, left: 1.0, width: 22,   fontSize: 5.5 },
     rightCol:   { top: 0.8, right: 0.4, width: 7.5,  logoH: 8,   gap: 0.8, codFontSize: 7   },
     precio:     { top: 9.0, left: 1.0,  width: 15,   fontSize: 8  },
-    barcode:    { top: 12,  left: 3,    width: 26,   height: 6.5,  barWidth: 1.5, textSize: 11 },
+    barcode:    { top: 13,  left: 3,    width: 26,   height: 4.5,  barWidth: 1.5, textSize: 11 },
   },
   grande: {
     label:      'Grande (50 × 26 mm)',
@@ -155,9 +155,9 @@ async function imprimir(productos, seleccionados, tamano) {
         // Fijar viewBox para que CSS pueda escalar sin distorsión
         const w = parseFloat(svg.getAttribute('width')  || 200);
         const h = parseFloat(svg.getAttribute('height') || 100);
-        // +10 de padding al fondo: las barras no llegan al borde del viewBox,
-        // evitando que el rasterizador de la impresora clipee el último row de pixels
-        svg.setAttribute('viewBox', `0 0 ${w} ${h + 10}`);
+        // +25 de padding al fondo: barras terminan al ~58% del contenedor,
+        // dejando margen suficiente antes del área no imprimible de la impresora
+        svg.setAttribute('viewBox', `0 0 ${w} ${h + 25}`);
         svg.setAttribute('width',   '100%');
         svg.setAttribute('height',  '100%');
         svg.setAttribute('preserveAspectRatio', 'none');
