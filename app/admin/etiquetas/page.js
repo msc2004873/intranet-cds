@@ -35,11 +35,9 @@ const TAMANOS = {
 // ============================================================
 // HELPERS
 // ============================================================
-function detectarFormato(codigo) {
-  const c = String(codigo).replace(/\s/g, '');
-  if (/^\d{12}$/.test(c)) return 'UPC';
-  if (/^\d{13}$/.test(c)) return 'EAN13';
-  if (/^\d{8}$/.test(c))  return 'EAN8';
+function detectarFormato() {
+  // CODE128 acepta cualquier string sin validar checksum
+  // EAN13/UPC fallan si el dígito verificador de Q-VET no coincide
   return 'CODE128';
 }
 
@@ -509,7 +507,6 @@ export default function EtiquetasPage() {
                             <td style={td}>{fmtPrecio(p.pvp)}</td>
                             <td style={{ ...td, fontFamily: 'monospace', fontSize: '11px', color: p.sinCodigo ? '#9C9590' : 'inherit' }}>
                               {p.codigoBarras || '—'}
-                              {p.codigoBarras && <span style={{ marginLeft: '6px', fontSize: '10px', color: '#9C9590' }}>{detectarFormato(p.codigoBarras)}</span>}
                             </td>
                             <td style={{ ...td, fontFamily: 'monospace', fontSize: '11px' }}>{p.codigoInterno || '—'}</td>
                             <td style={td}>
