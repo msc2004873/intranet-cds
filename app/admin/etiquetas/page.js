@@ -9,26 +9,28 @@ import Header from '../../components/Header';
 // CONSTANTES DE ETIQUETA — posicionamiento absoluto en mm/pt
 // Fácil de calibrar: cada campo tiene top/left/right/fontSize
 // ============================================================
+// Coordenadas exactas de BarTender — top/left en mm desde esquina superior izquierda
 const TAMANOS = {
   pequena: {
-    label: 'Pequeña (32 × 19 mm)',
-    ancho: 32,
-    alto:  19,
-    nombre:     { top: 1,    left: 1,    width: 21,  fontSize: 5.5, lineClamp: 2 },
-    logo:       { top: 0.5,  right: 0.5, width: 8,   height: 8                  },
-    precio:     { top: 8.8,  left: 1,                fontSize: 7.5               },
-    codInterno: { top: 8.8,  right: 1,               fontSize: 7.5               },
-    barcode:    { bottom: 0, left: 0,    width: 32,  height: 7,  textSize: 18   },
+    label:      'Pequeña (32 × 19 mm)',
+    ancho:      32,
+    alto:       19,
+    nombre:     { top: 1.4,  left: 1.3,  width: 21.3, height: 4,   fontSize: 5,  lineClamp: 2 },
+    logo:       { top: 1.4,  left: 25.9, width: 5.2,  height: 5.2                              },
+    precio:     { top: 8.3,  left: 3,    width: 12.3, height: 3.3, fontSize: 7                 },
+    codInterno: { top: 8.3,  left: 25.9, width: 6.3,  height: 2.9, fontSize: 7                 },
+    barcode:    { top: 11,   left: 5.3,  width: 23.8, height: 7.4, barWidth: 1.2, textSize: 14 },
   },
   grande: {
-    label: 'Grande (50 × 26 mm)',
-    ancho: 50,
-    alto:  26,
-    nombre:     { top: 1.5,  left: 1.5,  width: 33,  fontSize: 7,   lineClamp: 2 },
-    logo:       { top: 1,    right: 1,   width: 12,  height: 12                  },
-    precio:     { top: 12,   left: 1.5,              fontSize: 10                 },
-    codInterno: { top: 12,   right: 1.5,             fontSize: 9                  },
-    barcode:    { bottom: 0, left: 0,    width: 50,  height: 10, textSize: 22    },
+    label:      'Grande (50 × 26 mm)',
+    ancho:      50,
+    alto:       26,
+    // Pendiente calibración — ajustar cuando el user dé coordenadas BarTender
+    nombre:     { top: 1.5,  left: 1.5,  width: 33,   height: 6,   fontSize: 7,  lineClamp: 2 },
+    logo:       { top: 1,    left: 39,   width: 10,   height: 10                               },
+    precio:     { top: 12,   left: 1.5,  width: 20,   height: 4,   fontSize: 10                },
+    codInterno: { top: 12,   left: 36,   width: 13,   height: 4,   fontSize: 9                 },
+    barcode:    { top: 16,   left: 5,    width: 40,   height: 9,   barWidth: 1.5, textSize: 18 },
   },
 };
 
@@ -145,7 +147,7 @@ async function imprimir(productos, seleccionados, tamano) {
           margin:       0,
           lineColor:    '#000',
           background:   '#fff',
-          width:        cfg.ancho < 36 ? 1.2 : 1.6,
+          width:        cfg.barcode.barWidth,
           height:       55,
         });
         svg.setAttribute('width',  '100%');
@@ -194,6 +196,7 @@ async function imprimir(productos, seleccionados, tamano) {
     top: ${c.nombre.top}mm;
     left: ${c.nombre.left}mm;
     width: ${c.nombre.width}mm;
+    height: ${c.nombre.height}mm;
     font-family: Arial, sans-serif;
     font-size: ${c.nombre.fontSize}pt;
     font-weight: bold;
@@ -207,7 +210,7 @@ async function imprimir(productos, seleccionados, tamano) {
   .logo {
     position: absolute;
     top: ${c.logo.top}mm;
-    right: ${c.logo.right}mm;
+    left: ${c.logo.left}mm;
     width: ${c.logo.width}mm;
     height: ${c.logo.height}mm;
     object-fit: contain;
@@ -217,23 +220,29 @@ async function imprimir(productos, seleccionados, tamano) {
     position: absolute;
     top: ${c.precio.top}mm;
     left: ${c.precio.left}mm;
-    font-family: Arial, sans-serif;
+    width: ${c.precio.width}mm;
+    height: ${c.precio.height}mm;
+    font-family: 'Segoe UI Variable Text', 'Segoe UI', Arial, sans-serif;
     font-size: ${c.precio.fontSize}pt;
     font-weight: bold;
+    overflow: hidden;
   }
 
   .cod-interno {
     position: absolute;
     top: ${c.codInterno.top}mm;
-    right: ${c.codInterno.right}mm;
+    left: ${c.codInterno.left}mm;
+    width: ${c.codInterno.width}mm;
+    height: ${c.codInterno.height}mm;
     font-family: Arial, sans-serif;
     font-size: ${c.codInterno.fontSize}pt;
     font-weight: bold;
+    overflow: hidden;
   }
 
   .barcode {
     position: absolute;
-    bottom: ${c.barcode.bottom}mm;
+    top: ${c.barcode.top}mm;
     left: ${c.barcode.left}mm;
     width: ${c.barcode.width}mm;
     height: ${c.barcode.height}mm;
