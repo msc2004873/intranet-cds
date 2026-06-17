@@ -15,9 +15,9 @@ const TAMANOS = {
     label:      'Pequeña (32 × 19 mm)',
     ancho:      32,
     alto:       19,
-    nombre:     { top: 1.4,  left: 1.3,  width: 21.3, height: 4,   fontSize: 5,  lineClamp: 2 },
+    nombre:     { top: 1.4,  left: 1.3,  width: 21.3, height: 4,   fontSize: 5,  lineClamp: 2, align: 'right' },
     logo:       { top: 1.4,  left: 25.9, width: 5.2,  height: 5.2                              },
-    precio:     { top: 8.3,  left: 3,    width: 12.3, height: 3.3, fontSize: 7                 },
+    precio:     { top: 8.3,  left: 3,    width: 12.3, height: 3.3, fontSize: 8.5               },
     codInterno: { top: 8.3,  left: 25.9, width: 6.3,  height: 2.9, fontSize: 7                 },
     barcode:    { top: 11,   left: 5.3,  width: 23.8, height: 7.4, barWidth: 1.2, textSize: 14 },
   },
@@ -37,9 +37,11 @@ const TAMANOS = {
 // ============================================================
 // HELPERS
 // ============================================================
-function detectarFormato() {
-  // CODE128 acepta cualquier string sin validar checksum
-  // EAN13/UPC fallan si el dígito verificador de Q-VET no coincide
+function detectarFormato(codigo) {
+  const c = String(codigo).replace(/\s/g, '');
+  if (/^\d{13}$/.test(c)) return 'EAN13';
+  if (/^\d{12}$/.test(c)) return 'UPC';
+  if (/^\d{8}$/.test(c))  return 'EAN8';
   return 'CODE128';
 }
 
@@ -137,24 +139,36 @@ async function imprimir(productos, seleccionados, tamano) {
     // Barcode SVG
     let barcodeSvg = '';
     if (esCodValido(p.codigoBarras)) {
-      try {
+      const codigo = String(p.codigoBarras).replace(/\s/g, '');
+      const barcodeOpts = {
+        displayValue: true,
+        fontSize:     cfg.barcode.textSize,
+        textMargin:   1,
+        margin:       0,
+        lineColor:    '#000',
+        background:   '#fff',
+        width:        cfg.barcode.barWidth,
+        height:       55,
+      };
+      const renderSvg = (format) => {
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        JsBarcode(svg, String(p.codigoBarras).replace(/\s/g, ''), {
-          format:       'CODE128',
-          displayValue: true,
-          fontSize:     cfg.barcode.textSize,
-          textMargin:   1,
-          margin:       0,
-          lineColor:    '#000',
-          background:   '#fff',
-          width:        cfg.barcode.barWidth,
-          height:       55,
-        });
-        svg.setAttribute('width',  '100%');
-        svg.setAttribute('height', '100%');
-        barcodeSvg = svg.outerHTML;
+        JsBarcode(svg, codigo, { ...barcodeOpts, format });
+        // Fijar viewBox para que CSS pueda escalar sin distorsión
+        const w = parseFloat(svg.getAttribute('width')  || 200);
+        const h = parseFloat(svg.getAttribute('height') || 100);
+        svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
+        svg.setAttribute('width',   '100%');
+        svg.setAttribute('height',  '100%');
+        svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        return svg.outerHTML;
+      };
+      try {
+        barcodeSvg = renderSvg(detectarFormato(codigo));
       } catch {
-        barcodeSvg = `<span style="font-size:6pt;color:#999;">${escapeHtml(p.codigoBarras)}</span>`;
+        // Checksum inválido (ej: EAN13 con dígito verificador malo) → CODE128 sin restricciones
+        try { barcodeSvg = renderSvg('CODE128'); } catch {
+          barcodeSvg = `<span style="font-size:6pt;color:#999;">${escapeHtml(codigo)}</span>`;
+        }
       }
     } else {
       barcodeSvg = `<span style="font-size:6pt;color:#c00;">(sin código)</span>`;
@@ -201,6 +215,7 @@ async function imprimir(productos, seleccionados, tamano) {
     font-size: ${c.nombre.fontSize}pt;
     font-weight: bold;
     line-height: 1.2;
+    text-align: ${c.nombre.align || 'left'};
     overflow: hidden;
     display: -webkit-box;
     -webkit-line-clamp: ${c.nombre.lineClamp};
