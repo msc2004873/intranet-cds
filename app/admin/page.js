@@ -241,6 +241,23 @@ export default function AdminPage() {
             <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Gestiona usuarios y permisos del sistema</div>
             <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#EDE9F6', color: '#5B35B5' }}>Usuarios</span>
           </a>
+
+          <a href="/admin/etiquetas" style={buttonStyle} onMouseEnter={buttonHoverEnter} onMouseLeave={buttonHoverLeave}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              background: '#E8F3EC',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <span style={{ fontSize: '26px' }}>🏷️</span>
+            </div>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Etiquetas</div>
+            <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Imprimí etiquetas de productos desde Q-VET</div>
+            <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#E8F3EC', color: '#1a7a4a' }}>Etiquetas</span>
+          </a>
         </div>
       </div>
 

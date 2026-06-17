@@ -16,6 +16,8 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.104.1",
     "dotenv": "^17.4.2",
+    "jsbarcode": "^3.12.3",
+    "jspdf": "^4.2.1",
     "next": "^16.2.4",
     "pg": "^8.20.0",
     "react": "^19.2.5",
