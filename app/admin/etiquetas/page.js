@@ -6,29 +6,29 @@ import { useRouter } from 'next/navigation';
 import Header from '../../components/Header';
 
 // ============================================================
-// CONSTANTES DE ETIQUETA — calibrar según impresora física
-// fontSize en pt, resto en mm
+// CONSTANTES DE ETIQUETA — posicionamiento absoluto en mm/pt
+// Fácil de calibrar: cada campo tiene top/left/right/fontSize
 // ============================================================
 const TAMANOS = {
-  grande: {
-    label: 'Grande (50 × 26 mm)',
-    ancho: 50,
-    alto: 26,
-    padding: 1.5,
-    nombre:     { fontSize: 7,   lineClamp: 2 },
-    barcode:    { maxAncho: 42,  maxAlto: 13  },
-    precio:     { fontSize: 9                 },
-    codInterno: { fontSize: 5                 },
-  },
   pequena: {
     label: 'Pequeña (32 × 19 mm)',
     ancho: 32,
-    alto: 19,
-    padding: 1,
-    nombre:     { fontSize: 5.5, lineClamp: 2 },
-    barcode:    { maxAncho: 27,  maxAlto: 8.5 },
-    precio:     { fontSize: 7                 },
-    codInterno: { fontSize: 4                 },
+    alto:  19,
+    nombre:     { top: 1,    left: 1,    width: 21,  fontSize: 5.5, lineClamp: 2 },
+    logo:       { top: 0.5,  right: 0.5, width: 8,   height: 8                  },
+    precio:     { top: 8.8,  left: 1,                fontSize: 7.5               },
+    codInterno: { top: 8.8,  right: 1,               fontSize: 7.5               },
+    barcode:    { bottom: 0, left: 0,    width: 32,  height: 7,  textSize: 18   },
+  },
+  grande: {
+    label: 'Grande (50 × 26 mm)',
+    ancho: 50,
+    alto:  26,
+    nombre:     { top: 1.5,  left: 1.5,  width: 33,  fontSize: 7,   lineClamp: 2 },
+    logo:       { top: 1,    right: 1,   width: 12,  height: 12                  },
+    precio:     { top: 12,   left: 1.5,              fontSize: 10                 },
+    codInterno: { top: 12,   right: 1.5,             fontSize: 9                  },
+    barcode:    { bottom: 0, left: 0,    width: 50,  height: 10, textSize: 22    },
   },
 };
 
@@ -108,128 +108,141 @@ function parsearExcel(buffer) {
 }
 
 // ============================================================
-// IMPRESIÓN
-// win se abre sincrónicamente en el click handler ANTES del await
-// para que el popup blocker no lo frene
+// IMPRESIÓN — layout absoluto, logo embedido como base64
 // ============================================================
-async function imprimir(productos, seleccionados, tamano) {
-  const JsBarcode = (await import('jsbarcode')).default;
-  const cfg = TAMANOS[tamano];
+async function fetchBase64(url) {
+  const resp = await fetch(url);
+  const blob = await resp.blob();
+  return new Promise(resolve => {
+    const r = new FileReader();
+    r.onloadend = () => resolve(r.result);
+    r.readAsDataURL(blob);
+  });
+}
 
-  const lista = productos.filter(p => seleccionados.has(p.id));
+async function imprimir(productos, seleccionados, tamano) {
+  const JsBarcode  = (await import('jsbarcode')).default;
+  const logoSrc    = await fetchBase64('/corral-del-sol-logo-negro.png');
+  const cfg        = TAMANOS[tamano];
+
+  const lista   = productos.filter(p => seleccionados.has(p.id));
   const paginas = lista.flatMap(p =>
     Array.from({ length: Math.max(1, p.cantidad) }, () => p)
   );
-  if (paginas.length === 0) { win.close(); return; }
+  if (paginas.length === 0) return;
 
   const labelHtml = paginas.map((p, i) => {
-    let barcodeHtml = '';
+    // Barcode SVG
+    let barcodeSvg = '';
     if (esCodValido(p.codigoBarras)) {
       try {
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         JsBarcode(svg, String(p.codigoBarras).replace(/\s/g, ''), {
-          format:       detectarFormato(p.codigoBarras),
+          format:       'CODE128',
           displayValue: true,
-          fontSize:     cfg.barcode.maxAlto < 10 ? 22 : 28,
+          fontSize:     cfg.barcode.textSize,
           textMargin:   1,
           margin:       0,
-          lineColor:    '#000000',
-          background:   '#ffffff',
+          lineColor:    '#000',
+          background:   '#fff',
           width:        cfg.ancho < 36 ? 1.2 : 1.6,
-          height:       60,
+          height:       55,
         });
-        barcodeHtml = svg.outerHTML;
+        svg.setAttribute('width',  '100%');
+        svg.setAttribute('height', '100%');
+        barcodeSvg = svg.outerHTML;
       } catch {
-        barcodeHtml = `<span style="font-size:${cfg.codInterno.fontSize}pt;color:#999;">${escapeHtml(p.codigoBarras)}</span>`;
+        barcodeSvg = `<span style="font-size:6pt;color:#999;">${escapeHtml(p.codigoBarras)}</span>`;
       }
     } else {
-      barcodeHtml = `<span style="font-size:${cfg.codInterno.fontSize}pt;color:#c00;">(sin código)</span>`;
+      barcodeSvg = `<span style="font-size:6pt;color:#c00;">(sin código)</span>`;
     }
 
     const isLast = i === paginas.length - 1;
+
     return `<div class="etiqueta${isLast ? ' last' : ''}">
   <div class="nombre">${escapeHtml(p.nombre)}</div>
-  <div class="barcode">${barcodeHtml}</div>
-  <div class="footer">
-    <span class="precio">${fmtPrecio(p.pvp)}</span>
-    ${p.codigoInterno ? `<span class="cod">${escapeHtml(p.codigoInterno)}</span>` : ''}
-  </div>
+  <img class="logo" src="${logoSrc}" alt="" />
+  <div class="precio">${fmtPrecio(p.pvp)}</div>
+  ${p.codigoInterno ? `<div class="cod-interno">${escapeHtml(p.codigoInterno)}</div>` : ''}
+  <div class="barcode">${barcodeSvg}</div>
 </div>`;
   }).join('\n');
 
+  const c = cfg;
   const html = `<!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <style>
-  @page {
-    size: ${cfg.ancho}mm ${cfg.alto}mm;
-    margin: 0;
-  }
+  @page { size: ${c.ancho}mm ${c.alto}mm; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  html, body {
-    width: ${cfg.ancho}mm;
-    background: #fff;
-  }
+  html, body { width: ${c.ancho}mm; background: #fff; }
+
   .etiqueta {
-    width: ${cfg.ancho}mm;
-    height: ${cfg.alto}mm;
-    padding: ${cfg.padding}mm;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-between;
+    position: relative;
+    width: ${c.ancho}mm;
+    height: ${c.alto}mm;
     overflow: hidden;
     page-break-after: always;
     break-after: page;
   }
-  .etiqueta.last {
-    page-break-after: avoid;
-    break-after: avoid;
-  }
+  .etiqueta.last { page-break-after: avoid; break-after: avoid; }
+
   .nombre {
+    position: absolute;
+    top: ${c.nombre.top}mm;
+    left: ${c.nombre.left}mm;
+    width: ${c.nombre.width}mm;
     font-family: Arial, sans-serif;
-    font-size: ${cfg.nombre.fontSize}pt;
+    font-size: ${c.nombre.fontSize}pt;
     font-weight: bold;
-    text-align: center;
-    line-height: 1.15;
-    max-width: 100%;
+    line-height: 1.2;
     overflow: hidden;
     display: -webkit-box;
-    -webkit-line-clamp: ${cfg.nombre.lineClamp};
+    -webkit-line-clamp: ${c.nombre.lineClamp};
     -webkit-box-orient: vertical;
   }
+
+  .logo {
+    position: absolute;
+    top: ${c.logo.top}mm;
+    right: ${c.logo.right}mm;
+    width: ${c.logo.width}mm;
+    height: ${c.logo.height}mm;
+    object-fit: contain;
+  }
+
+  .precio {
+    position: absolute;
+    top: ${c.precio.top}mm;
+    left: ${c.precio.left}mm;
+    font-family: Arial, sans-serif;
+    font-size: ${c.precio.fontSize}pt;
+    font-weight: bold;
+  }
+
+  .cod-interno {
+    position: absolute;
+    top: ${c.codInterno.top}mm;
+    right: ${c.codInterno.right}mm;
+    font-family: Arial, sans-serif;
+    font-size: ${c.codInterno.fontSize}pt;
+    font-weight: bold;
+  }
+
   .barcode {
+    position: absolute;
+    bottom: ${c.barcode.bottom}mm;
+    left: ${c.barcode.left}mm;
+    width: ${c.barcode.width}mm;
+    height: ${c.barcode.height}mm;
+    overflow: hidden;
     display: flex;
     align-items: center;
     justify-content: center;
-    flex: 1;
-    width: 100%;
-    overflow: hidden;
   }
-  .barcode svg {
-    max-width: ${cfg.barcode.maxAncho}mm;
-    max-height: ${cfg.barcode.maxAlto}mm;
-    width: auto;
-    height: auto;
-    display: block;
-  }
-  .footer {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    line-height: 1.2;
-  }
-  .precio {
-    font-family: Arial, sans-serif;
-    font-size: ${cfg.precio.fontSize}pt;
-    font-weight: bold;
-  }
-  .cod {
-    font-family: Arial, sans-serif;
-    font-size: ${cfg.codInterno.fontSize}pt;
-    color: #555;
-  }
+  .barcode svg { width: 100%; height: 100%; }
 </style>
 </head>
 <body>${labelHtml}</body>
@@ -238,18 +251,10 @@ async function imprimir(productos, seleccionados, tamano) {
   const iframe = document.createElement('iframe');
   iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:0;';
   document.body.appendChild(iframe);
-
   const doc = iframe.contentWindow.document;
-  doc.open();
-  doc.write(html);
-  doc.close();
-
+  doc.open(); doc.write(html); doc.close();
   iframe.contentWindow.onafterprint = () => document.body.removeChild(iframe);
-
-  setTimeout(() => {
-    iframe.contentWindow.focus();
-    iframe.contentWindow.print();
-  }, 400);
+  setTimeout(() => { iframe.contentWindow.focus(); iframe.contentWindow.print(); }, 400);
 }
 
 // ============================================================
