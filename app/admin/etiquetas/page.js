@@ -28,7 +28,7 @@ const TAMANOS = {
     offsetX:    1.5,
     nombre:     { top: 1.0,  left: 1.0,  width: 29,  fontSize: 7.5 },
     logo:       { top: 1.0,  right: 1.0,  width: 16,  maxH: 11 },
-    codInterno: { top: 13.5, right: 2.5,  width: 13,  fontSize: 8 },
+    codInterno: { top: 13.0, right: 2.5,  width: 13,  fontSize: 6 },
     precio:     { top: 17.0, right: 1.0,  width: 17,  fontSize: 13 },
     barcode:    { top: 12.0, left: 1.0,   width: 28,  height: 11,  barWidth: 1.5 },
   },
@@ -213,8 +213,8 @@ async function imprimir(productos, seleccionados, tamano) {
     position: absolute;
     top: ${c.codInterno.top}mm; right: ${c.codInterno.right}mm; width: ${c.codInterno.width}mm;
     font-family: Arial, sans-serif; font-size: ${c.codInterno.fontSize}pt; font-weight: bold;
-    text-align: center; border: 2pt solid #000; border-radius: 8mm;
-    padding: 0.8mm 2mm; white-space: nowrap;
+    text-align: center; border: 1.5pt solid #000; border-radius: 8mm;
+    padding: 0.4mm 2mm; white-space: nowrap;
   }
   .precio {
     position: absolute;
