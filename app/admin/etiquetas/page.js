@@ -114,7 +114,7 @@ function parsearExcel(buffer) {
 // win se abre sincrónicamente en el click handler ANTES del await
 // para que el popup blocker no lo frene
 // ============================================================
-async function imprimir(productos, seleccionados, tamano, win) {
+async function imprimir(productos, seleccionados, tamano) {
   const JsBarcode = (await import('jsbarcode')).default;
   const cfg = TAMANOS[tamano];
 
@@ -237,15 +237,20 @@ async function imprimir(productos, seleccionados, tamano, win) {
 <body>${labelHtml}</body>
 </html>`;
 
-  win.document.open();
-  win.document.write(html);
-  win.document.close();
-  win.onafterprint = () => win.close();
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:0;height:0;border:0;';
+  document.body.appendChild(iframe);
 
-  // Delay para que Chrome renderice los SVGs antes de abrir el diálogo
+  const doc = iframe.contentWindow.document;
+  doc.open();
+  doc.write(html);
+  doc.close();
+
+  iframe.contentWindow.onafterprint = () => document.body.removeChild(iframe);
+
   setTimeout(() => {
-    win.focus();
-    win.print();
+    iframe.contentWindow.focus();
+    iframe.contentWindow.print();
   }, 400);
 }
 
@@ -376,21 +381,11 @@ export default function EtiquetasPage() {
 
   async function handleImprimir() {
     if (seleccionados.size === 0) { setError('Seleccioná al menos un producto.'); return; }
-
-    // Abrir ventana SINCRÓNICAMENTE antes del primer await
-    // para que el popup blocker no la bloquee
-    const win = window.open('', '_blank');
-    if (!win) {
-      setError('El navegador bloqueó la ventana. Permitir popups para este sitio e intentar de nuevo.');
-      return;
-    }
-
     setImprimiendo(true);
     setError('');
     try {
-      await imprimir(productos, seleccionados, tamano, win);
+      await imprimir(productos, seleccionados, tamano);
     } catch (e) {
-      win.close();
       setError('Error al imprimir: ' + e.message);
     } finally {
       setImprimiendo(false);
