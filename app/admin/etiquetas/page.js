@@ -18,7 +18,7 @@ const TAMANOS = {
     nombre:     { top: 1.4,  left: 1.3,  width: 21.3, height: 4,   fontSize: 5,  lineClamp: 2, align: 'right' },
     logo:       { top: 1.4,  left: 25.9, width: 5.2,  height: 5.2                              },
     precio:     { top: 8.3,  left: 3,    width: 12.3, height: 3.3, fontSize: 8.5               },
-    codInterno: { top: 8.3,  left: 25.9, width: 6.3,  height: 2.9, fontSize: 7                 },
+    codInterno: { top: 8.3,  left: 25.9, width: 6.3,  height: 2.9, fontSize: 5.5               },
     barcode:    { top: 11,   left: 5.3,  width: 23.8, height: 7.4, barWidth: 1.2, textSize: 14 },
   },
   grande: {
@@ -210,16 +210,13 @@ async function imprimir(productos, seleccionados, tamano) {
     top: ${c.nombre.top}mm;
     left: ${c.nombre.left}mm;
     width: ${c.nombre.width}mm;
-    height: ${c.nombre.height}mm;
     font-family: Arial, sans-serif;
     font-size: ${c.nombre.fontSize}pt;
     font-weight: bold;
     line-height: 1.2;
     text-align: ${c.nombre.align || 'left'};
-    overflow: hidden;
-    display: -webkit-box;
-    -webkit-line-clamp: ${c.nombre.lineClamp};
-    -webkit-box-orient: vertical;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 
   .logo {
@@ -248,11 +245,11 @@ async function imprimir(productos, seleccionados, tamano) {
     top: ${c.codInterno.top}mm;
     left: ${c.codInterno.left}mm;
     width: ${c.codInterno.width}mm;
-    height: ${c.codInterno.height}mm;
     font-family: Arial, sans-serif;
     font-size: ${c.codInterno.fontSize}pt;
     font-weight: bold;
-    overflow: hidden;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 
   .barcode {
