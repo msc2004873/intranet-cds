@@ -140,9 +140,7 @@ async function imprimir(productos, seleccionados, tamano) {
     if (esCodValido(p.codigoBarras)) {
       const codigo = String(p.codigoBarras).replace(/\s/g, '');
       const barcodeOpts = {
-        displayValue: true,
-        fontSize:     28,
-        textMargin:   4,
+        displayValue: false,
         margin:       8,
         lineColor:    '#000',
         background:   '#fff',
