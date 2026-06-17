@@ -15,11 +15,11 @@ const TAMANOS = {
     label:      'Pequeña (32 × 19 mm)',
     ancho:      32,
     alto:       19,
-    offsetX:    2,   // ajustar si el contenido sigue corrido a la izquierda en la impresora
-    nombre:     { top: 2,    left: 1.3, width: 21.3, fontSize: 7   },
-    rightCol:   { top: 1.8,  right: 0.3, width: 6.5, logoH: 6.5, gap: 0.8, codFontSize: 7.5 },
-    precio:     { top: 8.8,  left: 3,    width: 14,  fontSize: 9.5 },
-    barcode:    { top: 12.2, left: 4.1, width: 23.8, height: 6.8, barWidth: 1.2, textSize: 14 },
+    offsetX:    4,   // ajustar si el contenido sigue corrido a la izquierda en la impresora
+    nombre:     { top: 2.5,  left: 1.3, width: 21.3, fontSize: 7   },
+    rightCol:   { top: 2.3,  right: 0.3, width: 6.5, logoH: 6.5, gap: 0.8, codFontSize: 7.5 },
+    precio:     { top: 9.5,  left: 3,    width: 14,  fontSize: 9.5 },
+    barcode:    { top: 13,   left: 4.1, width: 23.8, height: 6,   barWidth: 1.2, textSize: 14 },
   },
   grande: {
     label:      'Grande (50 × 26 mm)',
