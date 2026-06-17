@@ -19,7 +19,7 @@ const TAMANOS = {
     nombre:     { top: 1.2, left: 1.0, width: 22,   fontSize: 5.5 },
     rightCol:   { top: 0.8, right: 0.4, width: 7.5,  logoH: 8,   gap: 0.8, codFontSize: 7   },
     precio:     { top: 9.0, left: 1.0,  width: 15,   fontSize: 8  },
-    barcode:    { top: 12,  left: 3,    width: 26,   height: 6.5,  barWidth: 1.5, textSize: 5.5 },
+    barcode:    { top: 12,  left: 3,    width: 26,   height: 4.5,  barWidth: 1.5 },
   },
   grande: {
     label:      'Grande (50 × 26 mm)',
@@ -181,10 +181,7 @@ async function imprimir(productos, seleccionados, tamano) {
     ${p.codigoInterno ? `<div class="cod-interno">${escapeHtml(p.codigoInterno)}</div>` : ''}
   </div>
   <div class="precio">${fmtPrecio(p.pvp)}</div>
-  <div class="barcode">
-    ${esCodValido(p.codigoBarras) ? `<div class="barcode-num">${escapeHtml(String(p.codigoBarras).replace(/\s/g,''))}</div>` : ''}
-    <div class="barcode-bars">${barcodeSvg}</div>
-  </div>
+  <div class="barcode">${barcodeSvg}</div>
 </div>`;
   }).join('\n');
 
@@ -258,27 +255,14 @@ async function imprimir(productos, seleccionados, tamano) {
     font-weight: bold;
   }
 
-  /* Barcode — flex column: dígitos arriba (HTML), barras abajo (SVG) */
   .barcode {
     position: absolute;
     top: ${c.barcode.top}mm;
     left: ${c.barcode.left}mm;
     width: ${c.barcode.width}mm;
     height: ${c.barcode.height}mm;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 0.3mm;
   }
-  .barcode-num {
-    font-family: 'Courier New', monospace;
-    font-size: ${c.barcode.textSize}pt;
-    text-align: center;
-    white-space: nowrap;
-    line-height: 1;
-  }
-  .barcode-bars { width: 100%; flex: 1; min-height: 0; }
-  .barcode-bars svg { width: 100%; height: 100%; }
+  .barcode svg { width: 100%; height: 100%; }
 </style>
 </head>
 <body>${labelHtml}</body>
