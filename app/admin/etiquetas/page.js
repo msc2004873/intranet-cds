@@ -26,10 +26,11 @@ const TAMANOS = {
     ancho:      50,
     alto:       26,
     offsetX:    1.5,
-    nombre:     { top: 1.5, left: 1.5, width: 33,  fontSize: 7   },
-    rightCol:   { top: 1,   right: 0.5, width: 11, logoH: 10, gap: 1, codFontSize: 8 },
-    precio:     { top: 12,  left: 1.5,  width: 22, fontSize: 10  },
-    barcode:    { top: 16,  left: 5,    width: 40,  height: 10,  barWidth: 1.5, textSize: 18 },
+    nombre:     { top: 1.0,  left: 1.0,  width: 29,  fontSize: 7.5 },
+    logo:       { top: 1.0,  right: 1.0,  width: 16,  maxH: 11 },
+    codInterno: { top: 13.5, right: 2.5,  width: 13,  fontSize: 8 },
+    precio:     { top: 17.0, right: 1.0,  width: 17,  fontSize: 13 },
+    barcode:    { top: 12.0, left: 1.0,   width: 28,  height: 11,  barWidth: 1.5 },
   },
 };
 
@@ -124,9 +125,10 @@ async function fetchBase64(url) {
 }
 
 async function imprimir(productos, seleccionados, tamano) {
-  const JsBarcode  = (await import('jsbarcode')).default;
-  const logoSrc    = await fetchBase64('/corral-del-sol-logo-negro.png');
-  const cfg        = TAMANOS[tamano];
+  const JsBarcode = (await import('jsbarcode')).default;
+  const logoSrc   = await fetchBase64('/corral-del-sol-logo-negro.png');
+  const c         = TAMANOS[tamano];
+  const isGrande  = tamano === 'grande';
 
   const lista   = productos.filter(p => seleccionados.has(p.id));
   const paginas = lista.flatMap(p =>
@@ -134,38 +136,55 @@ async function imprimir(productos, seleccionados, tamano) {
   );
   if (paginas.length === 0) return;
 
+  // Grande muestra dígitos (más espacio), pequeña no (evita pixelación)
+  const barcodeOpts = isGrande ? {
+    displayValue: true,
+    fontSize:     28,
+    margin:       6,
+    lineColor:    '#000',
+    background:   '#fff',
+    width:        4,
+    height:       180,
+  } : {
+    displayValue: false,
+    margin:       8,
+    lineColor:    '#000',
+    background:   '#fff',
+    width:        4,
+    height:       220,
+  };
+
   const labelHtml = paginas.map((p, i) => {
-    // Barcode SVG
-    let barcodeSvg = '';
+    let barcodePng = '';
     if (esCodValido(p.codigoBarras)) {
       const codigo = String(p.codigoBarras).replace(/\s/g, '');
-      const barcodeOpts = {
-        displayValue: false,
-        margin:       8,
-        lineColor:    '#000',
-        background:   '#fff',
-        width:        4,
-        height:       220,
-      };
-      // Canvas → PNG: evita el clipping de viewport que tienen los SVG en impresoras
       const renderPng = (format) => {
         const canvas = document.createElement('canvas');
         JsBarcode(canvas, codigo, { ...barcodeOpts, format });
         return `<img src="${canvas.toDataURL('image/png')}" style="width:100%;height:100%;display:block;" />`;
       };
       try {
-        barcodeSvg = renderPng(detectarFormato(codigo));
+        barcodePng = renderPng(detectarFormato(codigo));
       } catch {
-        try { barcodeSvg = renderPng('CODE128'); } catch {
-          barcodeSvg = `<span style="font-size:6pt;color:#999;">${escapeHtml(codigo)}</span>`;
+        try { barcodePng = renderPng('CODE128'); } catch {
+          barcodePng = `<span style="font-size:6pt;color:#999;">${escapeHtml(codigo)}</span>`;
         }
       }
     } else {
-      barcodeSvg = `<span style="font-size:6pt;color:#c00;">(sin código)</span>`;
+      barcodePng = `<span style="font-size:6pt;color:#c00;">(sin código)</span>`;
     }
 
     const isLast = i === paginas.length - 1;
 
+    if (isGrande) {
+      return `<div class="etiqueta${isLast ? ' last' : ''}">
+  <div class="nombre">${escapeHtml(p.nombre)}</div>
+  <img class="logo" src="${logoSrc}" alt="" />
+  ${p.codigoInterno ? `<div class="cod-interno">${escapeHtml(p.codigoInterno)}</div>` : ''}
+  <div class="precio">${fmtPrecio(p.pvp)}</div>
+  <div class="barcode">${barcodePng}</div>
+</div>`;
+    }
     return `<div class="etiqueta${isLast ? ' last' : ''}">
   <div class="nombre">${escapeHtml(p.nombre)}</div>
   <div class="right-col">
@@ -173,11 +192,60 @@ async function imprimir(productos, seleccionados, tamano) {
     ${p.codigoInterno ? `<div class="cod-interno">${escapeHtml(p.codigoInterno)}</div>` : ''}
   </div>
   <div class="precio">${fmtPrecio(p.pvp)}</div>
-  <div class="barcode">${barcodeSvg}</div>
+  <div class="barcode">${barcodePng}</div>
 </div>`;
   }).join('\n');
 
-  const c = cfg;
+  const grandeCSS = `
+  .nombre {
+    position: absolute;
+    top: ${c.nombre.top}mm; left: ${c.nombre.left}mm; width: ${c.nombre.width}mm;
+    font-family: Arial, sans-serif; font-size: ${c.nombre.fontSize}pt; font-weight: bold;
+    line-height: 1.25; word-wrap: break-word; overflow-wrap: break-word;
+    border: 1.5pt solid #82C4E8; border-radius: 2mm; padding: 1.2mm 1.5mm;
+  }
+  .logo {
+    position: absolute;
+    top: ${c.logo.top}mm; right: ${c.logo.right}mm; width: ${c.logo.width}mm;
+    max-height: ${c.logo.maxH}mm; object-fit: contain;
+  }
+  .cod-interno {
+    position: absolute;
+    top: ${c.codInterno.top}mm; right: ${c.codInterno.right}mm; width: ${c.codInterno.width}mm;
+    font-family: Arial, sans-serif; font-size: ${c.codInterno.fontSize}pt; font-weight: bold;
+    text-align: center; border: 2pt solid #000; border-radius: 8mm;
+    padding: 0.8mm 2mm; white-space: nowrap;
+  }
+  .precio {
+    position: absolute;
+    top: ${c.precio.top}mm; right: ${c.precio.right}mm; width: ${c.precio.width}mm;
+    font-family: Arial, sans-serif; font-size: ${c.precio.fontSize}pt; font-weight: bold;
+    text-align: right;
+  }`;
+
+  const pequenaCSS = `
+  .nombre {
+    position: absolute;
+    top: ${c.nombre.top}mm; left: ${c.nombre.left}mm; width: ${c.nombre.width}mm;
+    font-family: Arial, sans-serif; font-size: ${c.nombre.fontSize}pt; font-weight: bold;
+    line-height: 1.2; word-wrap: break-word; overflow-wrap: break-word;
+  }
+  .right-col {
+    position: absolute;
+    top: ${c.rightCol.top}mm; right: ${c.rightCol.right}mm; width: ${c.rightCol.width}mm;
+    display: flex; flex-direction: column; align-items: center; gap: ${c.rightCol.gap}mm;
+  }
+  .logo { width: 100%; max-height: ${c.rightCol.logoH}mm; object-fit: contain; }
+  .cod-interno {
+    font-family: Arial, sans-serif; font-size: ${c.rightCol.codFontSize}pt;
+    font-weight: bold; text-align: center; white-space: nowrap;
+  }
+  .precio {
+    position: absolute;
+    top: ${c.precio.top}mm; left: ${c.precio.left}mm; width: ${c.precio.width}mm;
+    font-family: Arial, sans-serif; font-size: ${c.precio.fontSize}pt; font-weight: bold;
+  }`;
+
   const html = `<!DOCTYPE html>
 <html>
 <head>
@@ -186,73 +254,17 @@ async function imprimir(productos, seleccionados, tamano) {
   @page { size: ${c.ancho}mm ${c.alto}mm; margin: 0; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body { width: ${c.ancho}mm; background: #fff; }
-
   .etiqueta {
-    position: relative;
-    width: ${c.ancho}mm;
-    height: ${c.alto}mm;
-    overflow: hidden;
-    transform: translateX(${c.offsetX}mm);
-    page-break-after: always;
-    break-after: page;
+    position: relative; width: ${c.ancho}mm; height: ${c.alto}mm;
+    overflow: hidden; transform: translateX(${c.offsetX}mm);
+    page-break-after: always; break-after: page;
   }
   .etiqueta.last { page-break-after: avoid; break-after: avoid; }
-
-  /* Nombre — arriba izquierda, wrap libre */
-  .nombre {
-    position: absolute;
-    top: ${c.nombre.top}mm;
-    left: ${c.nombre.left}mm;
-    width: ${c.nombre.width}mm;
-    font-family: Arial, sans-serif;
-    font-size: ${c.nombre.fontSize}pt;
-    font-weight: bold;
-    line-height: 1.2;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-  }
-
-  /* Columna derecha: logo arriba, cód interno abajo, ambos centrados */
-  .right-col {
-    position: absolute;
-    top: ${c.rightCol.top}mm;
-    right: ${c.rightCol.right}mm;
-    width: ${c.rightCol.width}mm;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: ${c.rightCol.gap}mm;
-  }
-  .logo {
-    width: 100%;
-    max-height: ${c.rightCol.logoH}mm;
-    object-fit: contain;
-  }
-  .cod-interno {
-    font-family: Arial, sans-serif;
-    font-size: ${c.rightCol.codFontSize}pt;
-    font-weight: bold;
-    text-align: center;
-    white-space: nowrap;
-  }
-
-  /* Precio — medio izquierda */
-  .precio {
-    position: absolute;
-    top: ${c.precio.top}mm;
-    left: ${c.precio.left}mm;
-    width: ${c.precio.width}mm;
-    font-family: Arial, sans-serif;
-    font-size: ${c.precio.fontSize}pt;
-    font-weight: bold;
-  }
-
+  ${isGrande ? grandeCSS : pequenaCSS}
   .barcode {
     position: absolute;
-    top: ${c.barcode.top}mm;
-    left: ${c.barcode.left}mm;
-    width: ${c.barcode.width}mm;
-    height: ${c.barcode.height}mm;
+    top: ${c.barcode.top}mm; left: ${c.barcode.left}mm;
+    width: ${c.barcode.width}mm; height: ${c.barcode.height}mm;
   }
   .barcode img { width: 100%; height: 100%; display: block; }
 </style>
@@ -280,8 +292,9 @@ export default function EtiquetasPage() {
   const [editando, setEditando]       = useState(null);
   const [editValues, setEditValues]   = useState({});
   const [busqueda, setBusqueda]       = useState('');
-  const [tamano, setTamano]           = useState('grande');
-  const [imprimiendo, setImprimiendo] = useState(false);
+  const [tamano, setTamano]               = useState('grande');
+  const [imprimiendo, setImprimiendo]     = useState(false);
+  const [showModalTamano, setShowModalTamano] = useState(false);
   const [arrastrando, setArrastrando] = useState(false);
   const [error, setError]             = useState('');
   const fileInputRef = useRef();
@@ -394,12 +407,18 @@ export default function EtiquetasPage() {
     setEditando(null);
   }
 
-  async function handleImprimir() {
+  function handleImprimir() {
     if (seleccionados.size === 0) { setError('Seleccioná al menos un producto.'); return; }
+    setShowModalTamano(true);
+  }
+
+  async function handleImprimirConTamano(t) {
+    setShowModalTamano(false);
+    setTamano(t);
     setImprimiendo(true);
     setError('');
     try {
-      await imprimir(productos, seleccionados, tamano);
+      await imprimir(productos, seleccionados, t);
     } catch (e) {
       setError('Error al imprimir: ' + e.message);
     } finally {
@@ -426,7 +445,20 @@ export default function EtiquetasPage() {
         {/* ── UPLOAD ─────────────────────────────────────────── */}
         {productos.length === 0 && (
           <div style={{ ...card, padding: '28px' }}>
-            <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '20px' }}>Subir Excel de Q-VET</h2>
+            <h2 style={{ fontSize: '16px', fontWeight: '600', marginBottom: '12px' }}>Subir Excel de Q-VET</h2>
+            <div style={{ background: '#F0F7FF', border: '1px solid #C3DDF0', borderRadius: '8px', padding: '12px 16px', marginBottom: '20px', fontSize: '12px', color: '#1A4A6B', lineHeight: 1.9 }}>
+              <div style={{ fontWeight: '700', marginBottom: '4px', color: '#2a78a5' }}>¿Dónde descargar el archivo?</div>
+              <div>
+                <span style={{ fontWeight: '600' }}>Documentos</span>
+                <span style={{ margin: '0 5px', color: '#6B9AB8' }}>›</span>
+                <span style={{ fontWeight: '600' }}>Listados</span>
+                <span style={{ margin: '0 5px', color: '#6B9AB8' }}>›</span>
+                <span style={{ fontWeight: '600' }}>Compras</span>
+                <span style={{ margin: '0 5px', color: '#6B9AB8' }}>›</span>
+                <span style={{ fontWeight: '600' }}>Productos en facturas ingresadas</span>
+              </div>
+              <div style={{ marginTop: '4px', color: '#4A7A9B' }}>Filtrá por número de factura y descargá el listado en Excel.</div>
+            </div>
             <div
               style={{ border: `2px dashed ${arrastrando ? '#2a78a5' : '#C8C0B4'}`, borderRadius: '12px', padding: '52px 24px', textAlign: 'center', cursor: 'pointer', background: arrastrando ? '#EDF5FA' : '#FAFAF8', transition: 'all 0.2s' }}
               onDragOver={(e) => { e.preventDefault(); setArrastrando(true); }}
@@ -547,29 +579,6 @@ export default function EtiquetasPage() {
         {productos.length > 0 && (
           <div style={{ ...card, padding: '20px 24px' }}>
             <div style={{ display: 'flex', gap: '32px', alignItems: 'center', flexWrap: 'wrap' }}>
-              <div>
-                <div style={{ fontSize: '11px', fontWeight: '700', color: '#6B6560', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '10px' }}>
-                  Tamaño de etiqueta
-                </div>
-                <div style={{ display: 'flex', gap: '8px' }}>
-                  {Object.entries(TAMANOS).map(([key, t]) => (
-                    <button
-                      key={key}
-                      onClick={() => setTamano(key)}
-                      style={{
-                        padding: '9px 18px', borderRadius: '8px', cursor: 'pointer',
-                        fontSize: '13px', fontWeight: '600', transition: 'all 0.15s',
-                        background: tamano === key ? '#2a78a5' : '#F0EDE6',
-                        color:      tamano === key ? '#fff'    : '#1A1714',
-                        border:     tamano === key ? 'none'    : '1px solid #E2DDD4',
-                      }}
-                    >
-                      {t.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: '20px' }}>
                 <div style={{ textAlign: 'right' }}>
                   <div style={{ fontSize: '28px', fontWeight: '700', color: '#1A1714', fontFamily: "'DM Mono', monospace", letterSpacing: '-1px' }}>
@@ -592,6 +601,50 @@ export default function EtiquetasPage() {
         )}
 
       </div>
+
+      {/* ── MODAL SELECCIÓN TAMAÑO ─────────────────────────── */}
+      {showModalTamano && (
+        <div
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}
+          onClick={() => setShowModalTamano(false)}
+        >
+          <div
+            style={{ background: '#fff', borderRadius: '16px', padding: '32px 28px', width: '340px', boxShadow: '0 12px 40px rgba(0,0,0,0.18)' }}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div style={{ fontSize: '18px', fontWeight: '700', color: '#1A1714', marginBottom: '6px' }}>¿Qué tamaño de etiqueta?</div>
+            <div style={{ fontSize: '12px', color: '#9C9590', marginBottom: '24px' }}>
+              {totalEtiquetas} etiqueta{totalEtiquetas !== 1 ? 's' : ''} a imprimir
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {Object.entries(TAMANOS).map(([key, t]) => (
+                <button
+                  key={key}
+                  onClick={() => handleImprimirConTamano(key)}
+                  style={{
+                    padding: '16px 20px', borderRadius: '10px', cursor: 'pointer', textAlign: 'left',
+                    border: '1.5px solid #E2DDD4', background: '#F7F5F0', transition: 'all 0.15s',
+                    fontSize: '14px', fontWeight: '600', color: '#1A1714',
+                  }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = '#EDF5FA'; e.currentTarget.style.borderColor = '#2a78a5'; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = '#F7F5F0'; e.currentTarget.style.borderColor = '#E2DDD4'; }}
+                >
+                  <div>{t.label}</div>
+                  <div style={{ fontSize: '11px', color: '#9C9590', fontWeight: '400', marginTop: '3px' }}>
+                    {key === 'pequena' ? 'Código de barras sin dígitos' : 'Código de barras con dígitos visibles'}
+                  </div>
+                </button>
+              ))}
+            </div>
+            <button
+              onClick={() => setShowModalTamano(false)}
+              style={{ marginTop: '16px', width: '100%', padding: '10px', background: 'transparent', border: 'none', cursor: 'pointer', fontSize: '13px', color: '#9C9590' }}
+            >
+              Cancelar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
