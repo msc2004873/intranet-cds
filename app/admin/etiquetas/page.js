@@ -19,7 +19,7 @@ const TAMANOS = {
     nombre:     { top: 1.2, left: 1.0, width: 22,   fontSize: 5.5 },
     rightCol:   { top: 0.8, right: 0.4, width: 7.5,  logoH: 8,   gap: 0.8, codFontSize: 7   },
     precio:     { top: 9.0, left: 1.0,  width: 15,   fontSize: 8  },
-    barcode:    { top: 12,  left: 3,    width: 26,   height: 5.5,  barWidth: 1.5, textSize: 11 },
+    barcode:    { top: 12,  left: 3,    width: 26,   height: 6.5,  barWidth: 1.5, textSize: 11 },
   },
   grande: {
     label:      'Grande (50 × 26 mm)',
