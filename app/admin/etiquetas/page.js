@@ -141,13 +141,13 @@ async function imprimir(productos, seleccionados, tamano) {
       const codigo = String(p.codigoBarras).replace(/\s/g, '');
       const barcodeOpts = {
         displayValue: true,
-        fontSize:     cfg.barcode.textSize,
-        textMargin:   2,
-        margin:       4,
+        fontSize:     28,
+        textMargin:   4,
+        margin:       8,
         lineColor:    '#000',
         background:   '#fff',
-        width:        cfg.barcode.barWidth,
-        height:       80,
+        width:        4,
+        height:       220,
       };
       // Canvas → PNG: evita el clipping de viewport que tienen los SVG en impresoras
       const renderPng = (format) => {
