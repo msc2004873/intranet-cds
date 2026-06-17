@@ -9,28 +9,28 @@ import Header from '../../components/Header';
 // CONSTANTES DE ETIQUETA — posicionamiento absoluto en mm/pt
 // Fácil de calibrar: cada campo tiene top/left/right/fontSize
 // ============================================================
-// Coordenadas exactas de BarTender — top/left en mm desde esquina superior izquierda
+// Coordenadas exactas de BarTender (mm/pt). offsetX compensa margen físico de impresora.
 const TAMANOS = {
   pequena: {
     label:      'Pequeña (32 × 19 mm)',
     ancho:      32,
     alto:       19,
-    nombre:     { top: 1.4,  left: 1.3,  width: 21.3, height: 4,   fontSize: 5,  lineClamp: 2, align: 'right' },
-    logo:       { top: 1.4,  left: 25.9, width: 5.2,  height: 5.2                              },
-    precio:     { top: 8.3,  left: 3,    width: 12.3, height: 3.3, fontSize: 8.5               },
-    codInterno: { top: 8.3,  left: 25.9, width: 6.3,  height: 2.9, fontSize: 5.5               },
-    barcode:    { top: 11,   left: 5.3,  width: 23.8, height: 7.4, barWidth: 1.2, textSize: 14 },
+    offsetX:    1.5, // desplazar todo a la derecha para compensar margen de impresora
+    nombre:     { top: 1.4, left: 1.3, width: 21.3, fontSize: 5   },
+    // logo y codInterno van en una columna derecha alineada al centro
+    rightCol:   { top: 1.2, right: 0.3, width: 6,   logoH: 5.2, gap: 0.8, codFontSize: 6 },
+    precio:     { top: 8.3, left: 3,    width: 14,  fontSize: 8.5 },
+    barcode:    { top: 11,  left: 5.3,  width: 23.8, height: 7.4, barWidth: 1.2, textSize: 14 },
   },
   grande: {
     label:      'Grande (50 × 26 mm)',
     ancho:      50,
     alto:       26,
-    // Pendiente calibración — ajustar cuando el user dé coordenadas BarTender
-    nombre:     { top: 1.5,  left: 1.5,  width: 33,   height: 6,   fontSize: 7,  lineClamp: 2 },
-    logo:       { top: 1,    left: 39,   width: 10,   height: 10                               },
-    precio:     { top: 12,   left: 1.5,  width: 20,   height: 4,   fontSize: 10                },
-    codInterno: { top: 12,   left: 36,   width: 13,   height: 4,   fontSize: 9                 },
-    barcode:    { top: 16,   left: 5,    width: 40,   height: 9,   barWidth: 1.5, textSize: 18 },
+    offsetX:    1.5,
+    nombre:     { top: 1.5, left: 1.5, width: 33,  fontSize: 7   },
+    rightCol:   { top: 1,   right: 0.5, width: 11, logoH: 10, gap: 1, codFontSize: 8 },
+    precio:     { top: 12,  left: 1.5,  width: 22, fontSize: 10  },
+    barcode:    { top: 16,  left: 5,    width: 40,  height: 10,  barWidth: 1.5, textSize: 18 },
   },
 };
 
@@ -159,7 +159,7 @@ async function imprimir(productos, seleccionados, tamano) {
         svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
         svg.setAttribute('width',   '100%');
         svg.setAttribute('height',  '100%');
-        svg.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+        svg.setAttribute('preserveAspectRatio', 'none'); // llena la caja exacta
         return svg.outerHTML;
       };
       try {
@@ -178,9 +178,11 @@ async function imprimir(productos, seleccionados, tamano) {
 
     return `<div class="etiqueta${isLast ? ' last' : ''}">
   <div class="nombre">${escapeHtml(p.nombre)}</div>
-  <img class="logo" src="${logoSrc}" alt="" />
+  <div class="right-col">
+    <img class="logo" src="${logoSrc}" alt="" />
+    ${p.codigoInterno ? `<div class="cod-interno">${escapeHtml(p.codigoInterno)}</div>` : ''}
+  </div>
   <div class="precio">${fmtPrecio(p.pvp)}</div>
-  ${p.codigoInterno ? `<div class="cod-interno">${escapeHtml(p.codigoInterno)}</div>` : ''}
   <div class="barcode">${barcodeSvg}</div>
 </div>`;
   }).join('\n');
@@ -200,11 +202,13 @@ async function imprimir(productos, seleccionados, tamano) {
     width: ${c.ancho}mm;
     height: ${c.alto}mm;
     overflow: hidden;
+    transform: translateX(${c.offsetX}mm);
     page-break-after: always;
     break-after: page;
   }
   .etiqueta.last { page-break-after: avoid; break-after: avoid; }
 
+  /* Nombre — arriba izquierda, wrap libre */
   .nombre {
     position: absolute;
     top: ${c.nombre.top}mm;
@@ -214,44 +218,46 @@ async function imprimir(productos, seleccionados, tamano) {
     font-size: ${c.nombre.fontSize}pt;
     font-weight: bold;
     line-height: 1.2;
-    text-align: ${c.nombre.align || 'left'};
     word-wrap: break-word;
     overflow-wrap: break-word;
   }
 
-  .logo {
+  /* Columna derecha: logo arriba, cód interno abajo, ambos centrados */
+  .right-col {
     position: absolute;
-    top: ${c.logo.top}mm;
-    left: ${c.logo.left}mm;
-    width: ${c.logo.width}mm;
-    height: ${c.logo.height}mm;
+    top: ${c.rightCol.top}mm;
+    right: ${c.rightCol.right}mm;
+    width: ${c.rightCol.width}mm;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: ${c.rightCol.gap}mm;
+  }
+  .logo {
+    width: 100%;
+    max-height: ${c.rightCol.logoH}mm;
     object-fit: contain;
   }
+  .cod-interno {
+    font-family: Arial, sans-serif;
+    font-size: ${c.rightCol.codFontSize}pt;
+    font-weight: bold;
+    text-align: center;
+    word-break: break-all;
+  }
 
+  /* Precio — medio izquierda */
   .precio {
     position: absolute;
     top: ${c.precio.top}mm;
     left: ${c.precio.left}mm;
     width: ${c.precio.width}mm;
-    height: ${c.precio.height}mm;
-    font-family: 'Segoe UI Variable Text', 'Segoe UI', Arial, sans-serif;
+    font-family: Arial, sans-serif;
     font-size: ${c.precio.fontSize}pt;
     font-weight: bold;
-    overflow: hidden;
   }
 
-  .cod-interno {
-    position: absolute;
-    top: ${c.codInterno.top}mm;
-    left: ${c.codInterno.left}mm;
-    width: ${c.codInterno.width}mm;
-    font-family: Arial, sans-serif;
-    font-size: ${c.codInterno.fontSize}pt;
-    font-weight: bold;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-  }
-
+  /* Barcode — fondo, llena exactamente su caja */
   .barcode {
     position: absolute;
     top: ${c.barcode.top}mm;
@@ -259,11 +265,11 @@ async function imprimir(productos, seleccionados, tamano) {
     width: ${c.barcode.width}mm;
     height: ${c.barcode.height}mm;
     overflow: hidden;
-    display: flex;
-    align-items: center;
-    justify-content: center;
   }
-  .barcode svg { width: 100%; height: 100%; }
+  .barcode svg {
+    width: 100%;
+    height: 100%;
+  }
 </style>
 </head>
 <body>${labelHtml}</body>
