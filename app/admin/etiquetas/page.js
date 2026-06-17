@@ -142,32 +142,23 @@ async function imprimir(productos, seleccionados, tamano) {
       const barcodeOpts = {
         displayValue: true,
         fontSize:     cfg.barcode.textSize,
-        textMargin:   1,
-        margin:       0,
+        textMargin:   2,
+        margin:       4,
         lineColor:    '#000',
         background:   '#fff',
         width:        cfg.barcode.barWidth,
-        height:       55,
+        height:       80,
       };
-      const renderSvg = (format) => {
-        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-        JsBarcode(svg, codigo, { ...barcodeOpts, format });
-        // Fijar viewBox para que CSS pueda escalar sin distorsión
-        const w = parseFloat(svg.getAttribute('width')  || 200);
-        const h = parseFloat(svg.getAttribute('height') || 100);
-        // +35 de padding al fondo: barras terminan al ~52% del contenedor (~15.4mm),
-        // dígitos al ~67% (~16mm) — ambos dentro del área imprimible de la impresora
-        svg.setAttribute('viewBox', `0 0 ${w} ${h + 35}`);
-        svg.setAttribute('width',   '100%');
-        svg.setAttribute('height',  '100%');
-        svg.setAttribute('preserveAspectRatio', 'none');
-        return svg.outerHTML;
+      // Canvas → PNG: evita el clipping de viewport que tienen los SVG en impresoras
+      const renderPng = (format) => {
+        const canvas = document.createElement('canvas');
+        JsBarcode(canvas, codigo, { ...barcodeOpts, format });
+        return `<img src="${canvas.toDataURL('image/png')}" style="width:100%;height:100%;display:block;" />`;
       };
       try {
-        barcodeSvg = renderSvg(detectarFormato(codigo));
+        barcodeSvg = renderPng(detectarFormato(codigo));
       } catch {
-        // Checksum inválido (ej: EAN13 con dígito verificador malo) → CODE128 sin restricciones
-        try { barcodeSvg = renderSvg('CODE128'); } catch {
+        try { barcodeSvg = renderPng('CODE128'); } catch {
           barcodeSvg = `<span style="font-size:6pt;color:#999;">${escapeHtml(codigo)}</span>`;
         }
       }
@@ -265,7 +256,7 @@ async function imprimir(productos, seleccionados, tamano) {
     width: ${c.barcode.width}mm;
     height: ${c.barcode.height}mm;
   }
-  .barcode svg { width: 100%; height: 100%; }
+  .barcode img { width: 100%; height: 100%; display: block; }
 </style>
 </head>
 <body>${labelHtml}</body>
