@@ -196,7 +196,7 @@ async function imprimir(productos, seleccionados, tamano) {
 </div>`;
   }).join('\n');
 
-  const grandeCSS = `
+  const layoutCSS = isGrande ? `
   .nombre {
     position: absolute;
     top: ${c.nombre.top}mm; left: ${c.nombre.left}mm; width: ${c.nombre.width}mm;
@@ -221,9 +221,7 @@ async function imprimir(productos, seleccionados, tamano) {
     top: ${c.precio.top}mm; right: ${c.precio.right}mm; width: ${c.precio.width}mm;
     font-family: Arial, sans-serif; font-size: ${c.precio.fontSize}pt; font-weight: bold;
     text-align: right;
-  }`;
-
-  const pequenaCSS = `
+  }` : `
   .nombre {
     position: absolute;
     top: ${c.nombre.top}mm; left: ${c.nombre.left}mm; width: ${c.nombre.width}mm;
@@ -260,7 +258,7 @@ async function imprimir(productos, seleccionados, tamano) {
     page-break-after: always; break-after: page;
   }
   .etiqueta.last { page-break-after: avoid; break-after: avoid; }
-  ${isGrande ? grandeCSS : pequenaCSS}
+  ${layoutCSS}
   .barcode {
     position: absolute;
     top: ${c.barcode.top}mm; left: ${c.barcode.left}mm;
