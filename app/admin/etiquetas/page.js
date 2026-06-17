@@ -158,7 +158,8 @@ async function imprimir(productos, seleccionados, tamano) {
         svg.setAttribute('viewBox', `0 0 ${w} ${h}`);
         svg.setAttribute('width',   '100%');
         svg.setAttribute('height',  '100%');
-        svg.setAttribute('preserveAspectRatio', 'none'); // llena la caja exacta
+        svg.setAttribute('preserveAspectRatio', 'none');
+        svg.setAttribute('overflow', 'visible'); // evita que la impresora clipee dígitos fuera del viewBox
         return svg.outerHTML;
       };
       try {
