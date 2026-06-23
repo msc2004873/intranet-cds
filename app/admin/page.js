@@ -32,6 +32,26 @@ const buttonHoverLeave = (e) => {
   e.currentTarget.style.transform = 'translateY(0)';
 };
 
+const MESES = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
+
+// Colones: separador de espacio (es-CR) y redondeo a entero en display (ver CLAUDE.md, Regla 2)
+const fmtColones = (n) => '₡' + Math.round(n || 0).toLocaleString('es-CR');
+
+const navBtnStyle = {
+  background: '#F0EDE6',
+  border: '1px solid #E2DDD4',
+  width: '32px',
+  height: '32px',
+  borderRadius: '8px',
+  fontSize: '16px',
+  fontWeight: '600',
+  cursor: 'pointer',
+  color: '#6B6560',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+};
+
 export default function AdminPage() {
   const router = useRouter();
   const [userRole, setUserRole] = useState('');
@@ -40,6 +60,9 @@ export default function AdminPage() {
   const [showTCModal, setShowTCModal] = useState(false);
   const [periodsTC, setPeriodsTC] = useState([]);
   const [mesModalOffset, setMesModalOffset] = useState(0);
+  const [ingresos, setIngresos] = useState(null);
+  const [ingresosOffset, setIngresosOffset] = useState(0);
+  const [loadingIngresos, setLoadingIngresos] = useState(true);
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -57,6 +80,7 @@ export default function AdminPage() {
   useEffect(() => {
     if (userRole === 'admin') {
       fetchPeriodoActual();
+      fetchIngresos(0);
     }
   }, [userRole]);
 
@@ -69,6 +93,32 @@ export default function AdminPage() {
       await fetchTCPeriodos(0);
     } catch (err) {
       console.error('Error fetching período:', err);
+    }
+  }
+
+  async function fetchIngresos(offset = 0) {
+    try {
+      setLoadingIngresos(true);
+      const now = new Date();
+      const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Costa_Rica',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+      });
+      const [mes, , ano] = formatter.format(now).split('/');
+      const mesTarget = new Date(parseInt(ano), parseInt(mes) - 1 + offset, 1);
+      const anoT = mesTarget.getFullYear();
+      const mesT = mesTarget.getMonth() + 1;
+
+      const res = await fetch(`/api/ingresos-periodo?ano=${anoT}&mes=${mesT}`);
+      const data = await res.json();
+      setIngresos(data.error ? null : data);
+    } catch (err) {
+      console.error('Error fetching ingresos:', err);
+      setIngresos(null);
+    } finally {
+      setLoadingIngresos(false);
     }
   }
 
@@ -176,6 +226,63 @@ export default function AdminPage() {
               {new Date().getDate()} de {new Date().toLocaleDateString('es-CR', { month: 'short' })}
             </div>
             <div style={{ fontSize: '10px', opacity: 0.7 }}>Período {periodo}</div>
+          </div>
+        </div>
+
+        {/* Ingresos cobrados por período */}
+        <div style={{
+          width: '100%',
+          maxWidth: '960px',
+          background: '#FFFFFF',
+          border: '1.5px solid #E2DDD4',
+          borderRadius: '16px',
+          padding: '24px',
+        }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <span style={{ fontSize: '20px' }}>💰</span>
+              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1A1714', margin: 0, letterSpacing: '-0.3px' }}>Ingresos cobrados</h3>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <button onClick={() => { const o = ingresosOffset - 1; setIngresosOffset(o); fetchIngresos(o); }} style={navBtnStyle} aria-label="Mes anterior">←</button>
+              <span style={{ fontSize: '14px', fontWeight: '600', color: '#1A1714', minWidth: '130px', textAlign: 'center', textTransform: 'capitalize' }}>
+                {(() => {
+                  const d = new Date();
+                  const t = new Date(d.getFullYear(), d.getMonth() + ingresosOffset, 1);
+                  return `${MESES[t.getMonth()]} ${t.getFullYear()}`;
+                })()}
+              </span>
+              <button onClick={() => { const o = ingresosOffset + 1; setIngresosOffset(o); fetchIngresos(o); }} style={navBtnStyle} aria-label="Mes siguiente">→</button>
+            </div>
+          </div>
+
+          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
+            <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#6B6560', fontWeight: '600', marginBottom: '6px' }}>Total del mes</div>
+            <div style={{ fontSize: '40px', fontWeight: '700', fontFamily: "'DM Mono', monospace", color: '#27AE60', letterSpacing: '-1px' }}>
+              {loadingIngresos ? '…' : fmtColones(ingresos?.totalMes)}
+            </div>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
+            {(ingresos?.periodos || [1, 2, 3, 4, 5, 6].map((n) => ({ periodo_num: n, dia_inicio: 0, dia_fin: 0, total: 0, cierres: 0 }))).map((p) => {
+              const esActual = ingresosOffset === 0 && p.periodo_num === periodo;
+              return (
+                <div key={p.periodo_num} style={{
+                  padding: '14px',
+                  borderRadius: '10px',
+                  background: esActual ? '#E8F3EC' : '#F7F5F0',
+                  border: esActual ? '2px solid #27AE60' : '1px solid #E2DDD4',
+                  textAlign: 'center',
+                }}>
+                  <div style={{ fontSize: '11px', fontWeight: '700', color: '#6B6560', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Período {p.periodo_num}</div>
+                  <div style={{ fontSize: '10px', color: '#9C9590', marginBottom: '8px' }}>{p.dia_inicio ? `${p.dia_inicio}–${p.dia_fin}` : '—'}</div>
+                  <div style={{ fontSize: '16px', fontWeight: '700', fontFamily: "'DM Mono', monospace", color: p.total > 0 ? '#1A1714' : '#C7C2BA' }}>
+                    {loadingIngresos ? '…' : fmtColones(p.total)}
+                  </div>
+                  <div style={{ fontSize: '10px', color: '#9C9590', marginTop: '4px' }}>{p.cierres} {p.cierres === 1 ? 'cierre' : 'cierres'}</div>
+                </div>
+              );
+            })}
           </div>
         </div>
 
