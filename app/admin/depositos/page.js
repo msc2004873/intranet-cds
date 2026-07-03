@@ -13,6 +13,10 @@ const fmtUSD = n => 'US$' + (Number(n) || 0).toLocaleString('en-US', { minimumFr
 const fmtFecha = f => f ? new Date(f + 'T00:00:00').toLocaleDateString('es-CR') : '—';
 const dM = f => { const d = new Date(f + 'T00:00:00'); return `${d.getDate()}/${d.getMonth() + 1}`; };
 const rango = (ini, fin) => `${dM(ini)} – ${dM(fin)}`;
+const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+const mesNombre = ini => MESES[new Date(ini + 'T00:00:00').getMonth()];
+const periodoNum = ini => { const d = new Date(ini + 'T00:00:00').getDate(); return d <= 5 ? 1 : d <= 10 ? 2 : d <= 15 ? 3 : d <= 20 ? 4 : d <= 25 ? 5 : 6; };
+const periodoLabel = ini => `${mesNombre(ini)} · P${periodoNum(ini)}`;
 const hoyCR = () => {
   const d = new Date();
   const p = n => String(n).padStart(2, '0');
@@ -253,8 +257,8 @@ export default function DepositosPage() {
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
                       <div style={{ width: '20px', textAlign: 'center', color: '#2a78a5', fontWeight: '700', fontSize: '15px' }}>{sel ? '✓' : ''}</div>
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: '14px', fontWeight: '700', color: '#1A1714', fontFamily: "'DM Mono', monospace" }}>{rango(p.periodo_inicio, p.periodo_fin)}</div>
-                        <div style={{ fontSize: '11px', color: '#9C9590' }}>Contado por {p.contado_por || '—'}</div>
+                        <div style={{ fontSize: '14px', fontWeight: '700', color: '#1A1714' }}>{periodoLabel(p.periodo_inicio)}</div>
+                        <div style={{ fontSize: '11px', color: '#9C9590' }}><span style={{ fontFamily: "'DM Mono', monospace" }}>{rango(p.periodo_inicio, p.periodo_fin)}</span> · Contado por {p.contado_por || '—'}</div>
                       </div>
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
@@ -362,7 +366,7 @@ export default function DepositosPage() {
             <div style={cardHead}>Depósitos en progreso</div>
             <div style={{ padding: '16px 20px' }}>
               {enProgreso.map(dep => {
-                const periodosStr = (dep.depositos_cds || []).map(x => rango(x.periodo_inicio, x.periodo_fin)).join(', ') || '—';
+                const periodosStr = (dep.depositos_cds || []).map(x => `${periodoLabel(x.periodo_inicio)} · ${rango(x.periodo_inicio, x.periodo_fin)}`).join(', ') || '—';
                 const dCRC = (Number(dep.total_contado_colones) || 0) - (Number(dep.total_referencia_colones) || 0);
                 const cCRC = Math.abs(dCRC) < 5 ? '#27AE60' : Math.abs(dCRC) < 500 ? '#F39C12' : '#E74C3C';
                 return (
@@ -453,7 +457,7 @@ export default function DepositosPage() {
               <div style={{ padding: '24px', textAlign: 'center', color: '#9C9590' }}>Aún no hay depósitos realizados</div>
             ) : (
               completados.map(dep => {
-                const periodosStr = (dep.depositos_cds || []).map(x => rango(x.periodo_inicio, x.periodo_fin)).join(', ') || '—';
+                const periodosStr = (dep.depositos_cds || []).map(x => `${periodoLabel(x.periodo_inicio)} · ${rango(x.periodo_inicio, x.periodo_fin)}`).join(', ') || '—';
                 return (
                   <div key={dep.id} style={{ border: '1.5px solid #E2DDD4', borderRadius: '10px', padding: '14px', marginBottom: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
