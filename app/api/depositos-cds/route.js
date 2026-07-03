@@ -11,19 +11,32 @@ export async function GET(req) {
     const inicio = searchParams.get('inicio');
     const fin = searchParams.get('fin');
 
-    if (!inicio || !fin) {
-      return Response.json({ error: 'Missing inicio and fin' }, { status: 400 });
+    // inicio y fin deben ir juntos (XOR = error)
+    if ((inicio && !fin) || (!inicio && fin)) {
+      return Response.json({ error: 'inicio y fin deben ir juntos' }, { status: 400 });
     }
 
+    // Modo período único (lo consume /admin/revision/clinica)
+    if (inicio && fin) {
+      const { data, error } = await supabase
+        .from('depositos_cds')
+        .select('*')
+        .eq('periodo_inicio', inicio)
+        .eq('periodo_fin', fin)
+        .maybeSingle();
+
+      if (error) throw error;
+      return Response.json(data || null);
+    }
+
+    // Modo listar todos: cada período con su depósito ligado (para derivar estado)
     const { data, error } = await supabase
       .from('depositos_cds')
-      .select('*')
-      .eq('periodo_inicio', inicio)
-      .eq('periodo_fin', fin)
-      .maybeSingle();
+      .select('*, depositos_bancarios(id, estado, referencia, fecha_deposito)')
+      .order('periodo_inicio', { ascending: false });
 
     if (error) throw error;
-    return Response.json(data || null);
+    return Response.json(data || []);
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
