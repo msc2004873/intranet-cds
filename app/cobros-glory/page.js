@@ -31,6 +31,7 @@ export default function CobroGloryPage() {
   const [telefonoDueno, setTelefonoDueno] = useState('');
   const [servicio, setServicio] = useState('');
   const [comentarios, setComentarios] = useState('');
+  const [precio, setPrecio] = useState('');
   const [pacientesAIngresar, setPacientesAIngresar] = useState([]);
   const [pacientesEspera, setPacientesEspera] = useState([]);
   const [registrosDia, setRegistrosDia] = useState([]);
@@ -102,13 +103,15 @@ export default function CobroGloryPage() {
       nombre_dueno: nombreDueno,
       telefono_dueno: telefonoDueno,
       servicio: servicio,
-      comentarios: comentarios
+      comentarios: comentarios,
+      monto: precio ? parseFloat(precio) : null
     };
 
     setPacientesAIngresar([...pacientesAIngresar, paciente]);
     setNombreMascota('');
     setServicio('');
     setComentarios('');
+    setPrecio('');
   }
 
   function quitarPacienteDeLista(id) {
@@ -145,6 +148,7 @@ export default function CobroGloryPage() {
         telefono_dueno: p.telefono_dueno,
         servicio: p.servicio,
         comentarios: p.comentarios,
+        monto: p.monto ?? null,
         fecha: fecha,
         cajera: cajera,
         caja: caja,
@@ -201,10 +205,10 @@ export default function CobroGloryPage() {
   }
 
 
-  function abrirModalCobro(id, mascota, dueno) {
+  function abrirModalCobro(id, mascota, dueno, monto) {
     setPacienteEnModal({ id, mascota, dueno });
     setSelectMetodo('');
-    setInputMonto('');
+    setInputMonto(monto ? monto.toString() : '');
     setSelectCajeraModal(cajera);
     setComentariosCobro('');
     setModalActivo(true);
@@ -304,10 +308,12 @@ export default function CobroGloryPage() {
           return;
         }
 
-        // Marcar solo como cobrados (sin monto duplicado) para no mostrar en registros
+        // Marcar solo como cobrados y limpiar monto para no duplicar en registros
+        // (el total va en la fila unificada; sin esto, un precio precargado en la
+        //  fila individual reaparecería sumado en "Registros del día")
         for (const id of idsAActualizar) {
           await supabase.from('cobros_glory')
-            .update({ cobrado: true, metodo: selectMetodo, cajera: selectCajeraModal, hora_cobro: new Date().toISOString() })
+            .update({ cobrado: true, metodo: selectMetodo, monto: null, cajera: selectCajeraModal, hora_cobro: new Date().toISOString() })
             .eq('id', id);
         }
       } else {
@@ -431,6 +437,10 @@ export default function CobroGloryPage() {
               <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Comentarios</label>
               <input type="text" value={comentarios} onChange={(e) => setComentarios(e.target.value)} placeholder="Ej: Tiene alergia al pollo" style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px' }} />
             </div>
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Precio (opcional) ₡</label>
+              <input type="text" value={precio === '' ? '' : (isNaN(parseFloat(precio)) ? precio : parseFloat(precio).toLocaleString('es-CR'))} onChange={(e) => setPrecio(e.target.value.replace(/\s/g, ''))} placeholder="0" inputMode="numeric" style={{ width: '100%', padding: '10px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px' }} />
+            </div>
             <button onClick={agregarPacienteALista} style={{ width: '100%', marginTop: '16px', padding: '12px', background: '#2a78a5', color: 'white', border: 'none', borderRadius: '8px', fontSize: '14px', fontWeight: '600', cursor: 'pointer', transition: 'background 0.2s' }} onMouseEnter={(e) => e.target.style.background = '#1f5780'} onMouseLeave={(e) => e.target.style.background = '#2a78a5'}>+ Agregar otro paciente</button>
           </div>
         </div>
@@ -461,6 +471,7 @@ export default function CobroGloryPage() {
                         <div>
                           <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714' }}>{p.nombre_mascota}</div>
                           <div style={{ fontSize: '11px', color: '#6B6560', marginTop: '2px' }}>Servicio: {p.servicio === 'corte' ? 'Corte' : p.servicio === 'corte_baño' ? 'Corte y baño' : 'Otro'}</div>
+                          {p.monto != null && <div style={{ fontSize: '11px', color: '#2a78a5', marginTop: '2px', fontWeight: '600' }}>Precio: {fmt(p.monto)}</div>}
                           {p.comentarios && <div style={{ fontSize: '11px', color: '#6B6560', marginTop: '2px' }}>Comentarios: {p.comentarios}</div>}
                         </div>
                         <button
@@ -517,6 +528,12 @@ export default function CobroGloryPage() {
                             <div style={{ fontSize: '13px', color: '#1A1714' }}>{p.servicio === 'corte' ? 'Corte' : p.servicio === 'corte_baño' ? 'Corte y baño' : 'Otro'}</div>
                           </>
                         )}
+                        {p.monto != null && (
+                          <>
+                            <div style={{ fontSize: '11px', color: '#6B6560', textTransform: 'uppercase', fontWeight: '600', marginTop: '6px' }}>Precio</div>
+                            <div style={{ fontSize: '14px', color: '#2a78a5', fontWeight: '600', fontFamily: "'DM Mono', monospace" }}>{fmt(p.monto)}</div>
+                          </>
+                        )}
                         {p.comentarios && (
                           <>
                             <div style={{ fontSize: '11px', color: '#6B6560', textTransform: 'uppercase', fontWeight: '600', marginTop: '6px' }}>Comentarios</div>
@@ -528,7 +545,7 @@ export default function CobroGloryPage() {
                       </div>
                       {!modoUnificacion && (
                         <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
-                          <button onClick={() => abrirModalCobro(p.id, p.nombre_mascota, p.nombre_dueno)} style={{ padding: '8px 12px', background: '#2a78a5', color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'background 0.2s' }} onMouseEnter={(e) => e.target.style.background = '#1f5780'} onMouseLeave={(e) => e.target.style.background = '#2a78a5'}>Cobrar</button>
+                          <button onClick={() => abrirModalCobro(p.id, p.nombre_mascota, p.nombre_dueno, p.monto)} style={{ padding: '8px 12px', background: '#2a78a5', color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'background 0.2s' }} onMouseEnter={(e) => e.target.style.background = '#1f5780'} onMouseLeave={(e) => e.target.style.background = '#2a78a5'}>Cobrar</button>
                         </div>
                       )}
                     </div>
