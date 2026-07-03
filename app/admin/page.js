@@ -235,13 +235,14 @@ export default function AdminPage() {
           maxWidth: '960px',
           background: '#FFFFFF',
           border: '1.5px solid #E2DDD4',
-          borderRadius: '16px',
-          padding: '24px',
+          borderRadius: '14px',
+          padding: '16px 20px',
         }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px', flexWrap: 'wrap', gap: '12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <span style={{ fontSize: '20px' }}>💰</span>
-              <h3 style={{ fontSize: '18px', fontWeight: '600', color: '#1A1714', margin: 0, letterSpacing: '-0.3px' }}>Ingresos cobrados</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap', gap: '10px' }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: '10px', flexWrap: 'wrap' }}>
+              <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '15px', fontWeight: '600', color: '#1A1714' }}>
+                <span style={{ fontSize: '16px' }}>💰</span> Ingresos por período
+              </span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <button onClick={() => { const o = ingresosOffset - 1; setIngresosOffset(o); fetchIngresos(o); }} style={navBtnStyle} aria-label="Mes anterior">←</button>
@@ -256,30 +257,24 @@ export default function AdminPage() {
             </div>
           </div>
 
-          <div style={{ textAlign: 'center', marginBottom: '24px' }}>
-            <div style={{ fontSize: '12px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#6B6560', fontWeight: '600', marginBottom: '6px' }}>Total del mes</div>
-            <div style={{ fontSize: '40px', fontWeight: '700', fontFamily: "'DM Mono', monospace", color: '#27AE60', letterSpacing: '-1px' }}>
-              {loadingIngresos ? '…' : fmtColones(ingresos?.totalMes)}
-            </div>
-          </div>
-
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(130px, 1fr))', gap: '12px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '8px' }}>
             {(ingresos?.periodos || [1, 2, 3, 4, 5, 6].map((n) => ({ periodo_num: n, dia_inicio: 0, dia_fin: 0, total: 0, cierres: 0 }))).map((p) => {
               const esActual = ingresosOffset === 0 && p.periodo_num === periodo;
               return (
                 <div key={p.periodo_num} style={{
-                  padding: '14px',
-                  borderRadius: '10px',
+                  padding: '8px 6px',
+                  borderRadius: '8px',
                   background: esActual ? '#E8F3EC' : '#F7F5F0',
-                  border: esActual ? '2px solid #27AE60' : '1px solid #E2DDD4',
+                  border: esActual ? '1.5px solid #27AE60' : '1px solid #E2DDD4',
                   textAlign: 'center',
                 }}>
-                  <div style={{ fontSize: '11px', fontWeight: '700', color: '#6B6560', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Período {p.periodo_num}</div>
-                  <div style={{ fontSize: '10px', color: '#9C9590', marginBottom: '8px' }}>{p.dia_inicio ? `${p.dia_inicio}–${p.dia_fin}` : '—'}</div>
-                  <div style={{ fontSize: '16px', fontWeight: '700', fontFamily: "'DM Mono', monospace", color: p.total > 0 ? '#1A1714' : '#C7C2BA' }}>
+                  <div style={{ fontSize: '10px', fontWeight: '700', color: '#6B6560', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                    P{p.periodo_num}{p.dia_inicio ? ` · ${p.dia_inicio}–${p.dia_fin}` : ''}
+                  </div>
+                  <div style={{ fontSize: '14px', fontWeight: '700', fontFamily: "'DM Mono', monospace", color: p.total > 0 ? '#1A1714' : '#C7C2BA', margin: '3px 0 1px' }}>
                     {loadingIngresos ? '…' : fmtColones(p.total)}
                   </div>
-                  <div style={{ fontSize: '10px', color: '#9C9590', marginTop: '4px' }}>{p.cierres} {p.cierres === 1 ? 'cierre' : 'cierres'}</div>
+                  <div style={{ fontSize: '9px', color: '#9C9590' }}>{p.cierres} {p.cierres === 1 ? 'cierre' : 'cierres'}</div>
                 </div>
               );
             })}
