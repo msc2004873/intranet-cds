@@ -28,24 +28,54 @@ const resumenPeriodos = (arr) => {
   }
   return sorted.map(x => periodoLabel(x.periodo_inicio)).join(', ');
 };
-// Rango combinado en lenguaje natural: "del 5 al 25 de junio del 2026"
+// Rango combinado en lenguaje natural, compacto: "del 16 al 30 de junio del 2026"
+// (los períodos de un depósito son siempre del mismo mes)
 const rangoLargo = (arr) => {
   if (!arr || arr.length === 0) return '';
   const ini = arr.map(x => x.periodo_inicio).sort()[0];
   const fin = arr.map(x => x.periodo_fin).sort().slice(-1)[0];
-  const anoFin = new Date(fin + 'T00:00:00').getFullYear();
-  if (monthKey(ini) === monthKey(fin)) {
-    return `del ${dia(ini)} al ${dia(fin)} de ${mesNombre(fin).toLowerCase()} del ${anoFin}`;
-  }
-  // legacy: abarca dos meses
-  const anoIni = new Date(ini + 'T00:00:00').getFullYear();
-  return `del ${dia(ini)} de ${mesNombre(ini).toLowerCase()} del ${anoIni} al ${dia(fin)} de ${mesNombre(fin).toLowerCase()} del ${anoFin}`;
+  const ano = new Date(ini + 'T00:00:00').getFullYear();
+  return `del ${dia(ini)} al ${dia(fin)} de ${mesNombre(ini).toLowerCase()} del ${ano}`;
 };
 const hoyCR = () => {
   const d = new Date();
   const p = n => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
 };
+
+// Zona para soltar (drag & drop) o elegir el archivo del comprobante, con resaltado al arrastrar
+function Dropzone({ preview, onFile, onClear }) {
+  const [arrastrando, setArrastrando] = useState(false);
+  return (
+    <>
+      <label
+        onDragOver={e => { e.preventDefault(); e.stopPropagation(); setArrastrando(true); }}
+        onDragEnter={e => { e.preventDefault(); e.stopPropagation(); setArrastrando(true); }}
+        onDragLeave={e => { e.preventDefault(); e.stopPropagation(); setArrastrando(false); }}
+        onDrop={e => { e.preventDefault(); e.stopPropagation(); setArrastrando(false); onFile(e.dataTransfer.files?.[0]); }}
+        style={{
+          display: 'block', border: `2px dashed ${arrastrando ? '#2a78a5' : '#E2DDD4'}`, borderRadius: '8px',
+          padding: '14px', textAlign: 'center', cursor: 'pointer',
+          background: arrastrando ? '#E8F0F7' : '#F0EDE6', transition: 'all 0.15s',
+        }}
+      >
+        <div style={{ fontSize: '16px', marginBottom: '2px' }}>📎</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560' }}>{arrastrando ? 'Soltá el archivo aquí' : 'Arrastrá o tocá para subir el comprobante'}</div>
+        <div style={{ fontSize: '10px', color: '#9C9590', marginTop: '2px' }}>JPG, PNG o PDF (opcional)</div>
+        <input type="file" accept="image/*,.pdf" capture="environment" onChange={e => onFile(e.target.files?.[0])} style={{ display: 'none' }} />
+      </label>
+      {preview && (
+        <div style={{ marginTop: '10px', padding: '10px', background: '#E8F3EC', borderRadius: '8px', border: '1px solid #A8E6C6' }}>
+          {typeof preview === 'string' && preview.startsWith('data:')
+            ? <img src={preview} alt="preview" style={{ width: '100%', borderRadius: '6px', maxHeight: '180px', objectFit: 'cover' }} />
+            : <div style={{ fontSize: '12px', color: '#2a78a5', fontWeight: '600' }}>{preview}</div>}
+          <button type="button" onClick={onClear}
+            style={{ marginTop: '8px', fontSize: '11px', padding: '4px 8px', background: '#FDEDEC', color: '#C0392B', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}>Quitar</button>
+        </div>
+      )}
+    </>
+  );
+}
 
 export default function DepositosPage() {
   const router = useRouter();
@@ -282,23 +312,11 @@ export default function DepositosPage() {
       <label style={{ fontSize: '10px', fontWeight: '700', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}># Boleta / referencia</label>
       <input type="text" value={refVal} onChange={e => onRef(e.target.value)} placeholder="Número de boleta"
         style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px', marginBottom: '10px' }} />
-      <label style={{ display: 'block', border: '2px dashed #E2DDD4', borderRadius: '8px', padding: '14px', textAlign: 'center', cursor: 'pointer', background: '#F0EDE6' }}
-        onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
-        onDrop={e => { e.preventDefault(); e.stopPropagation(); handleArchivo(e.dataTransfer.files?.[0], setArchivo, setPreview); }}>
-        <div style={{ fontSize: '16px', marginBottom: '2px' }}>📎</div>
-        <div style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560' }}>Foto del comprobante (opcional)</div>
-        <div style={{ fontSize: '10px', color: '#9C9590', marginTop: '2px' }}>JPG, PNG o PDF</div>
-        <input type="file" accept="image/*,.pdf" capture="environment" onChange={e => handleArchivo(e.target.files?.[0], setArchivo, setPreview)} style={{ display: 'none' }} />
-      </label>
-      {preview && (
-        <div style={{ marginTop: '10px', padding: '10px', background: '#E8F3EC', borderRadius: '8px', border: '1px solid #A8E6C6' }}>
-          {typeof preview === 'string' && preview.startsWith('data:')
-            ? <img src={preview} alt="preview" style={{ width: '100%', borderRadius: '6px', maxHeight: '180px', objectFit: 'cover' }} />
-            : <div style={{ fontSize: '12px', color: '#2a78a5', fontWeight: '600' }}>{preview}</div>}
-          <button type="button" onClick={() => { setArchivo(null); setPreview(null); }}
-            style={{ marginTop: '8px', fontSize: '11px', padding: '4px 8px', background: '#FDEDEC', color: '#C0392B', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}>Quitar</button>
-        </div>
-      )}
+      <Dropzone
+        preview={preview}
+        onFile={file => handleArchivo(file, setArchivo, setPreview)}
+        onClear={() => { setArchivo(null); setPreview(null); }}
+      />
     </div>
   );
 
