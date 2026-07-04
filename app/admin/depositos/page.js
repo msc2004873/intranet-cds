@@ -28,6 +28,19 @@ const resumenPeriodos = (arr) => {
   }
   return sorted.map(x => periodoLabel(x.periodo_inicio)).join(', ');
 };
+// Rango combinado en lenguaje natural: "del 5 al 25 de junio del 2026"
+const rangoLargo = (arr) => {
+  if (!arr || arr.length === 0) return '';
+  const ini = arr.map(x => x.periodo_inicio).sort()[0];
+  const fin = arr.map(x => x.periodo_fin).sort().slice(-1)[0];
+  const anoFin = new Date(fin + 'T00:00:00').getFullYear();
+  if (monthKey(ini) === monthKey(fin)) {
+    return `del ${dia(ini)} al ${dia(fin)} de ${mesNombre(fin).toLowerCase()} del ${anoFin}`;
+  }
+  // legacy: abarca dos meses
+  const anoIni = new Date(ini + 'T00:00:00').getFullYear();
+  return `del ${dia(ini)} de ${mesNombre(ini).toLowerCase()} del ${anoIni} al ${dia(fin)} de ${mesNombre(fin).toLowerCase()} del ${anoFin}`;
+};
 const hoyCR = () => {
   const d = new Date();
   const p = n => String(n).padStart(2, '0');
@@ -356,11 +369,14 @@ export default function DepositosPage() {
             )}
 
             {seleccionados.size > 0 && (
-              <div style={{ marginTop: '12px', padding: '12px 16px', borderRadius: '10px', background: '#E8F3EC', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                <span style={{ fontSize: '12px', fontWeight: '700', color: '#6B6560', textTransform: 'uppercase' }}>Referencia combinada ({seleccionados.size})</span>
-                <span style={{ fontFamily: "'DM Mono', monospace", fontWeight: '700', color: '#1A1714' }}>
-                  {fmtCRC(refCRC)}{refUSD > 0 ? ` · ${fmtUSD(refUSD)}` : ''}
-                </span>
+              <div style={{ marginTop: '12px', padding: '12px 16px', borderRadius: '10px', background: '#E8F3EC' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '10px' }}>
+                  <span style={{ fontSize: '12px', fontWeight: '700', color: '#6B6560', textTransform: 'uppercase' }}>Referencia combinada ({seleccionados.size})</span>
+                  <span style={{ fontFamily: "'DM Mono', monospace", fontWeight: '700', color: '#1A1714' }}>
+                    {fmtCRC(refCRC)}{refUSD > 0 ? ` · ${fmtUSD(refUSD)}` : ''}
+                  </span>
+                </div>
+                <div style={{ fontSize: '13px', fontWeight: '600', color: '#1A1714', marginTop: '6px' }}>{rangoLargo(seleccionadosArr)}</div>
               </div>
             )}
           </div>
@@ -456,6 +472,7 @@ export default function DepositosPage() {
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
                       <div>
                         <div style={{ fontSize: '13px', fontWeight: '700', color: '#1A1714', fontFamily: "'DM Mono', monospace" }}>{periodosStr}</div>
+                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', marginTop: '2px' }}>{rangoLargo(dep.depositos_cds)}</div>
                         <div style={{ fontSize: '11px', color: '#9C9590', marginTop: '2px' }}>Contó {dep.contado_por || '—'} · {fmtFecha(dep.fecha_conteo)}</div>
                       </div>
                       <div style={{ textAlign: 'right' }}>
@@ -533,6 +550,7 @@ export default function DepositosPage() {
                           <span style={{ fontSize: '12px', color: '#6B6560' }}>{fmtFecha(dep.fecha_deposito)}</span>
                         </div>
                         <div style={{ fontSize: '12px', color: '#6B6560', marginTop: '4px', fontFamily: "'DM Mono', monospace" }}>{periodosStr}</div>
+                        <div style={{ fontSize: '12px', fontWeight: '600', color: '#1A1714', marginTop: '2px' }}>{rangoLargo(dep.depositos_cds)}</div>
                         <div style={{ fontSize: '11px', color: '#9C9590', marginTop: '2px' }}>Contó {dep.contado_por || '—'} · Depositó {dep.completado_por || '—'}</div>
                       </div>
                       <div style={{ textAlign: 'right', whiteSpace: 'nowrap' }}>
