@@ -68,11 +68,15 @@ export default function RevisionClinicaPage() {
     ];
     const periodoActual = PERIODOS.find(p => diaHoy >= p.inicio && diaHoy <= p.fin);
 
+    // El último período termina el último día real del mes (no el 31 fijo, que se
+    // desborda al mes siguiente en meses de 30/28/29 días). new Date(ano, mes+1, 0) = último día del mes.
+    const ultimoDiaMes = new Date(ano, mes + 1, 0).getDate();
+
     setPeriodoActualAlMontar(periodoActual.num);
     setPeriodo({
       num: periodoActual.num,
       inicio: new Date(ano, mes, periodoActual.inicio),
-      fin: new Date(ano, mes, periodoActual.fin),
+      fin: new Date(ano, mes, Math.min(periodoActual.fin, ultimoDiaMes)),
     });
   }, []);
 

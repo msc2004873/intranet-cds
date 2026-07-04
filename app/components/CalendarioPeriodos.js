@@ -53,10 +53,13 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
     dias.push(i);
   }
 
+  // El último período nunca pasa del último día real del mes (el 31 fijo se desborda en meses de 30/28/29)
+  const finEfectivo = (periodo) => Math.min(periodo.fin, ultimoDiaMes);
+
   const handleSelectPeriodo = (periodo) => {
     setPeriodoSeleccionado(periodo.num);
     const inicio = new Date(ano, mes, periodo.inicio);
-    const fin = new Date(ano, mes, periodo.fin);
+    const fin = new Date(ano, mes, finEfectivo(periodo));
     onSelectPeriodo({
       num: periodo.num,
       inicio,
@@ -142,7 +145,7 @@ export default function CalendarioPeriodos({ onSelectPeriodo }) {
           // Relleno: solo si está seleccionado (verde si es actual, rojo si no)
           const bgColor = esSeleccionado ? (esHoy ? '#27AE60' : '#E74C3C') : '#fff';
           const esInicioPeriodo = periodo?.inicio === dia;
-          const esFinPeriodo = periodo?.fin === dia;
+          const esFinPeriodo = periodo ? finEfectivo(periodo) === dia : false;
 
           return (
             <div
