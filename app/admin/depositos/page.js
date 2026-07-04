@@ -66,11 +66,13 @@ function Dropzone({ preview, onFile, onClear }) {
       </label>
       {preview && (
         <div style={{ marginTop: '10px', padding: '10px', background: '#E8F3EC', borderRadius: '8px', border: '1px solid #A8E6C6' }}>
-          {typeof preview === 'string' && preview.startsWith('data:')
+          {typeof preview === 'string' && (preview.startsWith('data:image') || (preview.startsWith('http') && !/\.pdf($|\?)/i.test(preview)))
             ? <img src={preview} alt="preview" style={{ width: '100%', borderRadius: '6px', maxHeight: '180px', objectFit: 'cover' }} />
-            : <div style={{ fontSize: '12px', color: '#2a78a5', fontWeight: '600' }}>{preview}</div>}
+            : preview.startsWith('http')
+              ? <a href={preview} target="_blank" rel="noreferrer" style={{ fontSize: '12px', color: '#2a78a5', fontWeight: '700', textDecoration: 'none' }}>📄 Ver comprobante actual ↗</a>
+              : <div style={{ fontSize: '12px', color: '#2a78a5', fontWeight: '600' }}>{preview}</div>}
           <button type="button" onClick={onClear}
-            style={{ marginTop: '8px', fontSize: '11px', padding: '4px 8px', background: '#FDEDEC', color: '#C0392B', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}>Quitar</button>
+            style={{ marginTop: '8px', fontSize: '11px', padding: '4px 8px', background: '#FDEDEC', color: '#C0392B', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '600', display: 'block' }}>Quitar</button>
         </div>
       )}
     </>
@@ -162,9 +164,10 @@ export default function DepositosPage() {
   const enProgreso = depositos.filter(d => d.estado === 'en_progreso');
   const completados = depositos.filter(d => d.estado === 'completado');
 
-  // Períodos agrupados por mes (ordenados: mes asc, período asc dentro del mes)
+  // Períodos agrupados por mes (ordenados: mes asc, período asc dentro del mes).
+  // Los ya depositados no se muestran arriba — viven solo en "Depósitos realizados".
   const periodosPorMes = Object.values(
-    periodos.reduce((acc, p) => {
+    periodos.filter(p => estadoPeriodo(p) !== 'depositado').reduce((acc, p) => {
       const key = monthKey(p.periodo_inicio);
       (acc[key] = acc[key] || { key, ini: p.periodo_inicio, items: [] }).items.push(p);
       return acc;
@@ -250,8 +253,21 @@ export default function DepositosPage() {
     setCompPreviewUSD(null);
   };
 
+  // Editar un depósito ya realizado: reabre el formulario prellenado con lo guardado
+  const abrirEditar = (dep) => {
+    setCompletandoId(dep.id);
+    setCompFecha(dep.fecha_deposito || hoyCR());
+    setCompRefCRC(dep.referencia_colones || '');
+    setCompArchivoCRC(null);
+    setCompPreviewCRC(dep.comprobante_colones_url || null);
+    setCompRefUSD(dep.referencia_usd || '');
+    setCompArchivoUSD(null);
+    setCompPreviewUSD(dep.comprobante_usd_url || null);
+  };
+
   async function completar(id) {
-    const dep = enProgreso.find(d => d.id === id);
+    const dep = depositos.find(d => d.id === id);
+    const esEdicion = dep?.estado === 'completado';
     const aplicaCRC = Number(dep?.total_contado_colones) > 0;
     const aplicaUSD = Number(dep?.total_contado_usd) > 0;
     if (aplicaCRC && !compRefCRC.trim()) { showToast('❌ Falta el # de boleta de colones', 'error'); return; }
@@ -273,7 +289,7 @@ export default function DepositosPage() {
 
       const res = await fetch(`/api/depositos-bancarios?id=${id}`, { method: 'PATCH', body: fd });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Error al completar'); }
-      showToast('✅ Depósito completado', 'success');
+      showToast(esEdicion ? '✅ Depósito actualizado' : '✅ Depósito completado', 'success');
       setCompletandoId(null);
       await Promise.all([cargarPeriodos(), cargarDepositos()]);
     } catch (err) {
@@ -317,6 +333,36 @@ export default function DepositosPage() {
         onFile={file => handleArchivo(file, setArchivo, setPreview)}
         onClear={() => { setArchivo(null); setPreview(null); }}
       />
+    </div>
+  );
+
+  // Formulario de completar/editar depósito (banco + fecha + secciones por moneda).
+  // esEdicion=true cuando se edita un depósito ya realizado.
+  const formDeposito = (dep, esEdicion) => (
+    <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid #E2DDD4' }}>
+      <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '14px' }}>
+        <div>
+          <label style={{ fontSize: '10px', fontWeight: '700', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Banco</label>
+          <div style={{ padding: '9px 16px', borderRadius: '8px', background: '#E8F3EC', border: '2px solid #2a78a5', fontWeight: '700', color: '#1A1714', fontSize: '13px' }}>BAC</div>
+        </div>
+        <div>
+          <label style={{ fontSize: '10px', fontWeight: '700', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Fecha</label>
+          <input type="date" value={compFecha} onChange={e => setCompFecha(e.target.value)}
+            style={{ padding: '9px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px', fontFamily: "'DM Mono', monospace" }} />
+        </div>
+      </div>
+
+      {Number(dep.total_contado_colones) > 0 && seccionMoneda('Depósito en colones', fmtCRC(dep.total_contado_colones), '#2a78a5', compRefCRC, setCompRefCRC, compArchivoCRC, setCompArchivoCRC, compPreviewCRC, setCompPreviewCRC)}
+      {Number(dep.total_contado_usd) > 0 && seccionMoneda('Depósito en dólares', fmtUSD(dep.total_contado_usd), '#C8A84B', compRefUSD, setCompRefUSD, compArchivoUSD, setCompArchivoUSD, compPreviewUSD, setCompPreviewUSD)}
+
+      <div style={{ display: 'flex', gap: '10px' }}>
+        <button onClick={() => completar(dep.id)} disabled={completando}
+          style={{ flex: 1, padding: '10px', background: '#27AE60', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: completando ? 'wait' : 'pointer' }}>
+          {completando ? 'Guardando...' : (esEdicion ? 'Guardar cambios' : 'Completar depósito')}
+        </button>
+        <button onClick={() => setCompletandoId(null)} disabled={completando}
+          style={{ padding: '10px 16px', background: '#fff', color: '#6B6560', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Cancelar</button>
+      </div>
     </div>
   );
 
@@ -502,33 +548,7 @@ export default function DepositosPage() {
                       </div>
                     </div>
 
-                    {completandoId === dep.id ? (
-                      <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid #E2DDD4' }}>
-                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '14px' }}>
-                          <div>
-                            <label style={{ fontSize: '10px', fontWeight: '700', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Banco</label>
-                            <div style={{ padding: '9px 16px', borderRadius: '8px', background: '#E8F3EC', border: '2px solid #2a78a5', fontWeight: '700', color: '#1A1714', fontSize: '13px' }}>BAC</div>
-                          </div>
-                          <div>
-                            <label style={{ fontSize: '10px', fontWeight: '700', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Fecha</label>
-                            <input type="date" value={compFecha} onChange={e => setCompFecha(e.target.value)}
-                              style={{ padding: '9px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px', fontFamily: "'DM Mono', monospace" }} />
-                          </div>
-                        </div>
-
-                        {Number(dep.total_contado_colones) > 0 && seccionMoneda('Depósito en colones', fmtCRC(dep.total_contado_colones), '#2a78a5', compRefCRC, setCompRefCRC, compArchivoCRC, setCompArchivoCRC, compPreviewCRC, setCompPreviewCRC)}
-                        {Number(dep.total_contado_usd) > 0 && seccionMoneda('Depósito en dólares', fmtUSD(dep.total_contado_usd), '#C8A84B', compRefUSD, setCompRefUSD, compArchivoUSD, setCompArchivoUSD, compPreviewUSD, setCompPreviewUSD)}
-
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                          <button onClick={() => completar(dep.id)} disabled={completando}
-                            style={{ flex: 1, padding: '10px', background: '#27AE60', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: completando ? 'wait' : 'pointer' }}>
-                            {completando ? 'Completando...' : 'Completar depósito'}
-                          </button>
-                          <button onClick={() => setCompletandoId(null)} disabled={completando}
-                            style={{ padding: '10px 16px', background: '#fff', color: '#6B6560', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '13px', fontWeight: '600', cursor: 'pointer' }}>Cancelar</button>
-                        </div>
-                      </div>
-                    ) : (
+                    {completandoId === dep.id ? formDeposito(dep, false) : (
                       <div style={{ display: 'flex', gap: '10px', marginTop: '12px' }}>
                         <button onClick={() => abrirCompletar(dep.id)}
                           style={{ padding: '8px 16px', background: '#2a78a5', color: '#fff', border: 'none', borderRadius: '8px', fontSize: '13px', fontWeight: '700', cursor: 'pointer' }}>Completar</button>
@@ -590,10 +610,12 @@ export default function DepositosPage() {
                       ))}
                     </div>
 
-                    <div style={{ display: 'flex', gap: '10px', marginTop: '12px', alignItems: 'center' }}>
-                      <button onClick={() => deshacer(dep.id)}
-                        style={{ marginLeft: 'auto', padding: '6px 12px', background: '#fff', color: '#C0392B', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>Deshacer</button>
-                    </div>
+                    {completandoId === dep.id ? formDeposito(dep, true) : (
+                      <div style={{ display: 'flex', gap: '10px', marginTop: '12px', alignItems: 'center' }}>
+                        <button onClick={() => abrirEditar(dep)}
+                          style={{ marginLeft: 'auto', padding: '6px 12px', background: '#fff', color: '#2a78a5', border: '1.5px solid #2a78a5', borderRadius: '8px', fontSize: '12px', fontWeight: '700', cursor: 'pointer' }}>Editar</button>
+                      </div>
+                    )}
                   </div>
                 );
               })

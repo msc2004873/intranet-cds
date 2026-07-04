@@ -142,9 +142,8 @@ export async function PATCH(req) {
       .maybeSingle();
     if (getErr) throw getErr;
     if (!dep) return Response.json({ error: 'Depósito no existe' }, { status: 404 });
-    if (dep.estado === 'completado') {
-      return Response.json({ error: 'El depósito ya está completado' }, { status: 409 });
-    }
+    // Nota: un depósito ya completado SÍ se puede re-PATCHear (edición). No se puede deshacer,
+    // solo editar banco/referencias/comprobantes/fecha.
 
     const aplicaCRC = Number(dep.total_contado_colones) > 0;
     const aplicaUSD = Number(dep.total_contado_usd) > 0;
