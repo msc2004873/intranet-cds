@@ -95,7 +95,21 @@ export async function POST(req) {
   }
 }
 
-// PATCH — completar depósito (banco + boleta + foto) → "completado"
+// Sube un archivo al bucket `depositos` y devuelve su URL pública (o null si no hay archivo).
+async function subirComprobante(id, sufijo, archivo) {
+  if (!archivo || typeof archivo !== 'object' || !archivo.name) return null;
+  const buffer = await archivo.arrayBuffer();
+  const safeName = archivo.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const filePath = `deposito_${id}_${sufijo}_${Date.now()}_${safeName}`;
+  const { error: upErr } = await supabase.storage
+    .from('depositos')
+    .upload(filePath, buffer, { contentType: archivo.type, upsert: false });
+  if (upErr) throw upErr;
+  const { data: urlData } = supabase.storage.from('depositos').getPublicUrl(filePath);
+  return urlData?.publicUrl || null;
+}
+
+// PATCH — completar depósito (banco + boletas/comprobantes por moneda) → "completado"
 export async function PATCH(req) {
   try {
     const { searchParams } = new URL(req.url);
@@ -106,25 +120,24 @@ export async function PATCH(req) {
 
     const formData = await req.formData();
     const banco = formData.get('banco');
-    const referencia = (formData.get('referencia') || '').toString().trim();
+    const referenciaCRC = (formData.get('referencia_colones') || '').toString().trim();
+    const referenciaUSD = (formData.get('referencia_usd') || '').toString().trim();
     const fecha_deposito = formData.get('fecha_deposito');
     const completado_por = formData.get('completado_por');
-    const comprobante = formData.get('comprobante');
+    const comprobanteCRC = formData.get('comprobante_colones');
+    const comprobanteUSD = formData.get('comprobante_usd');
 
     if (!BANCOS.includes(banco)) {
       return Response.json({ error: 'Banco inválido' }, { status: 400 });
-    }
-    if (!referencia) {
-      return Response.json({ error: 'Falta el número de boleta / referencia' }, { status: 400 });
     }
     if (!fecha_deposito || !/^\d{4}-\d{2}-\d{2}$/.test(fecha_deposito)) {
       return Response.json({ error: 'Fecha de depósito inválida' }, { status: 400 });
     }
 
-    // El depósito debe existir y estar en progreso
+    // El depósito debe existir y estar en progreso. Cargamos los totales para saber qué monedas aplican.
     const { data: dep, error: getErr } = await supabase
       .from('depositos_bancarios')
-      .select('id, estado')
+      .select('id, estado, total_contado_colones, total_contado_usd')
       .eq('id', id)
       .maybeSingle();
     if (getErr) throw getErr;
@@ -133,29 +146,32 @@ export async function PATCH(req) {
       return Response.json({ error: 'El depósito ya está completado' }, { status: 409 });
     }
 
-    // Subir comprobante (opcional)
-    let comprobanteUrl = null;
-    if (comprobante && typeof comprobante === 'object' && comprobante.name) {
-      const buffer = await comprobante.arrayBuffer();
-      const safeName = comprobante.name.replace(/[^a-zA-Z0-9._-]/g, '_');
-      const filePath = `deposito_${id}_${Date.now()}_${safeName}`;
-      const { error: upErr } = await supabase.storage
-        .from('depositos')
-        .upload(filePath, buffer, { contentType: comprobante.type, upsert: false });
-      if (upErr) throw upErr;
-      const { data: urlData } = supabase.storage.from('depositos').getPublicUrl(filePath);
-      comprobanteUrl = urlData?.publicUrl || null;
+    const aplicaCRC = Number(dep.total_contado_colones) > 0;
+    const aplicaUSD = Number(dep.total_contado_usd) > 0;
+
+    // Cada moneda con monto contado exige su propia referencia de boleta
+    if (aplicaCRC && !referenciaCRC) {
+      return Response.json({ error: 'Falta el # de boleta de colones' }, { status: 400 });
     }
+    if (aplicaUSD && !referenciaUSD) {
+      return Response.json({ error: 'Falta el # de boleta de dólares' }, { status: 400 });
+    }
+
+    // Subir comprobantes (opcionales) por moneda
+    const comprobanteCrcUrl = aplicaCRC ? await subirComprobante(id, 'crc', comprobanteCRC) : null;
+    const comprobanteUsdUrl = aplicaUSD ? await subirComprobante(id, 'usd', comprobanteUSD) : null;
 
     const updateData = {
       estado: 'completado',
       banco,
-      referencia,
+      referencia_colones: aplicaCRC ? referenciaCRC : null,
+      referencia_usd: aplicaUSD ? referenciaUSD : null,
       fecha_deposito,
       completado_por: completado_por || null,
       updated_at: new Date().toISOString(),
     };
-    if (comprobanteUrl) updateData.comprobante_url = comprobanteUrl;
+    if (comprobanteCrcUrl) updateData.comprobante_colones_url = comprobanteCrcUrl;
+    if (comprobanteUsdUrl) updateData.comprobante_usd_url = comprobanteUsdUrl;
 
     const { data, error } = await supabase
       .from('depositos_bancarios')
@@ -179,19 +195,19 @@ export async function DELETE(req) {
       return Response.json({ error: 'id inválido' }, { status: 400 });
     }
 
-    // Best-effort: borrar el archivo del comprobante del bucket
+    // Best-effort: borrar los archivos de comprobantes del bucket (por moneda + legacy)
     const { data: dep } = await supabase
       .from('depositos_bancarios')
-      .select('comprobante_url')
+      .select('comprobante_url, comprobante_colones_url, comprobante_usd_url')
       .eq('id', id)
       .maybeSingle();
-    if (dep?.comprobante_url) {
-      const marker = '/depositos/';
-      const idx = dep.comprobante_url.indexOf(marker);
-      if (idx !== -1) {
-        const path = dep.comprobante_url.slice(idx + marker.length);
-        await supabase.storage.from('depositos').remove([path]);
-      }
+    const marker = '/depositos/';
+    const paths = [dep?.comprobante_url, dep?.comprobante_colones_url, dep?.comprobante_usd_url]
+      .filter(Boolean)
+      .map(url => { const idx = url.indexOf(marker); return idx !== -1 ? url.slice(idx + marker.length) : null; })
+      .filter(Boolean);
+    if (paths.length > 0) {
+      await supabase.storage.from('depositos').remove(paths);
     }
 
     const { error } = await supabase.from('depositos_bancarios').delete().eq('id', id);

@@ -11,12 +11,23 @@ const fmtUSD = n => 'US$' + (Number(n) || 0).toLocaleString('en-US', { minimumFr
 
 // fecha date-only → CR (NUNCA toISOString para date-only)
 const fmtFecha = f => f ? new Date(f + 'T00:00:00').toLocaleDateString('es-CR') : '—';
-const dM = f => { const d = new Date(f + 'T00:00:00'); return `${d.getDate()}/${d.getMonth() + 1}`; };
-const rango = (ini, fin) => `${dM(ini)} – ${dM(fin)}`;
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
 const mesNombre = ini => MESES[new Date(ini + 'T00:00:00').getMonth()];
 const periodoNum = ini => { const d = new Date(ini + 'T00:00:00').getDate(); return d <= 5 ? 1 : d <= 10 ? 2 : d <= 15 ? 3 : d <= 20 ? 4 : d <= 25 ? 5 : 6; };
 const periodoLabel = ini => `${mesNombre(ini)} · P${periodoNum(ini)}`;
+const dia = f => new Date(f + 'T00:00:00').getDate();
+const rangoDias = (ini, fin) => `del ${dia(ini)} al ${dia(fin)}`;
+const monthKey = ini => { const d = new Date(ini + 'T00:00:00'); return `${d.getFullYear()}-${String(d.getMonth()).padStart(2, '0')}`; };
+// Resumen compacto de los períodos de un depósito (mismo mes): "Julio · P1 P2"
+const resumenPeriodos = (arr) => {
+  if (!arr || arr.length === 0) return '—';
+  const sorted = [...arr].sort((a, b) => periodoNum(a.periodo_inicio) - periodoNum(b.periodo_inicio));
+  const meses = [...new Set(sorted.map(x => monthKey(x.periodo_inicio)))];
+  if (meses.length === 1) {
+    return `${mesNombre(sorted[0].periodo_inicio)} · ${sorted.map(x => 'P' + periodoNum(x.periodo_inicio)).join(' ')}`;
+  }
+  return sorted.map(x => periodoLabel(x.periodo_inicio)).join(', ');
+};
 const hoyCR = () => {
   const d = new Date();
   const p = n => String(n).padStart(2, '0');
@@ -39,12 +50,15 @@ export default function DepositosPage() {
   const [usdContado, setUsdContado] = useState(0);
   const [registrando, setRegistrando] = useState(false);
 
-  // Completar depósito
+  // Completar depósito — referencias y comprobantes separados por moneda
   const [completandoId, setCompletandoId] = useState(null);
-  const [compReferencia, setCompReferencia] = useState('');
   const [compFecha, setCompFecha] = useState(hoyCR());
-  const [compArchivo, setCompArchivo] = useState(null);
-  const [compPreview, setCompPreview] = useState(null);
+  const [compRefCRC, setCompRefCRC] = useState('');
+  const [compArchivoCRC, setCompArchivoCRC] = useState(null);
+  const [compPreviewCRC, setCompPreviewCRC] = useState(null);
+  const [compRefUSD, setCompRefUSD] = useState('');
+  const [compArchivoUSD, setCompArchivoUSD] = useState(null);
+  const [compPreviewUSD, setCompPreviewUSD] = useState(null);
   const [completando, setCompletando] = useState(false);
 
   const [toast, setToast] = useState(null);
@@ -105,6 +119,17 @@ export default function DepositosPage() {
   const enProgreso = depositos.filter(d => d.estado === 'en_progreso');
   const completados = depositos.filter(d => d.estado === 'completado');
 
+  // Períodos agrupados por mes (ordenados: mes asc, período asc dentro del mes)
+  const periodosPorMes = Object.values(
+    periodos.reduce((acc, p) => {
+      const key = monthKey(p.periodo_inicio);
+      (acc[key] = acc[key] || { key, ini: p.periodo_inicio, items: [] }).items.push(p);
+      return acc;
+    }, {})
+  )
+    .sort((a, b) => a.key.localeCompare(b.key))
+    .map(g => ({ ...g, items: g.items.sort((x, y) => periodoNum(x.periodo_inicio) - periodoNum(y.periodo_inicio)) }));
+
   const toggleSeleccion = (id) => {
     setSeleccionados(prev => {
       const next = new Set(prev);
@@ -115,6 +140,8 @@ export default function DepositosPage() {
 
   // Totales de referencia (suma de los períodos seleccionados)
   const seleccionadosArr = periodos.filter(p => seleccionados.has(p.id));
+  // Solo se pueden unificar períodos del mismo mes: una vez elegido uno, los demás meses se bloquean
+  const mesSel = seleccionadosArr.length > 0 ? monthKey(seleccionadosArr[0].periodo_inicio) : null;
   const refCRC = seleccionadosArr.reduce((s, p) => s + (Number(p.total_colones) || 0), 0);
   const refUSD = seleccionadosArr.reduce((s, p) => s + (Number(p.total_usd) || 0), 0);
 
@@ -129,6 +156,7 @@ export default function DepositosPage() {
 
   async function registrar() {
     if (seleccionados.size === 0) { showToast('❌ Selecciona al menos un período', 'error'); return; }
+    if (new Set(seleccionadosArr.map(p => monthKey(p.periodo_inicio))).size > 1) { showToast('❌ Solo podés unificar períodos del mismo mes', 'error'); return; }
     if (contadoCRC === 0 && contadoUSD === 0) { showToast('❌ Ingresa tu conteo', 'error'); return; }
     setRegistrando(true);
     try {
@@ -156,36 +184,49 @@ export default function DepositosPage() {
     }
   }
 
-  const handleArchivo = (file) => {
+  const handleArchivo = (file, setArchivo, setPreview) => {
     if (!file) return;
-    setCompArchivo(file);
+    setArchivo(file);
     if (file.type.startsWith('image/')) {
       const reader = new FileReader();
-      reader.onload = (ev) => setCompPreview(ev.target?.result);
+      reader.onload = (ev) => setPreview(ev.target?.result);
       reader.readAsDataURL(file);
     } else {
-      setCompPreview(`📄 ${file.name}`);
+      setPreview(`📄 ${file.name}`);
     }
   };
 
   const abrirCompletar = (id) => {
     setCompletandoId(id);
-    setCompReferencia('');
     setCompFecha(hoyCR());
-    setCompArchivo(null);
-    setCompPreview(null);
+    setCompRefCRC('');
+    setCompArchivoCRC(null);
+    setCompPreviewCRC(null);
+    setCompRefUSD('');
+    setCompArchivoUSD(null);
+    setCompPreviewUSD(null);
   };
 
   async function completar(id) {
-    if (!compReferencia.trim()) { showToast('❌ Falta el # de boleta', 'error'); return; }
+    const dep = enProgreso.find(d => d.id === id);
+    const aplicaCRC = Number(dep?.total_contado_colones) > 0;
+    const aplicaUSD = Number(dep?.total_contado_usd) > 0;
+    if (aplicaCRC && !compRefCRC.trim()) { showToast('❌ Falta el # de boleta de colones', 'error'); return; }
+    if (aplicaUSD && !compRefUSD.trim()) { showToast('❌ Falta el # de boleta de dólares', 'error'); return; }
     setCompletando(true);
     try {
       const fd = new FormData();
       fd.append('banco', 'BAC');
-      fd.append('referencia', compReferencia.trim());
       fd.append('fecha_deposito', compFecha);
       fd.append('completado_por', usuario?.nombre || 'Sistema');
-      if (compArchivo) fd.append('comprobante', compArchivo);
+      if (aplicaCRC) {
+        fd.append('referencia_colones', compRefCRC.trim());
+        if (compArchivoCRC) fd.append('comprobante_colones', compArchivoCRC);
+      }
+      if (aplicaUSD) {
+        fd.append('referencia_usd', compRefUSD.trim());
+        if (compArchivoUSD) fd.append('comprobante_usd', compArchivoUSD);
+      }
 
       const res = await fetch(`/api/depositos-bancarios?id=${id}`, { method: 'PATCH', body: fd });
       if (!res.ok) { const e = await res.json(); throw new Error(e.error || 'Error al completar'); }
@@ -218,6 +259,36 @@ export default function DepositosPage() {
   const cardStyle = { background: '#fff', borderRadius: '12px', border: '1.5px solid #E2DDD4', overflow: 'hidden', marginBottom: '20px' };
   const cardHead = { padding: '14px 20px', borderBottom: '1px solid #E2DDD4', background: '#F0EDE6', fontSize: '14px', fontWeight: '700', color: '#1A1714' };
 
+  // Sección de comprobante para una moneda (colones o dólares) dentro del formulario de completar
+  const seccionMoneda = (label, montoStr, accent, refVal, onRef, archivo, setArchivo, preview, setPreview) => (
+    <div style={{ marginBottom: '12px', padding: '14px', border: '1.5px solid #E2DDD4', borderRadius: '10px', background: '#FBFAF7' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '10px' }}>
+        <span style={{ fontSize: '11px', fontWeight: '800', color: accent, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{label}</span>
+        <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '700', color: '#1A1714' }}>{montoStr}</span>
+      </div>
+      <label style={{ fontSize: '10px', fontWeight: '700', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}># Boleta / referencia</label>
+      <input type="text" value={refVal} onChange={e => onRef(e.target.value)} placeholder="Número de boleta"
+        style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px', marginBottom: '10px' }} />
+      <label style={{ display: 'block', border: '2px dashed #E2DDD4', borderRadius: '8px', padding: '14px', textAlign: 'center', cursor: 'pointer', background: '#F0EDE6' }}
+        onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
+        onDrop={e => { e.preventDefault(); e.stopPropagation(); handleArchivo(e.dataTransfer.files?.[0], setArchivo, setPreview); }}>
+        <div style={{ fontSize: '16px', marginBottom: '2px' }}>📎</div>
+        <div style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560' }}>Foto del comprobante (opcional)</div>
+        <div style={{ fontSize: '10px', color: '#9C9590', marginTop: '2px' }}>JPG, PNG o PDF</div>
+        <input type="file" accept="image/*,.pdf" capture="environment" onChange={e => handleArchivo(e.target.files?.[0], setArchivo, setPreview)} style={{ display: 'none' }} />
+      </label>
+      {preview && (
+        <div style={{ marginTop: '10px', padding: '10px', background: '#E8F3EC', borderRadius: '8px', border: '1px solid #A8E6C6' }}>
+          {typeof preview === 'string' && preview.startsWith('data:')
+            ? <img src={preview} alt="preview" style={{ width: '100%', borderRadius: '6px', maxHeight: '180px', objectFit: 'cover' }} />
+            : <div style={{ fontSize: '12px', color: '#2a78a5', fontWeight: '600' }}>{preview}</div>}
+          <button type="button" onClick={() => { setArchivo(null); setPreview(null); }}
+            style={{ marginTop: '8px', fontSize: '11px', padding: '4px 8px', background: '#FDEDEC', color: '#C0392B', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}>Quitar</button>
+        </div>
+      )}
+    </div>
+  );
+
   return (
     <div style={{ minHeight: '100vh', background: '#FDFBF7' }}>
       <Header title="Depósitos" subtitle="Gestión de depósitos" showLogout={false} showModuleSelector={true} homeLink="/admin" />
@@ -237,40 +308,51 @@ export default function DepositosPage() {
             ) : periodos.length === 0 ? (
               <div style={{ padding: '24px', textAlign: 'center', color: '#9C9590' }}>No hay períodos contados. Contá un período en la revisión primero.</div>
             ) : (
-              periodos.map(p => {
-                const est = estadoPeriodo(p);
-                const sel = seleccionados.has(p.id);
-                const clickable = est === 'pendiente';
-                const chip = chipEstado[est];
-                return (
-                  <div
-                    key={p.id}
-                    onClick={clickable ? () => toggleSeleccion(p.id) : undefined}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
-                      padding: '12px 14px', marginBottom: '8px', borderRadius: '10px',
-                      border: sel ? '2px solid #2a78a5' : '1.5px solid #E2DDD4',
-                      background: sel ? '#E8F3EC' : '#fff',
-                      cursor: clickable ? 'pointer' : 'default',
-                    }}
-                  >
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
-                      <div style={{ width: '20px', textAlign: 'center', color: '#2a78a5', fontWeight: '700', fontSize: '15px' }}>{sel ? '✓' : ''}</div>
-                      <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: '14px', fontWeight: '700', color: '#1A1714' }}>{periodoLabel(p.periodo_inicio)}</div>
-                        <div style={{ fontSize: '11px', color: '#9C9590' }}><span style={{ fontFamily: "'DM Mono', monospace" }}>{rango(p.periodo_inicio, p.periodo_fin)}</span> · Contado por {p.contado_por || '—'}</div>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontSize: '14px', fontWeight: '700', color: '#1A1714', fontFamily: "'DM Mono', monospace" }}>{fmtCRC(p.total_colones)}</div>
-                        {Number(p.total_usd) > 0 && <div style={{ fontSize: '12px', fontWeight: '600', color: '#C8A84B', fontFamily: "'DM Mono', monospace" }}>{fmtUSD(p.total_usd)}</div>}
-                      </div>
-                      <span style={{ padding: '4px 10px', borderRadius: '20px', background: chip.bg, color: chip.fg, fontSize: '11px', fontWeight: '700', whiteSpace: 'nowrap' }}>{chip.t}</span>
-                    </div>
+              periodosPorMes.map(grupo => (
+                <div key={grupo.key} style={{ marginBottom: '18px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: '800', color: '#6B6560', textTransform: 'uppercase', letterSpacing: '0.6px', margin: '4px 2px 10px' }}>
+                    {mesNombre(grupo.ini)} {new Date(grupo.ini + 'T00:00:00').getFullYear()}
                   </div>
-                );
-              })
+                  {grupo.items.map(p => {
+                    const est = estadoPeriodo(p);
+                    const sel = seleccionados.has(p.id);
+                    // Bloqueado si ya hay una selección de otro mes (solo se unifica el mismo mes)
+                    const bloqueadoPorMes = est === 'pendiente' && mesSel && monthKey(p.periodo_inicio) !== mesSel;
+                    const clickable = est === 'pendiente' && !bloqueadoPorMes;
+                    const chip = chipEstado[est];
+                    return (
+                      <div
+                        key={p.id}
+                        onClick={clickable ? () => toggleSeleccion(p.id) : undefined}
+                        title={bloqueadoPorMes ? 'Solo podés unificar períodos del mismo mes' : undefined}
+                        style={{
+                          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px',
+                          padding: '12px 14px', marginBottom: '8px', borderRadius: '10px',
+                          border: sel ? '2px solid #2a78a5' : '1.5px solid #E2DDD4',
+                          background: sel ? '#E8F3EC' : '#fff',
+                          cursor: clickable ? 'pointer' : 'default',
+                          opacity: bloqueadoPorMes ? 0.4 : 1,
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px', minWidth: 0 }}>
+                          <div style={{ width: '20px', textAlign: 'center', color: '#2a78a5', fontWeight: '700', fontSize: '15px' }}>{sel ? '✓' : ''}</div>
+                          <div style={{ minWidth: 0 }}>
+                            <div style={{ fontSize: '14px', fontWeight: '700', color: '#1A1714' }}>P{periodoNum(p.periodo_inicio)}</div>
+                            <div style={{ fontSize: '11px', color: '#9C9590' }}><span style={{ fontFamily: "'DM Mono', monospace" }}>{rangoDias(p.periodo_inicio, p.periodo_fin)}</span> · Contado por {p.contado_por || '—'}</div>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+                          <div style={{ textAlign: 'right' }}>
+                            <div style={{ fontSize: '14px', fontWeight: '700', color: '#1A1714', fontFamily: "'DM Mono', monospace" }}>{fmtCRC(p.total_colones)}</div>
+                            {Number(p.total_usd) > 0 && <div style={{ fontSize: '12px', fontWeight: '600', color: '#C8A84B', fontFamily: "'DM Mono', monospace" }}>{fmtUSD(p.total_usd)}</div>}
+                          </div>
+                          <span style={{ padding: '4px 10px', borderRadius: '20px', background: chip.bg, color: chip.fg, fontSize: '11px', fontWeight: '700', whiteSpace: 'nowrap' }}>{chip.t}</span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ))
             )}
 
             {seleccionados.size > 0 && (
@@ -366,7 +448,7 @@ export default function DepositosPage() {
             <div style={cardHead}>Depósitos en progreso</div>
             <div style={{ padding: '16px 20px' }}>
               {enProgreso.map(dep => {
-                const periodosStr = (dep.depositos_cds || []).map(x => `${periodoLabel(x.periodo_inicio)} · ${rango(x.periodo_inicio, x.periodo_fin)}`).join(', ') || '—';
+                const periodosStr = resumenPeriodos(dep.depositos_cds);
                 const dCRC = (Number(dep.total_contado_colones) || 0) - (Number(dep.total_referencia_colones) || 0);
                 const cCRC = Math.abs(dCRC) < 5 ? '#27AE60' : Math.abs(dCRC) < 500 ? '#F39C12' : '#E74C3C';
                 return (
@@ -387,15 +469,10 @@ export default function DepositosPage() {
 
                     {completandoId === dep.id ? (
                       <div style={{ marginTop: '14px', paddingTop: '14px', borderTop: '1px solid #E2DDD4' }}>
-                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '12px' }}>
+                        <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', marginBottom: '14px' }}>
                           <div>
                             <label style={{ fontSize: '10px', fontWeight: '700', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Banco</label>
                             <div style={{ padding: '9px 16px', borderRadius: '8px', background: '#E8F3EC', border: '2px solid #2a78a5', fontWeight: '700', color: '#1A1714', fontSize: '13px' }}>BAC</div>
-                          </div>
-                          <div style={{ flex: 1, minWidth: '140px' }}>
-                            <label style={{ fontSize: '10px', fontWeight: '700', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}># Boleta / referencia</label>
-                            <input type="text" value={compReferencia} onChange={e => setCompReferencia(e.target.value)} placeholder="Número de boleta"
-                              style={{ width: '100%', padding: '9px 12px', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '14px' }} />
                           </div>
                           <div>
                             <label style={{ fontSize: '10px', fontWeight: '700', color: '#6B6560', textTransform: 'uppercase', display: 'block', marginBottom: '4px' }}>Fecha</label>
@@ -404,24 +481,8 @@ export default function DepositosPage() {
                           </div>
                         </div>
 
-                        <label style={{ display: 'block', border: '2px dashed #E2DDD4', borderRadius: '8px', padding: '16px', textAlign: 'center', cursor: 'pointer', background: '#F0EDE6', marginBottom: '12px' }}
-                          onDragOver={e => { e.preventDefault(); e.stopPropagation(); }}
-                          onDrop={e => { e.preventDefault(); e.stopPropagation(); handleArchivo(e.dataTransfer.files?.[0]); }}>
-                          <div style={{ fontSize: '18px', marginBottom: '4px' }}>📎</div>
-                          <div style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560' }}>Foto del comprobante (opcional)</div>
-                          <div style={{ fontSize: '10px', color: '#9C9590', marginTop: '2px' }}>JPG, PNG o PDF</div>
-                          <input type="file" accept="image/*,.pdf" capture="environment" onChange={e => handleArchivo(e.target.files?.[0])} style={{ display: 'none' }} />
-                        </label>
-
-                        {compPreview && (
-                          <div style={{ marginBottom: '12px', padding: '10px', background: '#E8F3EC', borderRadius: '8px', border: '1px solid #A8E6C6' }}>
-                            {typeof compPreview === 'string' && compPreview.startsWith('data:')
-                              ? <img src={compPreview} alt="preview" style={{ width: '100%', borderRadius: '6px', maxHeight: '180px', objectFit: 'cover' }} />
-                              : <div style={{ fontSize: '12px', color: '#2a78a5', fontWeight: '600' }}>{compPreview}</div>}
-                            <button type="button" onClick={() => { setCompArchivo(null); setCompPreview(null); }}
-                              style={{ marginTop: '8px', fontSize: '11px', padding: '4px 8px', background: '#FDEDEC', color: '#C0392B', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: '600' }}>Quitar</button>
-                          </div>
-                        )}
+                        {Number(dep.total_contado_colones) > 0 && seccionMoneda('Depósito en colones', fmtCRC(dep.total_contado_colones), '#2a78a5', compRefCRC, setCompRefCRC, compArchivoCRC, setCompArchivoCRC, compPreviewCRC, setCompPreviewCRC)}
+                        {Number(dep.total_contado_usd) > 0 && seccionMoneda('Depósito en dólares', fmtUSD(dep.total_contado_usd), '#C8A84B', compRefUSD, setCompRefUSD, compArchivoUSD, setCompArchivoUSD, compPreviewUSD, setCompPreviewUSD)}
 
                         <div style={{ display: 'flex', gap: '10px' }}>
                           <button onClick={() => completar(dep.id)} disabled={completando}
@@ -457,14 +518,18 @@ export default function DepositosPage() {
               <div style={{ padding: '24px', textAlign: 'center', color: '#9C9590' }}>Aún no hay depósitos realizados</div>
             ) : (
               completados.map(dep => {
-                const periodosStr = (dep.depositos_cds || []).map(x => `${periodoLabel(x.periodo_inicio)} · ${rango(x.periodo_inicio, x.periodo_fin)}`).join(', ') || '—';
+                const periodosStr = resumenPeriodos(dep.depositos_cds);
+                // Boletas por moneda (con fallback a la referencia legacy única)
+                const boletas = [];
+                if (dep.referencia_colones) boletas.push({ moneda: '₡', ref: dep.referencia_colones, url: dep.comprobante_colones_url, color: '#2a78a5' });
+                if (dep.referencia_usd) boletas.push({ moneda: 'US$', ref: dep.referencia_usd, url: dep.comprobante_usd_url, color: '#C8A84B' });
+                if (boletas.length === 0 && dep.referencia) boletas.push({ moneda: '', ref: dep.referencia, url: dep.comprobante_url, color: '#2a78a5' });
                 return (
                   <div key={dep.id} style={{ border: '1.5px solid #E2DDD4', borderRadius: '10px', padding: '14px', marginBottom: '12px' }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '12px' }}>
                       <div style={{ minWidth: 0 }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                           <span style={{ padding: '3px 8px', borderRadius: '6px', background: '#EDE9F6', color: '#5B35B5', fontSize: '11px', fontWeight: '700' }}>{dep.banco}</span>
-                          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '700', color: '#1A1714' }}>#{dep.referencia}</span>
                           <span style={{ fontSize: '12px', color: '#6B6560' }}>{fmtFecha(dep.fecha_deposito)}</span>
                         </div>
                         <div style={{ fontSize: '12px', color: '#6B6560', marginTop: '4px', fontFamily: "'DM Mono', monospace" }}>{periodosStr}</div>
@@ -475,10 +540,21 @@ export default function DepositosPage() {
                         {Number(dep.total_contado_usd) > 0 && <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '12px', fontWeight: '600', color: '#C8A84B' }}>{fmtUSD(dep.total_contado_usd)}</div>}
                       </div>
                     </div>
+
+                    {/* Boletas + comprobantes por moneda */}
+                    <div style={{ marginTop: '10px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                      {boletas.map((b, i) => (
+                        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
+                          {b.moneda && <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '12px', fontWeight: '700', color: b.color, minWidth: '34px' }}>{b.moneda}</span>}
+                          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '700', color: '#1A1714' }}>#{b.ref}</span>
+                          {b.url
+                            ? <a href={b.url} target="_blank" rel="noreferrer" style={{ fontSize: '12px', fontWeight: '700', color: '#2a78a5', textDecoration: 'none' }}>Ver comprobante ↗</a>
+                            : <span style={{ fontSize: '12px', color: '#9C9590' }}>Sin comprobante</span>}
+                        </div>
+                      ))}
+                    </div>
+
                     <div style={{ display: 'flex', gap: '10px', marginTop: '12px', alignItems: 'center' }}>
-                      {dep.comprobante_url
-                        ? <a href={dep.comprobante_url} target="_blank" rel="noreferrer" style={{ fontSize: '13px', fontWeight: '700', color: '#2a78a5', textDecoration: 'none' }}>Ver comprobante ↗</a>
-                        : <span style={{ fontSize: '12px', color: '#9C9590' }}>Sin comprobante</span>}
                       <button onClick={() => deshacer(dep.id)}
                         style={{ marginLeft: 'auto', padding: '6px 12px', background: '#fff', color: '#C0392B', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '12px', fontWeight: '600', cursor: 'pointer' }}>Deshacer</button>
                     </div>
