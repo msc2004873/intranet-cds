@@ -46,6 +46,8 @@ export default function CobroGloryPage() {
   const [modoUnificacion, setModoUnificacion] = useState(false);
   const [comentariosCobro, setComentariosCobro] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [editandoPrecioId, setEditandoPrecioId] = useState(null);
+  const [precioEditando, setPrecioEditando] = useState('');
 
   useEffect(() => {
     const hoy = getFechaCostaRica();
@@ -218,6 +220,34 @@ export default function CobroGloryPage() {
     setModalActivo(false);
     setPacienteEnModal(null);
     setComentariosCobro('');
+  }
+
+  function abrirEdicionPrecio(p) {
+    setEditandoPrecioId(p.id);
+    setPrecioEditando(p.monto != null ? String(p.monto) : '');
+  }
+
+  function cancelarEdicionPrecio() {
+    setEditandoPrecioId(null);
+    setPrecioEditando('');
+  }
+
+  async function guardarPrecioEspera(id) {
+    const val = precioEditando ? parseFloat(precioEditando.replace(/\s/g, '')) : null;
+    if (val != null && (isNaN(val) || val < 0)) {
+      showToast('❌ Precio inválido');
+      return;
+    }
+    const { error } = await supabase.from('cobros_glory').update({ monto: val }).eq('id', id);
+    if (error) {
+      console.error('Error Supabase:', error);
+      showToast('❌ Error al guardar precio: ' + error.message);
+      return;
+    }
+    setEditandoPrecioId(null);
+    setPrecioEditando('');
+    showToast('✅ Precio actualizado');
+    cargarPacientesEspera();
   }
 
   function toggleSeleccionar(id) {
@@ -528,7 +558,16 @@ export default function CobroGloryPage() {
                             <div style={{ fontSize: '13px', color: '#1A1714' }}>{p.servicio === 'corte' ? 'Corte' : p.servicio === 'corte_baño' ? 'Corte y baño' : 'Otro'}</div>
                           </>
                         )}
-                        {p.monto != null && (
+                        {editandoPrecioId === p.id ? (
+                          <>
+                            <div style={{ fontSize: '11px', color: '#6B6560', textTransform: 'uppercase', fontWeight: '600', marginTop: '6px', marginBottom: '4px' }}>Precio ₡</div>
+                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                              <input type="text" autoFocus value={precioEditando === '' ? '' : (isNaN(parseFloat(precioEditando)) ? precioEditando : parseFloat(precioEditando).toLocaleString('es-CR'))} onChange={(e) => setPrecioEditando(e.target.value.replace(/\s/g, ''))} onKeyDown={(e) => { if (e.key === 'Enter') guardarPrecioEspera(p.id); if (e.key === 'Escape') cancelarEdicionPrecio(); }} placeholder="0" inputMode="numeric" style={{ flex: 1, padding: '8px 10px', border: '1.5px solid #2a78a5', borderRadius: '6px', fontSize: '14px' }} />
+                              <button onClick={() => guardarPrecioEspera(p.id)} style={{ padding: '8px 12px', background: '#27AE60', color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>Guardar</button>
+                              <button onClick={cancelarEdicionPrecio} style={{ padding: '8px 12px', background: '#F0EDE6', color: '#1A1714', border: '1.5px solid #E2DDD4', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}>Cancelar</button>
+                            </div>
+                          </>
+                        ) : p.monto != null && (
                           <>
                             <div style={{ fontSize: '11px', color: '#6B6560', textTransform: 'uppercase', fontWeight: '600', marginTop: '6px' }}>Precio</div>
                             <div style={{ fontSize: '14px', color: '#2a78a5', fontWeight: '600', fontFamily: "'DM Mono', monospace" }}>{fmt(p.monto)}</div>
@@ -546,6 +585,7 @@ export default function CobroGloryPage() {
                       {!modoUnificacion && (
                         <div style={{ display: 'flex', gap: '8px', flexDirection: 'column' }}>
                           <button onClick={() => abrirModalCobro(p.id, p.nombre_mascota, p.nombre_dueno, p.monto)} style={{ padding: '8px 12px', background: '#2a78a5', color: 'white', border: 'none', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'background 0.2s' }} onMouseEnter={(e) => e.target.style.background = '#1f5780'} onMouseLeave={(e) => e.target.style.background = '#2a78a5'}>Cobrar</button>
+                          <button onClick={() => (editandoPrecioId === p.id ? cancelarEdicionPrecio() : abrirEdicionPrecio(p))} style={{ padding: '8px 12px', background: '#fff', color: '#2a78a5', border: '1.5px solid #2a78a5', borderRadius: '6px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap', transition: 'background 0.2s' }} onMouseEnter={(e) => e.target.style.background = '#E8F3EC'} onMouseLeave={(e) => e.target.style.background = '#fff'}>{p.monto != null ? '✎ Editar precio' : '+ Precio'}</button>
                         </div>
                       )}
                     </div>
