@@ -263,6 +263,8 @@ export default function CobroGloryPage() {
   function toggleModoUnificacion() {
     setModoUnificacion(prev => !prev);
     setPacientesSeleccionados(new Set());
+    setEditandoPrecioId(null);
+    setPrecioEditando('');
   }
 
   function abrirModalUnificado() {
