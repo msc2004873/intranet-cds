@@ -39,10 +39,14 @@ export async function GET(req) {
           id,
           cierre_caja_id,
           qvet_data,
+          tc,
+          dolares_revisado,
           cierre_caja!inner (
             id,
             fecha_hora,
-            caja
+            caja,
+            tc,
+            dolares_total
           )
         )
       `);

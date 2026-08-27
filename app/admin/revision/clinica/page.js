@@ -1224,13 +1224,19 @@ export default function RevisionClinicaPage() {
               // El TC sale de la revisión más reciente del período — el mismo que se usó
               // para calcular monto_revisora — y se muestra en pantalla para que se pueda
               // auditar de dónde salió.
-              const tcPeriodo = (() => {
-                const conFecha = auditRows
-                  .map(r => ({ tc: parseFloat(r.revision_caja?.tc) || 0, f: r.revision_caja?.cierre_caja?.fecha_hora || '' }))
+              // Se busca en dos fuentes porque auditRows no siempre trae la relación:
+              // cuando las filas se acaban de generar en el navegador vienen planas, sin
+              // revision_caja. `cierres` sí está siempre cargado y trae tc.
+              const tcMasReciente = (lista, getTc, getFecha) => {
+                const conTc = lista
+                  .map(x => ({ tc: parseFloat(getTc(x)) || 0, f: getFecha(x) || '' }))
                   .filter(x => x.tc > 0)
                   .sort((a, b) => (a.f < b.f ? 1 : -1));
-                return conFecha.length ? conFecha[0].tc : 0;
-              })();
+                return conTc.length ? conTc[0].tc : 0;
+              };
+              const tcPeriodo =
+                tcMasReciente(cierres, c => c.tc, c => c.fecha_hora) ||
+                tcMasReciente(auditRows, r => r.revision_caja?.tc, r => r.revision_caja?.cierre_caja?.fecha_hora);
               const totalContadoUSDenCRC = Math.round(totalContadoUSD * tcPeriodo);
               const totalContadoGeneral = totalContadoCRC + totalContadoUSDenCRC;
 
@@ -1347,6 +1353,15 @@ export default function RevisionClinicaPage() {
                         {tcPeriodo > 0 && <span style={{ color: '#2a78a5' }}> = {fmtCRC(totalContadoUSDenCRC)}</span>}
                       </span>
                     </div>
+
+                    {/* Si no se pudo determinar el TC, los dólares no se suman y la
+                        diferencia va a dar justo el monto en dólares. Antes eso pasaba
+                        en silencio y parecía un faltante. */}
+                    {totalContadoUSD > 0 && tcPeriodo === 0 && (
+                      <div style={{ padding: '12px 16px', borderRadius: '8px', background: '#FFF3CD', border: '1px solid #F39C12', marginBottom: '20px', fontSize: '12px', color: '#6B6560' }}>
+                        ⚠️ No se pudo determinar el tipo de cambio del período, así que los <strong>{fmtUSD(totalContadoUSD)}</strong> no están sumados al total. La diferencia de abajo va a salir inflada por ese monto.
+                      </div>
+                    )}
 
                     {/* Total general — es el que se compara contra la revisora, porque
                         monto_revisora ya trae los dólares convertidos a colones. */}
