@@ -243,6 +243,7 @@ export default function AdminPage() {
               <span style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '15px', fontWeight: '600', color: '#1A1714' }}>
                 <span style={{ fontSize: '16px' }}>💰</span> Ingresos por período
               </span>
+              <span style={{ fontSize: '11px', color: '#9C9590' }}>según QVet · efectivo + tarjeta + SINPE + transferencia</span>
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
               <button onClick={() => { const o = ingresosOffset - 1; setIngresosOffset(o); fetchIngresos(o); }} style={navBtnStyle} aria-label="Mes anterior">←</button>
@@ -258,8 +259,11 @@ export default function AdminPage() {
           </div>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(100px, 1fr))', gap: '8px' }}>
-            {(ingresos?.periodos || [1, 2, 3, 4, 5, 6].map((n) => ({ periodo_num: n, dia_inicio: 0, dia_fin: 0, total: 0, cierres: 0 }))).map((p) => {
+            {(ingresos?.periodos || [1, 2, 3, 4, 5, 6].map((n) => ({ periodo_num: n, dia_inicio: 0, dia_fin: 0, total: null, cierres: 0 }))).map((p) => {
               const esActual = ingresosOffset === 0 && p.periodo_num === periodo;
+              // total null = todavía no se ha subido el Excel de QVet de ese período.
+              // Se muestra "—" y no ₡0, que se leería como "no facturó nada".
+              const sinQvet = p.total === null || p.total === undefined;
               return (
                 <div key={p.periodo_num} style={{
                   padding: '8px 6px',
@@ -271,10 +275,12 @@ export default function AdminPage() {
                   <div style={{ fontSize: '10px', fontWeight: '700', color: '#6B6560', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
                     P{p.periodo_num}{p.dia_inicio ? ` · ${p.dia_inicio}–${p.dia_fin}` : ''}
                   </div>
-                  <div style={{ fontSize: '14px', fontWeight: '700', fontFamily: "'DM Mono', monospace", color: p.total > 0 ? '#1A1714' : '#C7C2BA', margin: '3px 0 1px' }}>
-                    {loadingIngresos ? '…' : fmtColones(p.total)}
+                  <div style={{ fontSize: '14px', fontWeight: '700', fontFamily: "'DM Mono', monospace", color: sinQvet ? '#C7C2BA' : '#1A1714', margin: '3px 0 1px' }}>
+                    {loadingIngresos ? '…' : sinQvet ? '—' : fmtColones(p.total)}
                   </div>
-                  <div style={{ fontSize: '9px', color: '#9C9590' }}>{p.cierres} {p.cierres === 1 ? 'cierre' : 'cierres'}</div>
+                  <div style={{ fontSize: '9px', color: '#9C9590' }}>
+                    {sinQvet ? 'sin QVet' : `${p.cierres} ${p.cierres === 1 ? 'registro' : 'registros'}`}
+                  </div>
                 </div>
               );
             })}

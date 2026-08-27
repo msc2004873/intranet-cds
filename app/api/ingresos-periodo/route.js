@@ -1,21 +1,21 @@
 import supabase from '../../../lib/supabase-server.js';
 
-// Ingresos cobrados en cajas (cierre_caja), agrupados por los 6 períodos de 5 días del mes.
-// Ingreso por cierre = efectivo (denominaciones_sobre) + tarjeta BAC + tarjeta BN
-//                       + Σ sinpe_json.monto + dolares_total × tc
-// NO se restan las salidas (es ingreso bruto) y NO se suma glory_json (solo cajas).
-
-const DENOMS = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 25, 10, 5];
-
-function efectivoFromSobre(sobre) {
-  if (!sobre || typeof sobre !== 'object') return 0;
-  return DENOMS.reduce((sum, d) => sum + d * (parseInt(sobre[d]) || 0), 0);
-}
-
-function sumSinpe(arr) {
-  if (!Array.isArray(arr)) return 0;
-  return arr.reduce((sum, x) => sum + (parseFloat(x?.monto) || 0), 0);
-}
+// Ingresos del mes agrupados en los 6 períodos de 5 días, tomados del LISTADO DE QVET.
+//
+// Antes se calculaban desde cierre_caja (denominaciones + tarjetas + sinpe + dólares).
+// Eso daba números malos cada vez que un cierre se guardaba incompleto: tarjetas en
+// cero, dólares sin declarar, o el cierre que no se guardó del todo. QVet es la fuente
+// contable real, así que ahora se lee de ahí.
+//
+// Ingreso = efectivo + tarjeta + sinpe + transferencia.
+//   - `salidas` NO se resta (es ingreso bruto, igual que antes).
+//   - `otro` NO se suma. Se verificó contra los cierres: el 24/08 en Caja 1 el total de
+//     QVet sin `otro` da ₡1 012 418.5 y el cierre da ₡1 012 418 — calzan. Con `otro`
+//     se dispara ₡209 331 de más. Sea lo que sea, no es plata que pase por la caja.
+//     Igual se devuelve en el desglose por si hay que revisarlo.
+//
+// El período sin Excel subido devuelve total: null (no 0), para que la pantalla muestre
+// "pendiente" en vez de dar a entender que ese período no facturó nada.
 
 function periodoDeDia(dia) {
   if (dia <= 5) return 1;
@@ -36,52 +36,82 @@ export async function GET(req) {
       return Response.json({ error: 'Parámetros ano y mes son requeridos' }, { status: 400 });
     }
 
-    // Ventana UTC que cubre todo el mes en hora CR (CR = UTC-6).
-    // Día 1 00:00 CR = día 1 06:00 UTC; usamos buffer para no perder cierres en bordes.
-    const pad = (n) => String(n).padStart(2, '0');
-    const inicioUTC = `${ano}-${pad(mes)}-01T00:00:00Z`;
-    const sigMes = mes === 12 ? 1 : mes + 1;
-    const sigAno = mes === 12 ? ano + 1 : ano;
-    const finUTC = `${sigAno}-${pad(sigMes)}-01T12:00:00Z`;
-
+    // qvet_data se guarda repetido en cada revisión del período (el array completo del
+    // Excel). Se traen todas y se deduplica por caja+fecha más abajo.
     const { data, error } = await supabase
-      .from('cierre_caja')
-      .select('fecha_hora, tc, dolares_total, tarjeta_bac, tarjeta_bn, sinpe_json, denominaciones_sobre')
-      .gte('fecha_hora', inicioUTC)
-      .lt('fecha_hora', finUTC);
+      .from('revision_caja')
+      .select('id, qvet_data')
+      .not('qvet_data', 'is', null)
+      .order('id', { ascending: true });
 
     if (error) throw error;
+
+    // Las fechas de QVet ya vienen como fecha CR 'YYYY-MM-DD', sin hora: no hay que
+    // convertir nada de UTC.
+    const prefijoMes = `${ano}-${String(mes).padStart(2, '0')}`;
+
+    // Deduplicar por caja+fecha. Si el Excel se volvió a subir, la revisión con id más
+    // alto es la más reciente y pisa a la anterior (por eso el order de arriba).
+    const porCajaFecha = new Map();
+    for (const fila of data || []) {
+      const filas = typeof fila.qvet_data === 'string'
+        ? JSON.parse(fila.qvet_data || '[]')
+        : (fila.qvet_data || []);
+      if (!Array.isArray(filas)) continue;
+
+      for (const q of filas) {
+        if (!q?.fecha || !String(q.fecha).startsWith(prefijoMes)) continue;
+        porCajaFecha.set(`${q.caja}|${q.fecha}`, q);
+      }
+    }
 
     const ultimoDia = new Date(ano, mes, 0).getDate();
     const periodos = [1, 2, 3, 4, 5, 6].map((p) => {
       const dIni = (p - 1) * 5 + 1;
       const dFin = p === 6 ? ultimoDia : p * 5;
-      return { periodo_num: p, dia_inicio: dIni, dia_fin: dFin, total: 0, cierres: 0 };
+      return {
+        periodo_num: p,
+        dia_inicio: dIni,
+        dia_fin: dFin,
+        total: null,        // null = sin Excel de QVet subido
+        cierres: 0,         // cantidad de caja-día que trae el Excel de ese período
+        tiene_qvet: false,
+        desglose: { efectivo: 0, tarjeta: 0, sinpe: 0, transferencia: 0, otro: 0, salidas: 0 },
+      };
     });
 
-    let totalMes = 0;
+    for (const q of porCajaFecha.values()) {
+      const dia = parseInt(String(q.fecha).slice(8, 10));
+      if (!dia) continue;
 
-    for (const row of data || []) {
-      // Fecha calendario CR = fecha_hora (UTC) − 6h
-      const crMs = new Date(row.fecha_hora).getTime() - 6 * 60 * 60 * 1000;
-      const cr = new Date(crMs);
-      if (cr.getUTCFullYear() !== ano || cr.getUTCMonth() + 1 !== mes) continue;
+      const bucket = periodos[periodoDeDia(dia) - 1];
+      const efectivo = parseFloat(q.efectivo) || 0;
+      const tarjeta = parseFloat(q.tarjeta) || 0;
+      const sinpe = parseFloat(q.sinpe) || 0;
+      const transferencia = parseFloat(q.transferencia) || 0;
 
-      const ingreso =
-        efectivoFromSobre(row.denominaciones_sobre) +
-        (parseFloat(row.tarjeta_bac) || 0) +
-        (parseFloat(row.tarjeta_bn) || 0) +
-        sumSinpe(row.sinpe_json) +
-        (parseFloat(row.dolares_total) || 0) * (parseFloat(row.tc) || 0);
-
-      const p = periodoDeDia(cr.getUTCDate());
-      const bucket = periodos[p - 1];
-      bucket.total += ingreso;
+      bucket.tiene_qvet = true;
+      bucket.total = (bucket.total || 0) + efectivo + tarjeta + sinpe + transferencia;
       bucket.cierres += 1;
-      totalMes += ingreso;
+      bucket.desglose.efectivo += efectivo;
+      bucket.desglose.tarjeta += tarjeta;
+      bucket.desglose.sinpe += sinpe;
+      bucket.desglose.transferencia += transferencia;
+      bucket.desglose.otro += parseFloat(q.otro) || 0;
+      bucket.desglose.salidas += parseFloat(q.salidas) || 0;
     }
 
-    return Response.json({ ano, mes, totalMes, periodos });
+    const conDatos = periodos.filter((p) => p.tiene_qvet);
+    const totalMes = conDatos.reduce((s, p) => s + p.total, 0);
+
+    return Response.json({
+      ano,
+      mes,
+      totalMes,
+      periodos,
+      periodos_con_qvet: conDatos.length,
+      fuente: 'qvet',
+    });
   } catch (err) {
     console.error('Error en ingresos-periodo:', err);
     return Response.json({ error: err.message }, { status: 500 });
