@@ -1217,7 +1217,24 @@ export default function RevisionClinicaPage() {
                 .reduce((s, r) => s + (r.monto_revisora || 0), 0);
               const totalContadoCRC = DENOMS_CRC.reduce((s, d) => s + ((denomsColones[d] || 0) * d), 0);
               const totalContadoUSD = denomsUSD.total || 0;
-              const diffCRC = totalContadoCRC - totalRevCRC;
+
+              // totalRevCRC ya trae los dólares convertidos (viene de monto_revisora del
+              // EFECTIVO), así que de este lado hay que convertirlos también o la
+              // diferencia da justo el monto en dólares y parece un faltante.
+              // El TC sale de la revisión más reciente del período — el mismo que se usó
+              // para calcular monto_revisora — y se muestra en pantalla para que se pueda
+              // auditar de dónde salió.
+              const tcPeriodo = (() => {
+                const conFecha = auditRows
+                  .map(r => ({ tc: parseFloat(r.revision_caja?.tc) || 0, f: r.revision_caja?.cierre_caja?.fecha_hora || '' }))
+                  .filter(x => x.tc > 0)
+                  .sort((a, b) => (a.f < b.f ? 1 : -1));
+                return conFecha.length ? conFecha[0].tc : 0;
+              })();
+              const totalContadoUSDenCRC = Math.round(totalContadoUSD * tcPeriodo);
+              const totalContadoGeneral = totalContadoCRC + totalContadoUSDenCRC;
+
+              const diffCRC = totalContadoGeneral - totalRevCRC;
               const diffColorCRC = Math.abs(diffCRC) < 5 ? '#27AE60' : Math.abs(diffCRC) < 500 ? '#F39C12' : '#E74C3C';
 
               const fmtCRC = n => '₡' + Math.round(n).toLocaleString('es-CR');
@@ -1239,7 +1256,10 @@ export default function RevisionClinicaPage() {
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', marginBottom: '16px' }}>
                           <div style={{ background: '#F0EDE6', padding: '14px 16px', borderRadius: '8px' }}>
                             <div style={{ fontSize: '10px', color: '#6B6560', fontWeight: '600', textTransform: 'uppercase', marginBottom: '6px' }}>Total contado</div>
-                            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '700', color: '#1A1714' }}>{fmtCRC(totalContadoCRC)}</div>
+                            <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '700', color: '#1A1714' }}>{fmtCRC(totalContadoGeneral)}</div>
+                            <div style={{ fontSize: '10px', color: '#9C9590', marginTop: '4px', fontFamily: "'DM Mono', monospace" }}>
+                              {fmtCRC(totalContadoCRC)} + {fmtUSD(totalContadoUSD)}
+                            </div>
                           </div>
                           <div style={{ background: '#F0EDE6', padding: '14px 16px', borderRadius: '8px' }}>
                             <div style={{ fontSize: '10px', color: '#6B6560', fontWeight: '600', textTransform: 'uppercase', marginBottom: '6px' }}>Revisora registró</div>
@@ -1253,8 +1273,14 @@ export default function RevisionClinicaPage() {
                           </div>
                         </div>
                         <div style={{ background: '#FBF6E9', padding: '14px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                          <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total Dólares</span>
-                          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '20px', fontWeight: '700', color: '#C8A84B' }}>{fmtUSD(totalContadoUSD)}</span>
+                          <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>
+                            Total Dólares
+                            {tcPeriodo > 0 && <span style={{ textTransform: 'none', fontWeight: '500', color: '#9C9590' }}> · al TC {tcPeriodo}</span>}
+                          </span>
+                          <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '20px', fontWeight: '700', color: '#C8A84B' }}>
+                            {fmtUSD(totalContadoUSD)}
+                            {tcPeriodo > 0 && <span style={{ color: '#2a78a5' }}> = {fmtCRC(totalContadoUSDenCRC)}</span>}
+                          </span>
                         </div>
                       </>
                     ) : (
@@ -1286,21 +1312,9 @@ export default function RevisionClinicaPage() {
                         </div>
                       </div>
                     ))}
-                    <div style={{ marginTop: '12px', padding: '12px 16px', borderRadius: '8px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', background: '#E8F3EC', marginBottom: '24px' }}>
-                      <div>
-                        <div style={{ fontSize: '10px', color: '#6B6560', fontWeight: '600', textTransform: 'uppercase' }}>Total contado</div>
-                        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '16px', fontWeight: '700', color: '#1A1714' }}>{fmtCRC(totalContadoCRC)}</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '10px', color: '#6B6560', fontWeight: '600', textTransform: 'uppercase' }}>Revisora registró</div>
-                        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '16px', fontWeight: '700', color: '#1A1714' }}>{fmtCRC(totalRevCRC)}</div>
-                      </div>
-                      <div>
-                        <div style={{ fontSize: '10px', color: '#6B6560', fontWeight: '600', textTransform: 'uppercase' }}>Diferencia</div>
-                        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '16px', fontWeight: '700', color: diffColorCRC }}>
-                          {Math.abs(diffCRC) < 5 ? '✓ Cuadra' : (diffCRC > 0 ? '+' : '') + fmtCRC(Math.abs(diffCRC))}
-                        </div>
-                      </div>
+                    <div style={{ marginTop: '12px', padding: '12px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#E8F3EC', marginBottom: '24px' }}>
+                      <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Subtotal colones</span>
+                      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '700', color: '#2a78a5' }}>{fmtCRC(totalContadoCRC)}</span>
                     </div>
 
                     {/* USD */}
@@ -1324,8 +1338,36 @@ export default function RevisionClinicaPage() {
                       </div>
                     </div>
                     <div style={{ padding: '12px 16px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#FBF6E9', marginBottom: '20px' }}>
-                      <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>Total USD</span>
-                      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '700', color: '#C8A84B' }}>{fmtUSD(totalContadoUSD)}</span>
+                      <span style={{ fontSize: '12px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>
+                        Subtotal dólares
+                        {tcPeriodo > 0 && <span style={{ textTransform: 'none', fontWeight: '500', color: '#9C9590' }}> · al TC {tcPeriodo}</span>}
+                      </span>
+                      <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '700', color: '#C8A84B' }}>
+                        {fmtUSD(totalContadoUSD)}
+                        {tcPeriodo > 0 && <span style={{ color: '#2a78a5' }}> = {fmtCRC(totalContadoUSDenCRC)}</span>}
+                      </span>
+                    </div>
+
+                    {/* Total general — es el que se compara contra la revisora, porque
+                        monto_revisora ya trae los dólares convertidos a colones. */}
+                    <div style={{ padding: '14px 16px', borderRadius: '8px', display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '8px', background: '#EDF4F8', border: '1.5px solid #2a78a5', marginBottom: '20px' }}>
+                      <div>
+                        <div style={{ fontSize: '10px', color: '#6B6560', fontWeight: '600', textTransform: 'uppercase' }}>Total contado</div>
+                        <div style={{ fontSize: '9px', color: '#9C9590' }}>colones + dólares</div>
+                        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '700', color: '#2a78a5', marginTop: '2px' }}>{fmtCRC(totalContadoGeneral)}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '10px', color: '#6B6560', fontWeight: '600', textTransform: 'uppercase' }}>Revisora registró</div>
+                        <div style={{ fontSize: '9px', color: '#9C9590' }}>todo en colones</div>
+                        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '700', color: '#1A1714', marginTop: '2px' }}>{fmtCRC(totalRevCRC)}</div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '10px', color: '#6B6560', fontWeight: '600', textTransform: 'uppercase' }}>Diferencia</div>
+                        <div style={{ fontSize: '9px', color: '#9C9590' }}>&nbsp;</div>
+                        <div style={{ fontFamily: "'DM Mono', monospace", fontSize: '18px', fontWeight: '700', color: diffColorCRC, marginTop: '2px' }}>
+                          {Math.abs(diffCRC) < 5 ? '✓ Cuadra' : (diffCRC > 0 ? '+' : '') + fmtCRC(Math.abs(diffCRC))}
+                        </div>
+                      </div>
                     </div>
 
                     <button
