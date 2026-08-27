@@ -45,6 +45,10 @@ export default function RevisionClinicaPage() {
   const [guardandoDeposito, setGuardandoDeposito] = useState(false);
   const [depositoGuardado, setDepositoGuardado] = useState(false);
   const [expandedCommentId, setExpandedCommentId] = useState(null);
+  // Cuando la revisora pide re-subir el Excel, vaciamos auditRows para que vuelva a
+  // aparecer el dropzone. Sin esta bandera el auto-load de abajo los recargaría de
+  // inmediato y el dropzone desaparecería otra vez.
+  const [reSubiendo, setReSubiendo] = useState(false);
 
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('user') || '{}');
@@ -88,7 +92,7 @@ export default function RevisionClinicaPage() {
 
   // Auto-load audit data when audit tab is opened
   useEffect(() => {
-    if (tabActivo === 'auditoria' && auditRows.length === 0 && !loadingAudit && periodo) {
+    if (tabActivo === 'auditoria' && auditRows.length === 0 && !loadingAudit && periodo && !reSubiendo) {
       console.error('📋 AUTO-LOADING AUDIT DATA FOR PERIOD:', periodo);
       const cargarAuditoria = async () => {
         try {
@@ -124,7 +128,7 @@ export default function RevisionClinicaPage() {
       };
       cargarAuditoria();
     }
-  }, [tabActivo, periodo, auditRows.length, loadingAudit]);
+  }, [tabActivo, periodo, auditRows.length, loadingAudit, reSubiendo]);
 
   async function cargarCierres() {
     if (!periodo) return;
@@ -602,6 +606,8 @@ export default function RevisionClinicaPage() {
                   const reloadRes = await fetch(`/api/auditoria-periodo?inicio=${periodo.inicio.toISOString().split('T')[0]}&fin=${periodo.fin.toISOString().split('T')[0]}`);
                   const reloadedData = reloadRes.ok ? await reloadRes.json() : [];
 
+                  setReSubiendo(false);
+
                   if (reloadedData.length > 0) {
                     setAuditRows(reloadedData);
                     console.error('✅ AUDIT ROWS RELOADED WITH RELATIONS: ' + reloadedData.length + ' rows');
@@ -696,6 +702,7 @@ export default function RevisionClinicaPage() {
 
                     if (!saveRes.ok) throw new Error('Error al guardar auditoría');
 
+                    setReSubiendo(false);
                     setAuditRows(allAuditRows);
                     e.target.value = '';
                   } catch (err) {
@@ -752,8 +759,25 @@ export default function RevisionClinicaPage() {
             </div>
             ) : (
               <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', padding: '24px', marginBottom: '24px' }}>
-                <div style={{ fontSize: '16px', fontWeight: '700', color: '#1A1714', marginBottom: '16px' }}>
-                  ✅ Auditoría Procesada
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', marginBottom: '16px' }}>
+                  <div style={{ fontSize: '16px', fontWeight: '700', color: '#1A1714' }}>
+                    ✅ Auditoría Procesada
+                  </div>
+                  <button
+                    onClick={() => {
+                      setReSubiendo(true);
+                      setAuditRows([]);
+                      setQvetRawData(null);
+                      setShowQvetDebug(false);
+                      setAuditError(null);
+                    }}
+                    style={{ padding: '8px 14px', background: '#F0EDE6', color: '#6B6560', border: '1.5px solid #E2DDD4', borderRadius: '8px', fontSize: '12px', fontWeight: '600', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                    onMouseEnter={(e) => e.target.style.background = '#E2DDD4'}
+                    onMouseLeave={(e) => e.target.style.background = '#F0EDE6'}
+                    title="Vuelve a mostrar el recuadro para subir el Excel. Los datos actuales se reemplazan al subir el nuevo archivo."
+                  >
+                    ↻ Volver a subir Excel
+                  </button>
                 </div>
 
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', marginBottom: '16px' }}>
