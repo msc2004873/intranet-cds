@@ -9,12 +9,23 @@ export function generateAuditRows(cierreCaja, revisionCaja, qvetData) {
     let montoQvet = 0;
 
     if (tipo === 'EFECTIVO') {
-      // Cajera: suma de denominaciones
-      montoCajera = cierreCaja.denominaciones_sobre
+      // QVet reporta TODO el efectivo en colones (los dólares ya vienen convertidos),
+      // así que de este lado hay que sumar los dólares al TC para que calce.
+      const tcCajera = parseFloat(cierreCaja.tc) || 0;
+      const tcRevisora = parseFloat(revisionCaja.tc) || tcCajera;
+
+      // Cajera: suma de denominaciones + dólares al TC del cierre
+      const colonesCajera = cierreCaja.denominaciones_sobre
         ? Object.entries(cierreCaja.denominaciones_sobre).reduce((sum, [denom, qty]) => sum + (parseInt(denom) * qty), 0)
         : 0;
-      // Revisora
-      montoRevisora = revisionCaja.efectivo_revisado || 0;
+      montoCajera = colonesCajera + Math.round((parseFloat(cierreCaja.dolares_total) || 0) * tcCajera);
+
+      // Revisora: idem, con los dólares que ella contó.
+      // Las revisiones viejas (anteriores a que existiera dolares_revisado) tienen null:
+      // ahí se usa lo del cierre para no inventar una diferencia que nunca se midió.
+      const dolaresRevisora = revisionCaja.dolares_revisado ?? cierreCaja.dolares_total;
+      montoRevisora = (revisionCaja.efectivo_revisado || 0) + Math.round((parseFloat(dolaresRevisora) || 0) * tcRevisora);
+
       // QVet
       montoQvet = qvetData.efectivo || 0;
     } else if (tipo === 'TARJETA') {

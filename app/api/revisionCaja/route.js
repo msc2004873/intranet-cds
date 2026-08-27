@@ -27,6 +27,14 @@ export async function POST(request) {
       );
     }
 
+    const dolaresNum = parseFloat(dolares) || 0;
+    if (dolaresNum < 0) {
+      return Response.json(
+        { error: 'Los dólares no pueden ser negativos' },
+        { status: 400 }
+      );
+    }
+
     // Calcular totales
     const totalEnCaja = Object.entries(denominaciones).reduce((sum, [denom, cant]) => {
       return sum + (parseInt(denom) * cant);
@@ -44,6 +52,9 @@ export async function POST(request) {
       }, 0),
       tarjeta_bac_revisado: tarjetas.bac || 0,
       tarjeta_bn_revisado: tarjetas.bn || 0,
+      // En USD, igual que cierre_caja.dolares_total. La auditoría los convierte con `tc`
+      // porque QVet reporta el efectivo todo en colones.
+      dolares_revisado: dolaresNum,
       sinpe_revisado_json: JSON.stringify(sinpeRevisado || []),
       depositos_revisados_json: JSON.stringify(transfRevisadas || []),
       salidas_revisadas_json: JSON.stringify(salidEvaluadas || []),

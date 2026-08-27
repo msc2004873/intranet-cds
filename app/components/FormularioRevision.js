@@ -583,6 +583,9 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
               <div style={{ fontSize: '12px', color: '#6B6560' }}>Dólares (USD)</div>
               <div style={{ fontSize: '12px', fontWeight: '600', color: '#1A1714', textAlign: 'right', fontFamily: "'DM Mono', monospace" }}>{fmt(totalDolares)}</div>
 
+              <div style={{ fontSize: '12px', color: '#2a78a5' }}>Efectivo total <span style={{ color: '#9C9590' }}>(en caja + USD, es lo que se compara con QVet)</span></div>
+              <div style={{ fontSize: '12px', fontWeight: '700', color: '#2a78a5', textAlign: 'right', fontFamily: "'DM Mono', monospace" }}>{fmt(totalEnCaja + totalDolares)}</div>
+
               <div style={{ fontSize: '12px', color: '#6B6560' }}>SINPE</div>
               <div style={{ fontSize: '12px', fontWeight: '600', color: '#1A1714', textAlign: 'right', fontFamily: "'DM Mono', monospace" }}>{fmt(totalSinpe)}</div>
 
