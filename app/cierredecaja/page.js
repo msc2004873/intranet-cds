@@ -1,11 +1,20 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Header from '../components/Header';
 
 const DENOMS = [20000, 10000, 5000, 2000, 1000, 500, 100, 50, 25, 10, 5];
+const BORRADOR_KEY = 'cierre_caja_borrador';
 const fmt = n => '₡' + Math.round(n).toLocaleString('es-CR');
 const fmtDecimal = n => n.toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+const fmtUsd = n => 'US$' + (n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+const FilaResumen = ({ label, valor, color = '#1A1714' }) => (
+  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '12px', padding: '10px 0', borderBottom: '1px solid #E2DDD4' }}>
+    <span style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase' }}>{label}</span>
+    <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '14px', fontWeight: '600', color, textAlign: 'right' }}>{valor}</span>
+  </div>
+);
 
 const getFechaCostaRica = () => {
   const formatter = new Intl.DateTimeFormat('es-CR', {
@@ -42,6 +51,14 @@ export default function CajeraPage() {
   const [gloryList, setGloryList] = useState([{ id: 1, metodo: '', monto: 0 }]);
   const [cerrarGlory, setCerrarGlory] = useState(false);
   const [cierreExistente, setCierreExistente] = useState(null);
+  // Aviso que NO se borra solo. Un toast de 3 s se pierde de vista, y así es
+  // como se colaban cierres que nunca se guardaron.
+  const [errorGuardado, setErrorGuardado] = useState(null);
+  const [sesionExpirada, setSesionExpirada] = useState(false);
+  const [borrador, setBorrador] = useState(null);
+  const [mostrarRevision, setMostrarRevision] = useState(false);
+  const guardandoRef = useRef(false);
+  const huboFalloRef = useRef(false);
   let sinpeCount = 1, depCount = 1, salidaCount = 1, gloryCount = 1;
 
   // Inicializar denominaciones
@@ -86,11 +103,35 @@ export default function CajeraPage() {
     }
   }, [caja]);
 
+  // Buscar un respaldo local de hoy para esta caja (quedó de un envío fallido)
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(BORRADOR_KEY);
+      if (!raw) return setBorrador(null);
+      const b = JSON.parse(raw);
+      setBorrador(b.fecha === getFechaCostaRica() && b.caja === caja ? b : null);
+    } catch (err) {
+      setBorrador(null);
+    }
+  }, [caja]);
+
+  // GET a la API que distingue "sesión vencida" de un error cualquiera y que
+  // nunca sigue redirects: el redirect a /login devolvía 200 con HTML y el
+  // navegador lo tomaba como respuesta buena.
+  async function apiGet(url) {
+    const res = await fetch(url, { redirect: 'manual', cache: 'no-store' });
+    if (res.type === 'opaqueredirect' || res.status === 401) {
+      setSesionExpirada(true);
+      throw new Error('Tu sesión venció. Volvé a iniciar sesión.');
+    }
+    if (!res.ok) throw new Error(`El servidor respondió ${res.status}`);
+    return res.json();
+  }
+
   async function verificarCierreExistente() {
     try {
       const hoy = getFechaCostaRica();
-      const res = await fetch(`/api/cierreCaja?fecha=${hoy}&caja=${encodeURIComponent(caja)}`);
-      const cierres = await res.json();
+      const cierres = await apiGet(`/api/cierreCaja?fecha=${hoy}&caja=${encodeURIComponent(caja)}`);
 
       if (cierres && cierres.length > 0) {
         const cierre = cierres[0];
@@ -116,8 +157,7 @@ export default function CajeraPage() {
 
   async function fetchTipoCambioPeriodo() {
     try {
-      const res = await fetch('/api/periodos/get-actual');
-      const data = await res.json();
+      const data = await apiGet('/api/periodos/get-actual');
       setTc(data.tipoCambio || 442);
     } catch (err) {
       console.log('No se pudo cargar TC del período');
@@ -129,8 +169,7 @@ export default function CajeraPage() {
     try {
       const hoy = getFechaCostaRica();
       const cajaParam = caja ? `&caja=${encodeURIComponent(caja)}` : '';
-      const res = await fetch(`/api/movimientos?tipo=SINPE&fecha=${hoy}${cajaParam}`);
-      const data = await res.json();
+      const data = await apiGet(`/api/movimientos?tipo=SINPE&fecha=${hoy}${cajaParam}`);
       if (Array.isArray(data)) {
         const items = data.map((m, i) => ({
           id: m.id || i,
@@ -153,8 +192,7 @@ export default function CajeraPage() {
   async function loadGloryDelDia() {
     try {
       const hoy = getFechaCostaRica();
-      const res = await fetch(`/api/cobros-glory?cobrado=true&fecha=${hoy}`);
-      const data = await res.json();
+      const data = await apiGet(`/api/cobros-glory?cobrado=true&fecha=${hoy}`);
       if (Array.isArray(data)) {
         const items = data.map((g, i) => ({
           id: g.id || i,
@@ -174,8 +212,7 @@ export default function CajeraPage() {
     try {
       const hoy = getFechaCostaRica();
       const cajaParam = caja ? `&caja=${encodeURIComponent(caja)}` : '';
-      const res = await fetch(`/api/movimientos?tipo=TRANSFERENCIA&fecha=${hoy}${cajaParam}`);
-      const data = await res.json();
+      const data = await apiGet(`/api/movimientos?tipo=TRANSFERENCIA&fecha=${hoy}${cajaParam}`);
       if (Array.isArray(data)) {
         const items = data.map((m, i) => ({
           id: m.id || i,
@@ -200,8 +237,7 @@ export default function CajeraPage() {
     try {
       const hoy = getFechaCostaRica();
       const cajaParam = caja ? `&caja=${encodeURIComponent(caja)}` : '';
-      const res = await fetch(`/api/movimientos?tipo=SALIDA&fecha=${hoy}${cajaParam}`);
-      const data = await res.json();
+      const data = await apiGet(`/api/movimientos?tipo=SALIDA&fecha=${hoy}${cajaParam}`);
       if (Array.isArray(data)) {
         const items = data.map((m, i) => ({
           id: m.id || i,
@@ -270,8 +306,7 @@ export default function CajeraPage() {
 
   async function loadCajeras() {
     try {
-      const res = await fetch('/api/admin/colaboradores');
-      const data = await res.json();
+      const data = await apiGet('/api/admin/colaboradores');
       setColaboradores(Array.isArray(data) ? data : []);
     } catch (err) {
       console.error('Error cargando cajeras:', err);
@@ -283,15 +318,95 @@ export default function CajeraPage() {
     setTimeout(() => setToast(''), 3000);
   };
 
-  async function handleSubmit(e) {
+  // Respaldo local de lo que la cajera digitó. Si el guardado falla y la página
+  // se recarga o se cierra, el conteo no se pierde.
+  function guardarBorrador() {
+    try {
+      localStorage.setItem(BORRADOR_KEY, JSON.stringify({
+        fecha: getFechaCostaRica(),
+        caja,
+        cajera,
+        guardadoEn: new Date().toISOString(),
+        denominaciones,
+        quedaDenominaciones,
+        dolares,
+        tarjetaBac,
+        tarjetaBn,
+        comentarios
+      }));
+    } catch (err) {
+      console.error('No se pudo guardar el respaldo local:', err);
+    }
+  }
+
+  function borrarBorrador() {
+    try {
+      localStorage.removeItem(BORRADOR_KEY);
+    } catch (err) {
+      console.error('No se pudo borrar el respaldo local:', err);
+    }
+    setBorrador(null);
+  }
+
+  function restaurarBorrador() {
+    if (!borrador) return;
+    setDenominaciones(borrador.denominaciones || {});
+    setQuedaDenominaciones(borrador.quedaDenominaciones || {});
+    setDolares(borrador.dolares || 0);
+    setTarjetaBac(borrador.tarjetaBac || 0);
+    setTarjetaBn(borrador.tarjetaBn || 0);
+    setComentarios(borrador.comentarios || '');
+    setBorrador(null);
+    showToast('ℹ️ Datos restaurados');
+  }
+
+  // Cierra el popup y sube la página, para que el aviso rojo no quede fuera de
+  // pantalla cuando el guardado falla.
+  function cerrarRevisionConAviso() {
+    setMostrarRevision(false);
+    showToast('❌ El cierre NO se guardó');
+    window.scrollTo(0, 0);
+  }
+
+  // Relee el cierre por id contra la base. Hasta que esto no devuelva la fila,
+  // el cierre NO se da por guardado.
+  async function verificarCierreGuardado(id) {
+    for (let intento = 1; intento <= 3; intento++) {
+      try {
+        const filas = await apiGet(`/api/cierreCaja?id=${encodeURIComponent(id)}`);
+        if (Array.isArray(filas) && filas.length > 0 && filas[0].id) return filas[0];
+      } catch (err) {
+        console.error(`Verificación del cierre ${id}, intento ${intento}:`, err);
+      }
+      if (intento < 3) await new Promise(r => setTimeout(r, 800));
+    }
+    return null;
+  }
+
+  // El botón ya no guarda: abre el popup de revisión. Se guarda hasta que la
+  // cajera confirme ahí.
+  function handleSubmit(e) {
     e.preventDefault();
+    if (guardandoRef.current) return;
 
     if (!cajera || !caja) {
       showToast('❌ Completá información general');
       return;
     }
 
+    setErrorGuardado(null);
+    setMostrarRevision(true);
+  }
+
+  async function confirmarYGuardar() {
+    // El disabled del botón no alcanza contra el doble click: el segundo click
+    // puede entrar antes de que React vuelva a pintar.
+    if (guardandoRef.current) return;
+
+    guardandoRef.current = true;
     setLoading(true);
+    setErrorGuardado(null);
+    guardarBorrador();
 
     try {
       const body = {
@@ -316,28 +431,97 @@ export default function CajeraPage() {
         body.gloryList = gloryList;
       }
 
-      console.log('=== SUBMIT CIERRE CAJA ===');
-      console.log('tarjetaBac state:', tarjetaBac, 'type:', typeof tarjetaBac);
-      console.log('tarjetaBn state:', tarjetaBn, 'type:', typeof tarjetaBn);
-      console.log('Body before JSON.stringify:', body);
-
       const res = await fetch('/api/cierreCaja', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
+        // redirect manual: si la sesión venció, el request se iba redirigido a
+        // /login y volvía con 200 + HTML. Eso era lo que se leía como "guardado".
+        redirect: 'manual',
+        cache: 'no-store'
       });
-      console.log('Response status:', res.status);
 
-      if (res.ok) {
-        showToast('✅ Cierre guardado');
-      } else {
-        const errorData = await res.json();
-        showToast('❌ Error: ' + (errorData.error || 'Error al guardar'));
+      if (res.type === 'opaqueredirect' || res.status === 401) {
+        setSesionExpirada(true);
+        throw new Error('Tu sesión venció, así que el cierre NO se guardó. Iniciá sesión otra vez en otra pestaña y volvé a enviarlo.');
+      }
+
+      // Se lee como texto: si viene HTML en lugar de JSON tampoco es un guardado.
+      const texto = await res.text();
+      let json = null;
+      try {
+        json = JSON.parse(texto);
+      } catch (err) {
+        json = null;
+      }
+
+      // 409 = esta caja ya tiene un cierre de hoy en la base.
+      if (res.status === 409 && json && json.cierre) {
+        const yaGuardado = json.cierre;
+        const hora = new Date(yaGuardado.fecha_hora).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' });
+        const esMiIntentoAnterior = huboFalloRef.current && yaGuardado.cajera === cajera;
+
+        if (esMiIntentoAnterior) {
+          // Ya se había guardado en un intento que se quedó sin respuesta.
+          const verificado = await verificarCierreGuardado(yaGuardado.id);
+          if (verificado) {
+            borrarBorrador();
+            setCierreExistente(verificado);
+            setMostrarRevision(false);
+            showToast('✅ El cierre ya estaba guardado');
+            return;
+          }
+        }
+
+        setErrorGuardado({
+          tipo: 'aviso',
+          titulo: 'Esta caja ya tiene un cierre de hoy',
+          detalle: `${json.error} Quedó registrado a las ${hora}${yaGuardado.cajera ? ' por ' + yaGuardado.cajera : ''}. Lo que acabás de enviar NO se guardó: revisá que sea la caja correcta o hablá con administración.`
+        });
+        cerrarRevisionConAviso();
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error((json && json.error) || `El servidor respondió ${res.status} y el cierre NO se guardó.`);
+      }
+
+      const cierre = (json && json.cierre) || json;
+      if (!cierre || !cierre.id) {
+        throw new Error('El servidor no devolvió el cierre guardado, así que no se puede confirmar. Volvé a intentarlo.');
+      }
+
+      // Recién aquí se puede hablar de "guardado": la fila se releyó de la base.
+      const verificado = await verificarCierreGuardado(cierre.id);
+      if (!verificado) {
+        throw new Error(`El cierre se envió (id ${cierre.id}) pero no se pudo verificar contra la base. NO lo des por guardado: avisale a administración con ese número.`);
+      }
+
+      borrarBorrador();
+      setCierreExistente(verificado);
+      setMostrarRevision(false);
+      huboFalloRef.current = false;
+      showToast('✅ Cierre guardado y verificado');
+
+      if (json && json.warning) {
+        setErrorGuardado({
+          tipo: 'aviso',
+          titulo: 'Cierre guardado, con un pendiente',
+          detalle: json.warning
+        });
       }
     } catch (err) {
-      showToast('❌ Error: ' + err.message);
+      console.error('El cierre no se guardó:', err);
+      huboFalloRef.current = true;
+      setErrorGuardado({
+        tipo: 'error',
+        titulo: 'EL CIERRE NO SE GUARDÓ',
+        detalle: (err.message || 'Error desconocido.') + ' Los datos siguen en pantalla: podés darle "Reintentar" sin volver a digitar nada.'
+      });
+      cerrarRevisionConAviso();
     } finally {
       setLoading(false);
+      guardandoRef.current = false;
     }
   }
 
@@ -388,6 +572,51 @@ export default function CajeraPage() {
                   Registrado a las {new Date(cierreExistente.fecha_hora).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' })}
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {sesionExpirada && (
+          <div style={{ background: '#FDEDEC', border: '2px solid #E74C3C', borderRadius: '12px', marginBottom: '16px', padding: '16px 20px' }}>
+            <div style={{ fontSize: '14px', fontWeight: '700', color: '#C0392B' }}>⚠️ Tu sesión venció</div>
+            <div style={{ fontSize: '13px', color: '#6B6560', marginTop: '6px', lineHeight: '1.5' }}>
+              Mientras la sesión esté vencida <strong>nada se guarda</strong>. Abrí{' '}
+              <a href="/login" target="_blank" rel="noopener noreferrer" style={{ color: '#2a78a5', fontWeight: '700' }}>iniciar sesión</a>{' '}
+              en otra pestaña, volvé aquí y enviá el cierre otra vez. Lo que digitaste no se pierde.
+            </div>
+          </div>
+        )}
+
+        {errorGuardado && (
+          <div style={{
+            background: errorGuardado.tipo === 'error' ? '#FDEDEC' : '#FEF5E7',
+            border: `2px solid ${errorGuardado.tipo === 'error' ? '#E74C3C' : '#F39C12'}`,
+            borderRadius: '12px', marginBottom: '16px', padding: '16px 20px'
+          }}>
+            <div style={{ fontSize: '14px', fontWeight: '700', color: errorGuardado.tipo === 'error' ? '#C0392B' : '#B9770E' }}>
+              {errorGuardado.tipo === 'error' ? '❌ ' : '⚠️ '}{errorGuardado.titulo}
+            </div>
+            <div style={{ fontSize: '13px', color: '#6B6560', marginTop: '6px', lineHeight: '1.5' }}>{errorGuardado.detalle}</div>
+            <button type="button" onClick={() => setErrorGuardado(null)} style={{ marginTop: '12px', padding: '8px 14px', background: 'transparent', border: '1.5px solid #9C9590', borderRadius: '8px', fontSize: '12px', fontWeight: '600', color: '#6B6560', cursor: 'pointer' }}>
+              Entendido
+            </button>
+          </div>
+        )}
+
+        {borrador && !cierreExistente && (
+          <div style={{ background: '#EAF2F8', border: '2px solid #2a78a5', borderRadius: '12px', marginBottom: '16px', padding: '16px 20px' }}>
+            <div style={{ fontSize: '14px', fontWeight: '700', color: '#2a78a5' }}>ℹ️ Hay un cierre sin enviar</div>
+            <div style={{ fontSize: '13px', color: '#6B6560', marginTop: '6px', lineHeight: '1.5' }}>
+              Quedó un respaldo de {borrador.caja} de las{' '}
+              {new Date(borrador.guardadoEn).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' })} que no llegó a guardarse.
+            </div>
+            <div style={{ display: 'flex', gap: '8px', marginTop: '12px' }}>
+              <button type="button" onClick={restaurarBorrador} style={{ padding: '8px 14px', background: '#2a78a5', border: 'none', borderRadius: '8px', fontSize: '12px', fontWeight: '600', color: 'white', cursor: 'pointer' }}>
+                Restaurar datos
+              </button>
+              <button type="button" onClick={borrarBorrador} style={{ padding: '8px 14px', background: 'transparent', border: '1.5px solid #9C9590', borderRadius: '8px', fontSize: '12px', fontWeight: '600', color: '#6B6560', cursor: 'pointer' }}>
+                Descartar
+              </button>
             </div>
           </div>
         )}
@@ -653,7 +882,9 @@ export default function CajeraPage() {
 
           {/* Submit Button */}
           <button type="submit" disabled={loading} style={{ width: '100%', padding: '16px', background: '#2a78a5', color: 'white', border: 'none', borderRadius: '12px', fontSize: '16px', fontWeight: '600', cursor: 'pointer', transition: 'background 0.2s', marginBottom: '24px' }} onMouseEnter={(e) => e.target.style.background = '#1f5780'} onMouseLeave={(e) => e.target.style.background = '#2a78a5'}>
-            {loading ? 'Guardando...' : 'Enviar cierre de caja'}
+            {loading
+              ? 'Guardando y verificando...'
+              : (errorGuardado && errorGuardado.tipo === 'error' ? 'Reintentar envío del cierre' : 'Enviar cierre de caja')}
           </button>
         </form>
         ) : null}
@@ -690,6 +921,58 @@ export default function CajeraPage() {
           </div>
         )}
       </div>
+
+      {/* Popup de revisión: nada se manda hasta que la cajera confirme aquí */}
+      {mostrarRevision && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(26, 23, 20, 0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', zIndex: 1000 }}>
+          <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', width: '100%', maxWidth: '480px', maxHeight: '90vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', background: '#F0EDE6' }}>
+              <div style={{ fontSize: '14px', fontWeight: '700', color: '#1A1714' }}>Revisá el cierre antes de enviarlo</div>
+              <div style={{ fontSize: '12px', color: '#6B6560', marginTop: '2px' }}>{caja} · {cajera} · {fecha}</div>
+            </div>
+
+            <div style={{ padding: '16px 20px', overflowY: 'auto' }}>
+              <FilaResumen label="Total en caja" valor={fmt(totalCierre)} />
+              <FilaResumen label="Queda en caja (fondo)" valor={fmt(totalQueda)} />
+
+              <div style={{ margin: '12px 0', padding: '16px 20px', background: '#2a78a5', color: 'white', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <span style={{ fontSize: '12px', fontWeight: '600' }}>💰 Total al sobre</span>
+                <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '22px', fontWeight: '600' }}>{fmt(totalSobre)}</span>
+              </div>
+
+              <FilaResumen label="Dólares" valor={`${fmtUsd(dolares)} · ${fmt(dolaresEnColones)}`} />
+              <FilaResumen label="Tarjeta BAC" valor={`₡${fmtDecimal(tarjetaBac)}`} />
+              <FilaResumen label="Tarjeta BN" valor={`₡${fmtDecimal(tarjetaBn)}`} />
+              <FilaResumen label={`SINPE (${sinpeList.length})`} valor={fmt(totalSinpe)} />
+              <FilaResumen label={`Depósitos (${depositoList.length})`} valor={fmt(totalDepositos)} />
+              <FilaResumen label={`Salidas (${salidaList.length})`} valor={fmt(totalSalidas)} color="#C0392B" />
+              {cerrarGlory && <FilaResumen label={`Glory (${gloryList.length})`} valor={fmt(totalGlory)} color="#C8A84B" />}
+
+              {comentarios.trim() !== '' && (
+                <div style={{ marginTop: '14px' }}>
+                  <div style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', marginBottom: '6px' }}>Comentarios</div>
+                  <div style={{ fontSize: '13px', color: '#1A1714', background: '#F7F5F0', borderRadius: '8px', padding: '10px 12px', whiteSpace: 'pre-wrap' }}>{comentarios}</div>
+                </div>
+              )}
+
+              {cerrarGlory && (
+                <div style={{ marginTop: '14px', fontSize: '12px', color: '#B9770E', background: '#FEF5E7', border: '1px solid #F39C12', borderRadius: '8px', padding: '10px 12px', lineHeight: '1.5' }}>
+                  Este cierre también cierra Glory del día. Solo se permite uno.
+                </div>
+              )}
+            </div>
+
+            <div style={{ padding: '16px 20px', borderTop: '1px solid #E2DDD4', background: '#F7F5F0', display: 'flex', gap: '8px' }}>
+              <button type="button" onClick={() => setMostrarRevision(false)} disabled={loading} style={{ flex: 1, padding: '14px', background: 'transparent', border: '1.5px solid #9C9590', borderRadius: '12px', fontSize: '14px', fontWeight: '600', color: '#6B6560', cursor: loading ? 'not-allowed' : 'pointer' }}>
+                Volver a revisar
+              </button>
+              <button type="button" onClick={confirmarYGuardar} disabled={loading} style={{ flex: 2, padding: '14px', background: loading ? '#95A5A6' : '#27AE60', color: 'white', border: 'none', borderRadius: '12px', fontSize: '14px', fontWeight: '600', cursor: loading ? 'not-allowed' : 'pointer' }}>
+                {loading ? 'Guardando y verificando...' : 'Confirmar y guardar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Toast */}
       {toast && (
