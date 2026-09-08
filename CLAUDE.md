@@ -17,7 +17,15 @@ Librerías: `jsbarcode` (etiquetas), `xlsx` (import de Excel QVet), `jspdf` (dec
 **Correr local**:
 1. `npm install`
 2. Crear `.env.local` con: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
-3. `npm run dev` → http://localhost:3000 (sin cookies de sesión, el middleware redirige a `/login`)
+3. `npm run dev` → http://localhost:3000 (sin cookies de sesión: las páginas redirigen a `/login`, las rutas `/api/*` responden 401)
+
+> 🚨 **`.env.local` apunta a la Supabase de PRODUCCIÓN. No hay base de staging.**
+> El server local escribe en los datos reales de la clínica. Enviar el formulario
+> de `/cierredecaja` desde localhost crea un cierre real — y además bloquea el
+> cierre verdadero del día, porque solo se permite uno por caja por día.
+> Para probar en local: solo lecturas, o requests que mueran antes de tocar la
+> base (sin sesión → 401, payload inválido → 400). Si se escribe algo por error,
+> borrar la fila por `id` confirmando primero el campo `cajera`.
 
 **Migraciones DB**: `npx supabase db push`.
 
@@ -193,6 +201,27 @@ const png = canvas.toDataURL('image/png');   // → <img src={png} />
 
 ---
 
+### 8. GUARDADO — no cantar éxito sin verificar
+
+**Regla**: un guardado se anuncia como exitoso solo cuando la fila se pudo **releer de la base**. `res.ok` NO alcanza.
+
+En el cliente:
+- `fetch` con `redirect: 'manual'`; si `res.type === 'opaqueredirect'` o `res.status === 401`, la sesión venció y **no se guardó**.
+- Leer el cuerpo con `res.text()` y parsear a mano: si viene HTML en vez de JSON, tampoco es un guardado.
+- Exigir que la respuesta traiga el `id`, y releerlo (`GET ?id=`) antes de mostrar el ✅.
+- Si falla: aviso **persistente** (no un toast de 3 s, se pierde de vista), datos intactos en pantalla, respaldo en `localStorage` y botón de reintentar.
+- Bloquear el doble click con un `ref`, no solo con `disabled` (el segundo click entra antes del re-render).
+
+En la API:
+- Si el insert no devuelve fila → error 500, nunca 2xx.
+- Duplicado (una caja ya cerrada hoy) → **409 con la fila existente**, para que un reintento pueda distinguir "ya quedó guardado" de "no se guardó".
+
+Implementado en `/cierredecaja` + `/api/cierreCaja`. **Falta replicarlo** en `/conteo`, `/registros` y cobros Glory: siguen mirando solo `res.ok`.
+
+**Por qué**: cierres que decían "guardado exitosamente" y no existían en la base. Ver la advertencia del middleware en la sección de Auth.
+
+---
+
 ## 🗄️ Datos y Supabase
 
 **Cliente Supabase**:
@@ -224,6 +253,10 @@ const png = canvas.toDataURL('image/png');   // → <img src={png} />
 ## 🔑 Autenticación, roles y revisión
 
 **Auth (NO es Supabase Auth)**: login = iniciales (2 letras) + PIN (4 dígitos) contra la tabla `colaboradores` (`activo = true`). Sesión = cookies httpOnly `user` (JSON) + `authToken` (base64 `id:timestamp`, no es JWT) + copia en localStorage. Endpoint: `POST /api/auth/login`.
+
+**Middleware**: las páginas sin sesión se redirigen a `/login`; las rutas `/api/*` **nunca se redirigen**, responden `401` con `{ error, code: 'SESION_EXPIRADA' }`. Cada request con sesión válida renueva las cookies 7 días (expiración deslizante).
+
+> ⚠️ **Nunca redirigir una ruta de API.** `fetch()` sigue el redirect solo, recibe el HTML de `/login` con status **200**, y el código que mira `res.ok` cree que todo salió bien. Así se perdieron ~5 cierres entre julio y agosto de 2026 mostrando "✅ Cierre guardado".
 
 **Roles**: solo `'admin'` y `'cajera'` (minúscula, campo `rol`). "revisora" NO es un rol, es un módulo.
 
