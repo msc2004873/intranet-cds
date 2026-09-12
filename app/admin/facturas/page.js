@@ -102,6 +102,7 @@ const FILTROS = [
   { id: 'todas',      etiqueta: 'Todas' },
   { id: 'mercaderia', etiqueta: 'Mercadería' },
   { id: 'gastos',     etiqueta: 'Gastos y servicios' },
+  { id: 'notas',      etiqueta: 'Notas de crédito' },
   { id: 'pagada',     etiqueta: 'Pagadas' },
   { id: 'ajenas',     etiqueta: 'De otra persona' },
   { id: 'grafico',    etiqueta: 'Gráfico de gastos' },
@@ -167,7 +168,7 @@ export default function FacturasPage() {
     try {
       setCargando(true); setError(''); setSinTabla(false);
       const estados = ['por_pagar', 'pagada'];
-      const bandejas = ['administracion', 'errores', 'pagos'];
+      const bandejas = ['administracion', 'errores', 'pagos', 'notas'];
       const q = bandejas.includes(filtro) ? `bandeja=${filtro}`
         : filtro === 'tramite' ? 'tramite=1&vista=todas'
         : filtro === 'grafico' ? 'vista=todas'
@@ -255,74 +256,74 @@ export default function FacturasPage() {
             return (
               <div key={f.id} style={{ ...card, borderColor: vencida ? '#E8B4AE' : '#E2DDD4', overflow: 'hidden' }}>
 
-                {/* ---------- LÍNEA 1: condición · fecha · proveedor · monto ---------- */}
+                {/* ---------- UNA SOLA LÍNEA ----------
+                    🚨 Mario lo pidió DOS VECES (12/9 y 13/9): *"siguen siendo muy chunky"*.
+                    Van solo: condición · fecha · proveedor · ··últimos 5 de la factura ·
+                    estado (si dice algo) · vencimiento · monto.
+                    Lo que se quitó de acá y vive en el desplegable: la categoría, el conteo
+                    de productos y la nota de crédito. **No devolverlos a la fila.** */}
                 <div onClick={() => setAbierta(abierto ? null : f.id)}
-                  style={{ padding: '9px 14px', cursor: 'pointer' }}>
+                  style={{ padding: '7px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 9 }}>
 
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{
+                    fontSize: 9, fontWeight: 800, letterSpacing: '0.4px', padding: '2px 6px',
+                    borderRadius: 4, background: cond.fondo, color: cond.color, whiteSpace: 'nowrap', flexShrink: 0,
+                  }}>{cond.corta}</span>
+
+                  <span style={{ fontSize: 12, color: '#8A837C', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    {fechaCorta(f.fecha_emision)}
+                  </span>
+
+                  <span style={{
+                    flex: 1, fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap',
+                    overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0,
+                  }} title={f.proveedor_nombre}>{f.proveedor_nombre}</span>
+
+                  {/* Los últimos 5 dígitos: es el número que la gente canta al buscar una factura. */}
+                  <span style={{
+                    fontSize: 11.5, color: '#B5AFA8', fontFamily: "'DM Mono', monospace",
+                    whiteSpace: 'nowrap', flexShrink: 0,
+                  }} title={`Factura ${f.consecutivo}`}>··{String(f.consecutivo || '').slice(-5)}</span>
+
+                  {est.mostrar && (
+                    <span style={{ fontSize: 11, color: est.color, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                      {est.nom}
+                    </span>
+                  )}
+
+                  {f.fecha_vencimiento && f.tipo_documento === 'factura' && (
                     <span style={{
-                      fontSize: 9.5, fontWeight: 800, letterSpacing: '0.5px', padding: '3px 7px',
-                      borderRadius: 5, background: cond.fondo, color: cond.color, whiteSpace: 'nowrap', flexShrink: 0,
-                    }}>{cond.corta}</span>
-
-                    <span style={{ fontSize: 12.5, color: '#6B6560', whiteSpace: 'nowrap', flexShrink: 0, minWidth: 54 }}>
-                      {fechaCorta(f.fecha_emision)}
+                      fontSize: 11, whiteSpace: 'nowrap', flexShrink: 0,
+                      color: vencida ? '#C0392B' : (pronto ? '#B5651D' : '#B5AFA8'),
+                      fontWeight: vencida || pronto ? 700 : 400,
+                    }}>
+                      {vencida ? `−${Math.abs(dias)}d` : dias === 0 ? 'hoy' : `${dias}d`}
                     </span>
+                  )}
 
-                    <span style={{
-                      flex: 1, fontWeight: 600, fontSize: 13.5, whiteSpace: 'nowrap',
-                      overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0,
-                    }} title={f.proveedor_nombre}>
-                      {/* 🚫 Acá había un punto azul/ámbar para mercadería vs gasto. Se quitó:
-                          dos sistemas de color en la misma fila es justo la confusión que
-                          Mario quiere evitar, y la segunda línea YA dice la categoría. */}
-                      {f.proveedor_nombre}
-                    </span>
-
-                    <span style={{ fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', flexShrink: 0, textAlign: 'right' }}>
-                      {/* Si una nota de crédito le rebajó, manda el SALDO y el original va tachado. */}
-                      {f.nota_credito_aplicada > 0 ? (
-                        <>
-                          <span style={{ textDecoration: 'line-through', color: '#B5AFA8', fontWeight: 400, fontSize: 12, marginRight: 6 }}>
-                            {fmt(f.total_comprobante, f.moneda)}
-                          </span>
-                          {fmt(f.saldo, f.moneda)}
-                        </>
-                      ) : fmt(f.total_comprobante, f.moneda)}
-                    </span>
-
-                    <span style={{ fontSize: 10, color: '#B5AFA8', flexShrink: 0, width: 10 }}>{abierto ? '▲' : '▼'}</span>
-                  </div>
-
-                  {/* ---------- LÍNEA 2: el contexto, chiquito ---------- */}
-                  <div style={{
-                    fontSize: 11.5, color: '#8A837C', marginTop: 3, paddingLeft: 2,
-                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
-                  }}>
-                    {/* `recibida` es el estado por defecto: decirlo no aporta y estorba.
-                        El estado solo se muestra cuando significa algo (pedido de Mario). */}
-                    {est.mostrar && <><span style={{ color: est.color, fontWeight: 600 }}>{est.nom}</span>{' · '}</>}
-                    {CATEGORIAS[f.categoria] || 'Sin clasificar'}
-                    {f.categoria_mixta && <span style={{ color: '#B5651D' }}> (mixta)</span>}
-                    {' · '}{lineas.length} prod.
-                    {f.fecha_vencimiento && (
-                      <span style={{ color: vencida ? '#C0392B' : (pronto ? '#B5651D' : '#8A837C'), fontWeight: vencida || pronto ? 600 : 400 }}>
-                        {' · '}
-                        {vencida ? `venció hace ${Math.abs(dias)}d`
-                          : dias === 0 ? 'vence hoy'
-                          : `vence en ${dias}d`}
-                      </span>
-                    )}
-                    {f.nota_credito_aplicada > 0 && (
-                      <span style={{ color: '#5B35B5' }}>{' · '}nota de crédito −{fmt(f.nota_credito_aplicada, f.moneda)}</span>
-                    )}
-                    {!f.es_de_corral_del_sol && <span style={{ color: '#B5651D', fontWeight: 600 }}>{' · '}no es de Corral del Sol</span>}
-                  </div>
+                  <span style={{ fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    {/* Si una nota de crédito le rebajó, manda el SALDO. El original tachado
+                        se fue al desplegable: en una línea sola no cabe y es el dato menos urgente. */}
+                    {fmt(f.nota_credito_aplicada > 0 ? f.saldo : f.total_comprobante, f.moneda)}
+                  </span>
                 </div>
 
                 {/* ---------- DESPLEGABLE: todo lo demás ---------- */}
                 {abierto && (
-                  <div style={{ borderTop: '1px solid #EFEBE4', background: '#FCFBF9', padding: '12px 16px' }}>
+                  <div style={{ borderTop: '1px solid #EFEBE4', background: '#FCFBF9', padding: '11px 14px' }}>
+
+                    {/* El contexto que antes iba en una segunda línea de la fila. Acá adentro
+                        no estorba y la fila queda de una sola línea, como pidió Mario. */}
+                    <div style={{ fontSize: 11.5, color: '#8A837C', marginBottom: 9 }}>
+                      {CATEGORIAS[f.categoria] || 'Sin clasificar'}
+                      {f.categoria_mixta && <span style={{ color: '#B5651D' }}> (mixta)</span>}
+                      {' · '}{lineas.length} producto{lineas.length === 1 ? '' : 's'}
+                      {f.nota_credito_aplicada > 0 && (
+                        <span style={{ color: '#5B35B5' }}>
+                          {' · '}nota de crédito −{fmt(f.nota_credito_aplicada, f.moneda)} sobre {fmt(f.total_comprobante, f.moneda)}
+                        </span>
+                      )}
+                    </div>
 
                     {(f.problema_detalle || f.corrige_razon || !f.es_de_corral_del_sol) && (
                       <div style={{ fontSize: 12.5, marginBottom: 10, lineHeight: 1.6 }}>
@@ -330,6 +331,13 @@ export default function FacturasPage() {
                           <div style={{ color: '#B5651D' }}>Facturada a <strong>{f.receptor_nombre}</strong> — cédula {f.receptor_cedula}</div>
                         )}
                         {f.corrige_razon && <div style={{ color: '#5B35B5' }}>Corrige: «{f.corrige_razon}»</div>}
+                        {/* Una nota cuya factura no está en la base no le resta a nadie:
+                            hay que poder verlo, si no se pierde plata en silencio. */}
+                        {f.tipo_documento === 'nota_credito' && f.corrige_encontrada === false && (
+                          <div style={{ color: '#C0392B' }}>
+                            ⚠ La factura que corrige no está en el sistema — esta nota no le está restando a nada.
+                          </div>
+                        )}
                         {f.problema_detalle && <div style={{ color: '#C0392B' }}>Problema: {f.problema_detalle}</div>}
                       </div>
                     )}
@@ -387,24 +395,27 @@ export default function FacturasPage() {
                     {/* Administración no "mueve estados": marca sus dos checks. Cuando los dos están,
                         la factura pasa sola a pagos. Ese es el botón que antes se olvidaba. */}
                     {f.es_mercaderia ? (
-                      <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 7 }}>
+                      // Lado a lado, no uno encima de otro: lo pidió Mario el 2026-09-13
+                      // (*"prefiero lado a lado, pueden tomar menos espacio"*). Con `wrap`
+                      // se apilan solos en un teléfono, que es donde sí hace falta.
+                      <div style={{ marginTop: 12, display: 'flex', gap: 7, flexWrap: 'wrap' }}>
                         <Check
                           hecho={!!f.fecha_recepcion}
                           titulo="Recibida por Recepción"
-                          pie={f.fecha_recepcion ? `${f.recibida_por} · ${fechaLarga(f.fecha_recepcion)}` : 'Todavía nadie ha contado la mercadería'}
+                          pie={f.fecha_recepcion ? `${f.recibida_por} · ${fechaCorta(f.fecha_recepcion)}` : 'sin recibir'}
                           bloqueado
                         />
                         <Check
                           hecho={!!f.fecha_qvet}
                           titulo="Subida en QVet"
-                          pie={f.fecha_qvet ? `${f.en_qvet_por} · ${fechaLarga(f.fecha_qvet)}` : 'Marcalo cuando el inventario esté actualizado'}
+                          pie={f.fecha_qvet ? `${f.en_qvet_por} · ${fechaCorta(f.fecha_qvet)}` : 'marcar al subirla'}
                           bloqueado={!f.fecha_recepcion || f.estado === 'con_problema'}
                           onToggle={() => accionar(f.id, 'qvet', { valor: !f.fecha_qvet })}
                         />
                         <Check
                           hecho={!!f.etiquetas_impresas}
                           titulo="Marcado"
-                          pie={f.fecha_marcado ? `${f.marcado_por} · ${fechaLarga(f.fecha_marcado)}` : 'Marcalo cuando el producto esté etiquetado'}
+                          pie={f.fecha_marcado ? `${f.marcado_por} · ${fechaCorta(f.fecha_marcado)}` : 'marcar al etiquetar'}
                           bloqueado={!f.fecha_recepcion || f.estado === 'con_problema'}
                           onToggle={() => accionar(f.id, 'marcado', { valor: !f.etiquetas_impresas })}
                         />

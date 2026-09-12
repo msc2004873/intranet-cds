@@ -41,6 +41,11 @@ const BANDEJAS = {
   errores:   (q) => q.eq('estado', 'con_problema'),
   // Administración: lo que ya está listo para pagarse.
   pagos:     (q) => q.eq('estado', 'por_pagar'),
+  // 🚨 Las notas de crédito NO entran a ninguna bandeja del ciclo: no se reciben (no llega
+  // mercadería) y no se pagan (es plata que el proveedor devuelve). Se emparejan solas con
+  // la factura que corrigen y le restan. Pero una nota cuya factura NO está en la base no le
+  // resta a nada y quedaba INVISIBLE — por eso existe esta bandeja.
+  notas:     (q) => q.eq('tipo_documento', 'nota_credito'),
 };
 
 // GET — lista de facturas con sus líneas y su bitácora.
@@ -119,6 +124,25 @@ export async function GET(req) {
       f.nota_credito_aplicada = resta;
       // Lo que de verdad se debe. Nunca negativo: si la nota supera la factura, queda en 0.
       f.saldo = Math.max(Number(f.total_comprobante || 0) - resta, 0);
+    }
+
+    // Para cada NOTA de la lista: ¿la factura que dice corregir está en la base? Si no está,
+    // esa nota no le está restando a nadie y hay que poder verlo.
+    const clavesQueCorrigen = filas
+      .filter(f => f.tipo_documento === 'nota_credito' && f.corrige_clave)
+      .map(f => f.corrige_clave);
+    if (clavesQueCorrigen.length) {
+      const { data: existen } = await supabase
+        .from('facturas_proveedor')
+        .select('clave, estado, proveedor_nombre')
+        .in('clave', clavesQueCorrigen);
+      const mapa = new Map((existen || []).map(x => [x.clave, x]));
+      for (const f of filas) {
+        if (f.tipo_documento !== 'nota_credito') continue;
+        const corregida = f.corrige_clave ? mapa.get(f.corrige_clave) : null;
+        f.corrige_encontrada = !!corregida;
+        f.corrige_estado = corregida?.estado || null;
+      }
     }
 
     return Response.json(filas);

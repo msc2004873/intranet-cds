@@ -22,23 +22,31 @@ export function Check({ hecho, titulo, pie, bloqueado, onToggle }) {
     <div
       onClick={clickeable ? onToggle : undefined}
       style={{
-        display: 'flex', alignItems: 'center', gap: 11,
-        padding: '9px 12px', borderRadius: 10,
+        // `flex: 1 1 140px` = los tres caben en una fila y se apilan solos en un teléfono.
+        flex: '1 1 140px', minWidth: 0,
+        display: 'flex', alignItems: 'center', gap: 8,
+        padding: '6px 9px', borderRadius: 9,
         border: '1.5px solid ' + (hecho ? '#BFE0CD' : '#E2DDD4'),
         background: hecho ? '#F2F9F5' : (bloqueado ? '#FAF9F7' : '#FFFFFF'),
         cursor: clickeable ? 'pointer' : 'default',
         opacity: bloqueado && !hecho ? 0.62 : 1,
       }}>
       <span style={{
-        width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+        width: 18, height: 18, borderRadius: 5, flexShrink: 0,
         display: 'flex', alignItems: 'center', justifyContent: 'center',
-        fontSize: 13, fontWeight: 800, color: '#FFFFFF',
+        fontSize: 11, fontWeight: 800, color: '#FFFFFF',
         background: hecho ? '#1a7a4a' : '#FFFFFF',
         border: '1.5px solid ' + (hecho ? '#1a7a4a' : '#D8D2C9'),
       }}>{hecho ? '✓' : ''}</span>
       <div style={{ minWidth: 0 }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: hecho ? '#1a7a4a' : '#1A1714' }}>{titulo}</div>
-        <div style={{ fontSize: 11.5, color: '#8A837C', marginTop: 1 }}>{pie}</div>
+        <div style={{
+          fontSize: 12, fontWeight: 600, color: hecho ? '#1a7a4a' : '#1A1714',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }}>{titulo}</div>
+        <div style={{
+          fontSize: 10.5, color: '#8A837C',
+          whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+        }} title={pie}>{pie}</div>
       </div>
     </div>
   );
