@@ -54,7 +54,20 @@ const CONDICION = {
   '01': { corta: 'CONTADO', color: '#1f63ad', fondo: '#E4EFFB' },
   '02': { corta: 'CRÉDITO', color: '#8a4d12', fondo: '#FBF0E4' },
 };
-const NOTA_CREDITO = { corta: 'NOTA DE CRÉDITO', color: '#5B35B5', fondo: '#EDE9F6' };
+const NOTA_CREDITO = { corta: 'N. CRÉDITO', color: '#5B35B5', fondo: '#EDE9F6' };
+
+// 📐 COLUMNAS FIJAS (Mario, 2026-09-12: *"los días y los montos se ven desalineados, es un
+// despiche"*). condición · fecha · proveedor · N° factura · estado · días · monto.
+// En teléfono se esconden fecha, N° y estado (clase `solo-ancho`).
+const COLUMNAS = '74px 60px minmax(0,1fr) 84px 96px 40px 96px';
+const CSS_FILA = `.fila-fact{grid-template-columns:${COLUMNAS}}
+@media (max-width:640px){.fila-fact{grid-template-columns:74px minmax(0,1fr) 40px 88px}.fila-fact .solo-ancho{display:none}}`;
+
+// El número de factura COMPLETO, como lo usa la gente y el banco: 00100001010000038852 → 38852.
+// Antes eran los últimos 5 dígitos y Mario pidió el número entero.
+const numFactura = (f) => String(f.consecutivo || '').slice(-10).replace(/^0+/, '') || '—';
+// «2026-10-01» → «1/10/26» sin pasar por Date (que lo leería en UTC y mostraría el día anterior).
+const diaCorto = (s) => { if (!s) return ''; const [a, m, d] = s.split('-'); return `${+d}/${+m}/${a.slice(2)}`; };
 const OTRA_CONDICION = { corta: 'OTRO', color: '#52514e', fondo: '#EEECE8' };
 
 // 🚨 BUG QUE ESTO ARREGLA: antes la nota de crédito pintaba la pastilla con el color de SU
@@ -137,6 +150,7 @@ export default function FacturasPage() {
   // Sub-filtro de Centro de pagos: las facturas que se deben, o las notas de crédito.
   const [sub, setSub] = useState('facturas');
   const [pagando, setPagando] = useState(null);   // id de la que se está pagando
+  const [verHilo, setVerHilo] = useState(null);   // el historial va escondido: *"mucho texto"*
   const [refPago, setRefPago] = useState('');
   const [fechaPago, setFechaPago] = useState(hoyCR());
   const [error, setError] = useState('');
@@ -281,54 +295,52 @@ export default function FacturasPage() {
             return (
               <div key={f.id} style={{ ...card, borderColor: vencida ? '#E8B4AE' : '#E2DDD4', overflow: 'hidden' }}>
 
-                {/* ---------- UNA SOLA LÍNEA ----------
-                    🚨 Mario lo pidió DOS VECES (12/9 y 13/9): *"siguen siendo muy chunky"*.
-                    Van solo: condición · fecha · proveedor · ··últimos 5 de la factura ·
-                    estado (si dice algo) · vencimiento · monto.
-                    Lo que se quitó de acá y vive en el desplegable: la categoría, el conteo
-                    de productos y la nota de crédito. **No devolverlos a la fila.** */}
-                <div onClick={() => setAbierta(abierto ? null : f.id)}
-                  style={{ padding: '7px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 9 }}>
+                {/* ---------- UNA SOLA LÍNEA, EN COLUMNAS FIJAS ----------
+                    Mario pidió la fila de una línea DOS VECES y después que se viera alineada.
+                    Cada dato tiene su columna (ver COLUMNAS arriba): los días y los montos
+                    quedan uno debajo del otro. **No devolver datos a la fila**: lo demás va
+                    en el desplegable. */}
+                <div className="fila-fact" onClick={() => setAbierta(abierto ? null : f.id)}
+                  style={{ padding: '7px 12px', cursor: 'pointer', display: 'grid', alignItems: 'center', columnGap: 10 }}>
 
                   <span style={{
-                    fontSize: 9, fontWeight: 800, letterSpacing: '0.4px', padding: '2px 6px',
-                    borderRadius: 4, background: cond.fondo, color: cond.color, whiteSpace: 'nowrap', flexShrink: 0,
+                    justifySelf: 'start', fontSize: 9, fontWeight: 800, letterSpacing: '0.4px', padding: '2px 6px',
+                    borderRadius: 4, background: cond.fondo, color: cond.color, whiteSpace: 'nowrap',
                   }}>{cond.corta}</span>
 
-                  <span style={{ fontSize: 12, color: '#8A837C', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                  <span className="solo-ancho" style={{ fontSize: 12, color: '#8A837C', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
                     {fechaCorta(f.fecha_emision)}
                   </span>
 
                   <span style={{
-                    flex: 1, fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap',
-                    overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0,
+                    fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                   }} title={f.proveedor_nombre}>{f.proveedor_nombre}</span>
 
-                  {/* Los últimos 5 dígitos: es el número que la gente canta al buscar una factura. */}
+                  <span className="solo-ancho" style={{
+                    fontSize: 12, color: '#6B6560', fontFamily: "'DM Mono', monospace",
+                    whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  }} title={`Consecutivo ${f.consecutivo}`}>{numFactura(f)}</span>
+
+                  {/* Un gasto recién llegado dice «Gasto»: por eso está en Por revisar sin pasar por Recepción. */}
+                  <span className="solo-ancho" style={{
+                    fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                    color: est.mostrar ? est.color : '#9A948E',
+                  }}>
+                    {est.mostrar ? est.nom : (f.tipo_documento === 'factura' && !f.es_mercaderia ? 'Gasto' : '')}
+                  </span>
+
                   <span style={{
-                    fontSize: 11.5, color: '#B5AFA8', fontFamily: "'DM Mono', monospace",
-                    whiteSpace: 'nowrap', flexShrink: 0,
-                  }} title={`Factura ${f.consecutivo}`}>··{String(f.consecutivo || '').slice(-5)}</span>
+                    fontSize: 11, textAlign: 'right', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums',
+                    color: vencida ? '#C0392B' : (pronto ? '#B5651D' : '#B5AFA8'),
+                    fontWeight: vencida || pronto ? 700 : 400,
+                  }}>
+                    {f.fecha_vencimiento && f.tipo_documento === 'factura'
+                      ? (vencida ? `−${Math.abs(dias)}d` : dias === 0 ? 'hoy' : `${dias}d`)
+                      : ''}
+                  </span>
 
-                  {est.mostrar && (
-                    <span style={{ fontSize: 11, color: est.color, fontWeight: 600, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                      {est.nom}
-                    </span>
-                  )}
-
-                  {f.fecha_vencimiento && f.tipo_documento === 'factura' && (
-                    <span style={{
-                      fontSize: 11, whiteSpace: 'nowrap', flexShrink: 0,
-                      color: vencida ? '#C0392B' : (pronto ? '#B5651D' : '#B5AFA8'),
-                      fontWeight: vencida || pronto ? 700 : 400,
-                    }}>
-                      {vencida ? `−${Math.abs(dias)}d` : dias === 0 ? 'hoy' : `${dias}d`}
-                    </span>
-                  )}
-
-                  <span style={{ fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                    {/* Si una nota de crédito le rebajó, manda el SALDO. El original tachado
-                        se fue al desplegable: en una línea sola no cabe y es el dato menos urgente. */}
+                  <span style={{ fontWeight: 700, fontSize: 13, textAlign: 'right', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
+                    {/* Si una nota de crédito le rebajó, manda el SALDO. */}
                     {fmt(f.nota_credito_aplicada > 0 ? f.saldo : f.total_comprobante, f.moneda)}
                   </span>
                 </div>
@@ -403,17 +415,12 @@ export default function FacturasPage() {
                       </table>
                     </div>
 
-                    <div style={{ fontSize: 11, color: '#9A948E', marginTop: 10, lineHeight: 1.6 }}>
-                      Emitida el {fechaLarga(f.fecha_emision)} · {f.condicion_venta_nombre}
-                      {f.plazo_credito ? ` a ${f.plazo_credito} días` : ''}
-                      {f.fecha_vencimiento && ` · vence ${f.fecha_vencimiento}`}
-                      {f.vencimiento_calculado && f.fecha_vencimiento && (
-                        <span title="La factura no trae fecha de vencimiento: se calcula sumándole el plazo a la fecha de emisión."> (calculada)</span>
-                      )}
-                      <br />
-                      Factura {f.consecutivo} · clave {f.clave}
-                      {f.recibida_por && <><br />Recibida por {f.recibida_por} el {fechaLarga(f.fecha_recepcion)}</>}
-                      {f.pagada_por && <><br />Pagada por {f.pagada_por} el {fechaLarga(f.fecha_pago)}</>}
+                    {/* Una sola línea de datos. La clave de 50 dígitos se quitó: nadie la lee. */}
+                    <div style={{ fontSize: 11, color: '#9A948E', marginTop: 8 }}>
+                      {f.condicion_venta_nombre}{f.plazo_credito ? ` ${f.plazo_credito} días` : ''}
+                      {f.fecha_vencimiento && ` · vence ${diaCorto(f.fecha_vencimiento)}`}
+                      {` · N° ${f.consecutivo}`}
+                      {f.estado === 'pagada' && ` · pagada ${diaCorto(f.fecha_pago)}${f.referencia_pago ? ` ref. ${f.referencia_pago}` : ''}`}
                     </div>
 
                     {/* ---------- LOS CHECKS DEL CICLO ---------- */}
@@ -444,19 +451,11 @@ export default function FacturasPage() {
                           bloqueado={!f.fecha_recepcion || f.estado === 'con_problema'}
                           onToggle={() => accionar(f.id, 'marcado', { valor: !f.etiquetas_impresas })}
                         />
-                        {f.estado === 'por_pagar' && (
-                          <div style={{ fontSize: 12, color: '#B5651D', fontWeight: 600, paddingLeft: 2 }}>
-                            ✔ Los tres checks están puestos — la factura ya está en Centro de pagos.
-                          </div>
-                        )}
                       </div>
                     ) : (
-                      // Un gasto (luz, leasing, gasolina) no se recibe ni entra a QVet: solo se paga.
-                      f.estado !== 'pagada' && f.estado !== 'por_pagar' && (
-                        <div style={{ marginTop: 14 }}>
-                          <div style={{ fontSize: 12, color: '#8A837C', marginBottom: 7 }}>
-                            Esto es un gasto, no mercadería: no pasa por recepción ni por QVet.
-                          </div>
+                      // Un gasto (luz, leasing, gasolina) no se recibe ni entra a QVet: solo se aprueba y se paga.
+                      f.tipo_documento === 'factura' && f.estado !== 'pagada' && f.estado !== 'por_pagar' && (
+                        <div style={{ marginTop: 12 }}>
                           <Boton onClick={() => accionar(f.id, 'a_pago')} color="#B5651D">Aprobar para pago</Boton>
                         </div>
                       )
@@ -465,10 +464,7 @@ export default function FacturasPage() {
                     {/* ---------- resolver un error con el proveedor ---------- */}
                     {f.estado === 'con_problema' && (
                       <div style={{ marginTop: 14, padding: '12px 14px', background: '#FDF4F3', border: '1.5px solid #E8B4AE', borderRadius: 10 }}>
-                        <div style={{ fontSize: 12.5, fontWeight: 700, color: '#C0392B' }}>Cerrar el problema con el proveedor</div>
-                        <div style={{ fontSize: 11.5, color: '#8A837C', marginTop: 2, marginBottom: 8 }}>
-                          Escribí cómo se resolvió. Administración lo va a leer antes de pagar.
-                        </div>
+                        <div style={{ fontSize: 12.5, fontWeight: 700, color: '#C0392B', marginBottom: 6 }}>Cerrar el problema con el proveedor</div>
                         <CajaTexto
                           placeholder="Mandaron el producto que faltaba el 15/9…"
                           boton="Se resolvió"
@@ -482,36 +478,50 @@ export default function FacturasPage() {
                         El CABYS se equivoca con los códigos ambiguos (una placa de aluminio
                         para mascota y un tornillo comparten prefijo). Acá se corrige, y la
                         decisión queda guardada POR PROVEEDOR para las próximas facturas. */}
+                    {/* Selector de TIPO. Antes era una frase + un botón «No — es un gasto» que Mario
+                        no entendió (*"¿qué es ese botón?"*). Mercadería pasa por Recepción y QVet;
+                        gasto se aprueba y se paga. El cambio queda guardado por proveedor. */}
                     {f.tipo_documento === 'factura' && (
-                      <div style={{ marginTop: 12, fontSize: 11.5, color: '#8A837C', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-                        <span>
-                          Está clasificada como <strong style={{ color: f.es_mercaderia ? '#2a78a5' : '#B5651D' }}>
-                            {f.es_mercaderia ? 'mercadería' : 'gasto'}</strong>
-                          {f.clasificacion_manual && ' (corregida a mano)'}
-                        </span>
-                        <button
-                          onClick={() => {
-                            const aMerc = !f.es_mercaderia;
-                            if (!confirm(`¿Marcar esta factura como ${aMerc ? 'MERCADERÍA' : 'GASTO'}?\n\nTambién se va a aplicar a las próximas facturas de ${f.proveedor_nombre}.`)) return;
-                            accionar(f.id, 'clasificar', { es_mercaderia: aMerc });
-                          }}
-                          style={{
-                            padding: '4px 10px', borderRadius: 7, cursor: 'pointer', fontSize: 11.5, fontWeight: 600,
-                            border: '1.5px solid #E2DDD4', background: '#FFFFFF', color: '#6B6560',
-                          }}>
-                          No — es {f.es_mercaderia ? 'un gasto' : 'mercadería'}
-                        </button>
+                      <div style={{ marginTop: 12, display: 'flex', gap: 6, alignItems: 'center', fontSize: 11.5, color: '#8A837C' }}>
+                        Tipo:
+                        {[[true, 'Mercadería'], [false, 'Gasto']].map(([merc, nombre]) => {
+                          const activo = !!f.es_mercaderia === merc;
+                          return (
+                            <button key={nombre} disabled={activo}
+                              onClick={() => {
+                                if (!confirm(`¿Cambiar a ${nombre.toUpperCase()}?\nTambién aplica a las próximas facturas de ${f.proveedor_nombre}.`)) return;
+                                accionar(f.id, 'clasificar', { es_mercaderia: merc });
+                              }}
+                              style={{
+                                padding: '3px 10px', borderRadius: 7, fontSize: 11.5, fontWeight: 600,
+                                cursor: activo ? 'default' : 'pointer',
+                                border: '1.5px solid ' + (activo ? '#2a78a5' : '#E2DDD4'),
+                                background: activo ? '#E4EFFB' : '#FFFFFF',
+                                color: activo ? '#1f63ad' : '#6B6560',
+                              }}>{nombre}</button>
+                          );
+                        })}
                       </div>
                     )}
 
-                    {/* ---------- el hilo: quién dijo qué, en orden ---------- */}
-                    <Hilo eventos={f.facturas_eventos} />
-                    <CajaTexto
-                      placeholder="Escribir un comentario…"
-                      boton="Comentar"
-                      color="#2a78a5"
-                      onEnviar={(txt) => accionar(f.id, 'comentario', { comentario: txt })}
-                    />
+                    {/* ---------- historial y comentarios: escondidos hasta que se pidan ---------- */}
+                    <div style={{ marginTop: 12 }}>
+                      <button onClick={() => setVerHilo(verHilo === f.id ? null : f.id)}
+                        style={{ background: 'none', border: 'none', padding: 0, color: '#2a78a5', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                        {verHilo === f.id ? '▴' : '▾'} Historial y comentarios ({(f.facturas_eventos || []).length})
+                      </button>
+                      {verHilo === f.id && (
+                        <>
+                          <Hilo eventos={f.facturas_eventos} titulo="" />
+                          <CajaTexto
+                            placeholder="Escribir un comentario…"
+                            boton="Comentar"
+                            color="#2a78a5"
+                            onEnviar={(txt) => accionar(f.id, 'comentario', { comentario: txt })}
+                          />
+                        </>
+                      )}
+                    </div>
 
                     {/* ---------- pagar ----------
                         Vivía en /admin/facturas/pagos; Mario lo quiso en el mismo lugar. Solo sale
@@ -559,6 +569,7 @@ export default function FacturasPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', background: '#F7F5F0' }}>
       <Header title="Facturas" subtitle="Facturas de proveedores" showLogout={true} showModuleSelector={true} />
+      <style>{CSS_FILA}</style>
 
       <div style={{ flex: 1, padding: '22px 16px', maxWidth: '1080px', width: '100%', margin: '0 auto', color: '#1A1714' }}>
 
@@ -682,10 +693,6 @@ export default function FacturasPage() {
 
         {filtro === 'grafico' && !cargando && <GraficoGastos facturas={facturas} />}
 
-        <div style={{ marginTop: 22, fontSize: 11.5, color: '#9A948E', textAlign: 'center', lineHeight: 1.7 }}>
-          Las facturas entran solas desde facturacion@corraldelsol.com. El robot solo lee el correo.<br />
-          Mercadería y gastos se separan con el código CABYS que trae cada factura — nadie lo escribe a mano.
-        </div>
       </div>
     </div>
   );
