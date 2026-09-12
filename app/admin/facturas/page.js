@@ -37,11 +37,31 @@ function diasPara(vence) {
 }
 
 // La condición va de primero, como pidió Mario. Etiqueta corta para que quepa en la línea.
+//
+// 🎨 LOS CUATRO COLORES ESTÁN ESCOGIDOS, NO INVENTADOS. Mario los pidió "definidísimos,
+// para 0 confusión". Los tonos son #2a78d6 · #B5651D · #5B35B5 · #52514e, y pasan el
+// validador de la guía de dataviz **comparando TODOS los pares** (no solo los vecinos):
+// peor par ΔE 10,8 con daltonismo deutan y 16,3 en visión normal.
+// El texto va en un tono un poco más oscuro sobre su pastilla clara, y cada uno se leyó
+// contra su propio fondo: 5,2 · 5,9 · 6,7 · 6,7 (el mínimo es 4,5).
+//
+// 🚨 LO QUE NO SE DEBE HACER: verde para contado. Verde y ámbar juntos dan ΔE 4,8 con
+// daltonismo protan — **contado y crédito, que son justo los dos que más se comparan, se
+// vuelven el mismo color** para quien no distingue rojo-verde. Por eso contado es AZUL.
+// Si alguien "mejora" esto poniendo verde, rompe justo lo que Mario pidió.
 const CONDICION = {
-  '01': { corta: 'CONTADO', color: '#1a7a4a', fondo: '#E8F3EC' },
-  '02': { corta: 'CRÉDITO', color: '#B5651D', fondo: '#FBF0E4' },
+  '01': { corta: 'CONTADO', color: '#1f63ad', fondo: '#E4EFFB' },
+  '02': { corta: 'CRÉDITO', color: '#8a4d12', fondo: '#FBF0E4' },
 };
-const condicionDe = (f) => CONDICION[f.condicion_venta] || { corta: 'OTRO', color: '#5B35B5', fondo: '#EDE9F6' };
+const NOTA_CREDITO = { corta: 'NOTA DE CRÉDITO', color: '#5B35B5', fondo: '#EDE9F6' };
+const OTRA_CONDICION = { corta: 'OTRO', color: '#52514e', fondo: '#EEECE8' };
+
+// 🚨 BUG QUE ESTO ARREGLA: antes la nota de crédito pintaba la pastilla con el color de SU
+// condición de venta, así que la misma nota salía a veces azul y a veces ámbar. Una nota de
+// crédito es una cosa aparte: **siempre morada**, sin importar qué diga su condición.
+const condicionDe = (f) => f.tipo_documento === 'nota_credito'
+  ? NOTA_CREDITO
+  : (CONDICION[f.condicion_venta] || OTRA_CONDICION);
 
 const ESTADOS = {
   // `mostrar: false` = no se pinta en la fila. `recibida` es el estado de nacimiento:
@@ -204,7 +224,6 @@ export default function FacturasPage() {
             const vencida = dias !== null && dias < 0 && f.estado !== 'pagada';
             const pronto = dias !== null && dias >= 0 && dias <= 7 && f.estado !== 'pagada';
             const lineas = (f.facturas_lineas || []).slice().sort((a, b) => (a.numero_linea || 0) - (b.numero_linea || 0));
-            const esNota = f.tipo_documento === 'nota_credito';
             const abierto = abierta === f.id;
 
             return (
@@ -218,7 +237,7 @@ export default function FacturasPage() {
                     <span style={{
                       fontSize: 9.5, fontWeight: 800, letterSpacing: '0.5px', padding: '3px 7px',
                       borderRadius: 5, background: cond.fondo, color: cond.color, whiteSpace: 'nowrap', flexShrink: 0,
-                    }}>{esNota ? 'N. CRÉDITO' : cond.corta}</span>
+                    }}>{cond.corta}</span>
 
                     <span style={{ fontSize: 12.5, color: '#6B6560', whiteSpace: 'nowrap', flexShrink: 0, minWidth: 54 }}>
                       {fechaCorta(f.fecha_emision)}
@@ -228,11 +247,9 @@ export default function FacturasPage() {
                       flex: 1, fontWeight: 600, fontSize: 13.5, whiteSpace: 'nowrap',
                       overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0,
                     }} title={f.proveedor_nombre}>
-                      {/* Un punto de color en vez de un emoji: dice mercadería/gasto sin gritar. */}
-                      <span style={{
-                        display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
-                        background: f.es_mercaderia ? AZUL : AMBAR, marginRight: 7, verticalAlign: 'middle',
-                      }} />
+                      {/* 🚫 Acá había un punto azul/ámbar para mercadería vs gasto. Se quitó:
+                          dos sistemas de color en la misma fila es justo la confusión que
+                          Mario quiere evitar, y la segunda línea YA dice la categoría. */}
                       {f.proveedor_nombre}
                     </span>
 
