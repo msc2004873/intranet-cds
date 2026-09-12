@@ -38,16 +38,25 @@ export async function GET(req) {
                plazo_credito, moneda, tipo_cambio, total_comprobante, total_impuesto, estado,
                recibida_por, fecha_recepcion, problema_detalle, pagada_por, fecha_pago,
                corrige_clave, corrige_razon, necesita_revision, motivo_revision, correo_asunto,
+               categoria, es_mercaderia, categoria_mixta,
                facturas_lineas(id, numero_linea, detalle, cantidad, unidad_medida,
-                               precio_unitario, monto_total_linea, cantidad_recibida)`)
+                               precio_unitario, monto_total_linea, cantidad_recibida,
+                               cabys, categoria)`)
       .order('fecha_emision', { ascending: false });
 
     const estado = searchParams.get('estado');
     if (estado && ESTADOS.includes(estado)) query = query.eq('estado', estado);
 
+    // `vista` separa por a quién pertenece la factura y por si es mercadería o gasto.
+    // Lo pidió Mario: la mercadería pasa por recibir producto; el gasto solo se paga.
     const vista = searchParams.get('vista');
-    if (vista === 'ajenas') query = query.eq('es_de_corral_del_sol', false);
-    else if (vista !== 'todas') query = query.eq('es_de_corral_del_sol', true);
+    if (vista === 'ajenas') {
+      query = query.eq('es_de_corral_del_sol', false);
+    } else {
+      query = query.eq('es_de_corral_del_sol', true);
+      if (vista === 'mercaderia') query = query.eq('es_mercaderia', true);
+      else if (vista === 'gastos') query = query.eq('es_mercaderia', false);
+    }
 
     const { data, error } = await query;
     if (error) throw error;
