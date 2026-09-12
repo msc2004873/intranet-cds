@@ -44,13 +44,15 @@ const CONDICION = {
 const condicionDe = (f) => CONDICION[f.condicion_venta] || { corta: 'OTRO', color: '#5B35B5', fondo: '#EDE9F6' };
 
 const ESTADOS = {
-  recibida:            { nom: 'Recién llegada',      color: '#2a78a5' },
-  mercaderia_recibida: { nom: 'Mercadería recibida', color: '#8B6914' },
-  con_problema:        { nom: 'Con problema',        color: '#C0392B' },
-  en_inventario:       { nom: 'En QVet',             color: '#5B35B5' },
-  por_pagar:           { nom: 'Por pagar',           color: '#B5651D' },
-  pagada:              { nom: 'Pagada',              color: '#1a7a4a' },
-  anulada:             { nom: 'Anulada',             color: '#6B6560' },
+  // `mostrar: false` = no se pinta en la fila. `recibida` es el estado de nacimiento:
+  // ponerle "Recién llegada" a todo era ruido. Mario: "no me cuadra nada ese badge".
+  recibida:            { nom: '',                    color: '#2a78a5', mostrar: false },
+  mercaderia_recibida: { nom: 'Mercadería recibida', color: '#8B6914', mostrar: true },
+  con_problema:        { nom: 'Con problema',        color: '#C0392B', mostrar: true },
+  en_inventario:       { nom: 'En QVet',             color: '#5B35B5', mostrar: true },
+  por_pagar:           { nom: 'Por pagar',           color: '#B5651D', mostrar: true },
+  pagada:              { nom: 'Pagada',              color: '#1a7a4a', mostrar: true },
+  anulada:             { nom: 'Anulada',             color: '#6B6560', mostrar: true },
 };
 
 // Nombres en cristiano para las categorías que salen del código CABYS de Hacienda.
@@ -69,14 +71,14 @@ const CATEGORIAS = {
 };
 
 const FILTROS = [
-  { id: 'tramite',    etiqueta: '⏳ En trámite de pago' },
+  { id: 'tramite',    etiqueta: 'En trámite de pago' },
   { id: 'todas',      etiqueta: 'Todas' },
-  { id: 'mercaderia', etiqueta: '📦 Mercadería' },
-  { id: 'gastos',     etiqueta: '💸 Gastos y servicios' },
+  { id: 'mercaderia', etiqueta: 'Mercadería' },
+  { id: 'gastos',     etiqueta: 'Gastos y servicios' },
   { id: 'con_problema', etiqueta: 'Con problema' },
   { id: 'pagada',     etiqueta: 'Pagadas' },
-  { id: 'ajenas',     etiqueta: '⚠️ De otra persona' },
-  { id: 'grafico',    etiqueta: '📊 Gráfico de gastos' },
+  { id: 'ajenas',     etiqueta: 'De otra persona' },
+  { id: 'grafico',    etiqueta: 'Gráfico de gastos' },
 ];
 
 // Arranca en "en trámite de pago": es lo que alguien necesita ver al entrar.
@@ -148,7 +150,8 @@ export default function FacturasPage() {
   const porPagar = facturas.filter(f => f.estado === 'por_pagar');
   const venceEsta = porPagar.filter(f => { const d = diasPara(f.fecha_vencimiento); return d !== null && d <= 7; });
   const problemas = facturas.filter(f => f.estado === 'con_problema');
-  const sumaPorPagar = porPagar.filter(f => f.moneda === 'CRC').reduce((s, f) => s + Number(f.total_comprobante || 0), 0);
+  // Se suma el SALDO (ya con las notas de crédito restadas), no el monto bruto.
+  const sumaPorPagar = porPagar.filter(f => f.moneda === 'CRC').reduce((s, f) => s + Number(f.saldo ?? f.total_comprobante ?? 0), 0);
 
 
   // ---- orden: lo que vence primero va primero (lo pidió Mario) ----
@@ -168,7 +171,7 @@ export default function FacturasPage() {
     return pendiente(f) && d !== null && d <= DIAS_URGENTE;
   });
   const resto = ordenadas.filter(f => !urgentes.includes(f));
-  const sumaUrgentes = urgentes.filter(f => f.moneda === 'CRC').reduce((s, f) => s + Number(f.total_comprobante || 0), 0);
+  const sumaUrgentes = urgentes.filter(f => f.moneda === 'CRC').reduce((s, f) => s + Number(f.saldo ?? f.total_comprobante ?? 0), 0);
 
   const fila = (f) => {
 
@@ -202,11 +205,24 @@ export default function FacturasPage() {
                       flex: 1, fontWeight: 600, fontSize: 13.5, whiteSpace: 'nowrap',
                       overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0,
                     }} title={f.proveedor_nombre}>
-                      {f.es_mercaderia ? '📦 ' : '💸 '}{f.proveedor_nombre}
+                      {/* Un punto de color en vez de un emoji: dice mercadería/gasto sin gritar. */}
+                      <span style={{
+                        display: 'inline-block', width: 6, height: 6, borderRadius: '50%',
+                        background: f.es_mercaderia ? AZUL : AMBAR, marginRight: 7, verticalAlign: 'middle',
+                      }} />
+                      {f.proveedor_nombre}
                     </span>
 
-                    <span style={{ fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', flexShrink: 0 }}>
-                      {fmt(f.total_comprobante, f.moneda)}
+                    <span style={{ fontWeight: 700, fontSize: 14, whiteSpace: 'nowrap', flexShrink: 0, textAlign: 'right' }}>
+                      {/* Si una nota de crédito le rebajó, manda el SALDO y el original va tachado. */}
+                      {f.nota_credito_aplicada > 0 ? (
+                        <>
+                          <span style={{ textDecoration: 'line-through', color: '#B5AFA8', fontWeight: 400, fontSize: 12, marginRight: 6 }}>
+                            {fmt(f.total_comprobante, f.moneda)}
+                          </span>
+                          {fmt(f.saldo, f.moneda)}
+                        </>
+                      ) : fmt(f.total_comprobante, f.moneda)}
                     </span>
 
                     <span style={{ fontSize: 10, color: '#B5AFA8', flexShrink: 0, width: 10 }}>{abierto ? '▲' : '▼'}</span>
@@ -217,8 +233,10 @@ export default function FacturasPage() {
                     fontSize: 11.5, color: '#8A837C', marginTop: 3, paddingLeft: 2,
                     whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                   }}>
-                    <span style={{ color: est.color, fontWeight: 600 }}>{est.nom}</span>
-                    {' · '}{CATEGORIAS[f.categoria] || 'Sin clasificar'}
+                    {/* `recibida` es el estado por defecto: decirlo no aporta y estorba.
+                        El estado solo se muestra cuando significa algo (pedido de Mario). */}
+                    {est.mostrar && <><span style={{ color: est.color, fontWeight: 600 }}>{est.nom}</span>{' · '}</>}
+                    {CATEGORIAS[f.categoria] || 'Sin clasificar'}
                     {f.categoria_mixta && <span style={{ color: '#B5651D' }}> (mixta)</span>}
                     {' · '}{lineas.length} prod.
                     {f.fecha_vencimiento && (
@@ -229,7 +247,10 @@ export default function FacturasPage() {
                           : `vence en ${dias}d`}
                       </span>
                     )}
-                    {!f.es_de_corral_del_sol && <span style={{ color: '#B5651D', fontWeight: 600 }}> · ⚠️ no es de Corral del Sol</span>}
+                    {f.nota_credito_aplicada > 0 && (
+                      <span style={{ color: '#5B35B5' }}>{' · '}nota de crédito −{fmt(f.nota_credito_aplicada, f.moneda)}</span>
+                    )}
+                    {!f.es_de_corral_del_sol && <span style={{ color: '#B5651D', fontWeight: 600 }}>{' · '}no es de Corral del Sol</span>}
                   </div>
                 </div>
 
@@ -294,19 +315,19 @@ export default function FacturasPage() {
                     <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 12 }}>
                       {f.estado === 'recibida' && f.es_mercaderia && (
                         <>
-                          <Boton onClick={() => mover(f.id, 'mercaderia_recibida')} color="#1a7a4a">📦 Llegó completa</Boton>
+                          <Boton onClick={() => mover(f.id, 'mercaderia_recibida')} color="#1a7a4a">Llegó completa</Boton>
                           <Boton onClick={() => {
                             const d = prompt('¿Qué pasó con este pedido?');
                             if (d) mover(f.id, 'con_problema', { detalle: d });
-                          }} color="#C0392B">🔴 Llegó con problema</Boton>
+                          }} color="#C0392B">Llegó con problema</Boton>
                         </>
                       )}
                       {/* Un gasto (luz, leasing, gasolina) no pasa por recibir mercadería: va directo a pago. */}
                       {f.estado === 'recibida' && !f.es_mercaderia && (
-                        <Boton onClick={() => mover(f.id, 'por_pagar')} color="#B5651D">💵 Pasar a pago</Boton>
+                        <Boton onClick={() => mover(f.id, 'por_pagar')} color="#B5651D">Pasar a pago</Boton>
                       )}
                       {f.estado === 'mercaderia_recibida' && (
-                        <Boton onClick={() => mover(f.id, 'en_inventario')} color="#5B35B5">📥 Ya está en QVet</Boton>
+                        <Boton onClick={() => mover(f.id, 'en_inventario')} color="#5B35B5">Ya está en QVet</Boton>
                       )}
                       {f.estado === 'con_problema' && (
                         <Boton onClick={() => mover(f.id, 'mercaderia_recibida', { detalle: 'Problema resuelto con el proveedor' })} color="#1a7a4a">
@@ -314,13 +335,13 @@ export default function FacturasPage() {
                         </Boton>
                       )}
                       {f.estado === 'en_inventario' && (
-                        <Boton onClick={() => mover(f.id, 'por_pagar')} color="#B5651D">💵 Pasar a pago</Boton>
+                        <Boton onClick={() => mover(f.id, 'por_pagar')} color="#B5651D">Pasar a pago</Boton>
                       )}
                       {f.estado === 'por_pagar' && (
                         <Boton onClick={() => {
                           const ref = prompt('Número de comprobante o referencia del pago (opcional):');
                           if (ref !== null) mover(f.id, 'pagada', { referencia_pago: ref || null });
-                        }} color="#1a7a4a">✅ Marcar como pagada</Boton>
+                        }} color="#1a7a4a">Marcar como pagada</Boton>
                       )}
                     </div>
                   </div>
@@ -359,7 +380,7 @@ export default function FacturasPage() {
 
         {sinTabla && (
           <div style={{ ...card, textAlign: 'center', padding: '42px 24px' }}>
-            <div style={{ fontSize: 30, marginBottom: 8 }}>🛠️</div>
+
             <div style={{ fontWeight: 700 }}>El módulo de facturas todavía no está encendido</div>
             <div style={{ fontSize: 13, color: '#6B6560', marginTop: 6 }}>
               Falta crear la tabla donde se guardan las facturas.
@@ -378,7 +399,7 @@ export default function FacturasPage() {
 
         {!cargando && !facturas.length && !error && !sinTabla && (
           <div style={{ ...card, textAlign: 'center', padding: '42px 20px', color: '#6B6560' }}>
-            <div style={{ fontSize: 30, marginBottom: 8 }}>📭</div>
+
             <div style={{ fontWeight: 600, color: '#1A1714' }}>No hay facturas acá</div>
             <div style={{ fontSize: 13, marginTop: 4 }}>Entran solas cuando llegan a facturacion@corraldelsol.com.</div>
           </div>
@@ -439,88 +460,139 @@ function Titulo({ texto, color, pie }) {
 const AZUL = '#2a78a5';   // mercadería
 const AMBAR = '#B5651D';  // gasto
 
+// Colores del pie. Orden fijo del tema categórico validado (ΔE 9.1 protan / 19.6 normal).
+// 🚫 No agregar un 7º color: el pie aguanta 6 pedazos, de ahí en adelante nadie los distingue.
+// Por eso el 6º es siempre "Otros". Y como el contraste de algunos contra el blanco queda
+// bajo, la leyenda con el monto y la tabla de abajo son OBLIGATORIAS, no adorno.
+const PIE = ['#2a78d6', '#eb6834', '#1baf7a', '#eda100', '#e87ba4', '#008300'];
+const MAX_PEDAZOS = 6;
+
+const nombreMesCR = () => new Date().toLocaleDateString('es-CR', {
+  timeZone: 'America/Costa_Rica', month: 'long', year: 'numeric',
+});
+const mesActualCR = () => new Intl.DateTimeFormat('en-CA', {
+  timeZone: 'America/Costa_Rica', year: 'numeric', month: '2-digit',
+}).format(new Date()).slice(0, 7);
+
 function GraficoGastos({ facturas }) {
-  // Solo facturas (las notas de crédito restan y confundirían el gráfico) y solo colones:
-  // mezclar monedas en una misma barra sería mentir.
-  const base = facturas.filter(f => f.tipo_documento === 'factura' && f.moneda === 'CRC' && f.es_de_corral_del_sol);
-  const totalMerc = base.filter(f => f.es_mercaderia).reduce((s, f) => s + Number(f.total_comprobante || 0), 0);
-  const gastos = base.filter(f => !f.es_mercaderia);
-  const totalGasto = gastos.reduce((s, f) => s + Number(f.total_comprobante || 0), 0);
+  // Solo el mes en curso (lo pidió Mario), solo colones, solo de Corral del Sol.
+  // Las notas de crédito NO son un pedazo del pie: restan del gasto que corrigen.
+  const mes = mesActualCR();
+  const delMes = facturas.filter(f =>
+    f.es_de_corral_del_sol && f.moneda === 'CRC' &&
+    String(f.fecha_emision || '').slice(0, 7) === mes);
+
+  const facturasMes = delMes.filter(f => f.tipo_documento === 'factura');
+  const neto = f => Number(f.saldo ?? f.total_comprobante ?? 0);
+
+  const totalMerc = facturasMes.filter(f => f.es_mercaderia).reduce((s, f) => s + neto(f), 0);
+  const gastos = facturasMes.filter(f => !f.es_mercaderia);
+  const totalGasto = gastos.reduce((s, f) => s + neto(f), 0);
   const total = totalMerc + totalGasto;
 
   const porCat = {};
   for (const f of gastos) {
     const k = f.categoria || 'sin_clasificar';
     if (!porCat[k]) porCat[k] = { monto: 0, n: 0 };
-    porCat[k].monto += Number(f.total_comprobante || 0);
+    porCat[k].monto += neto(f);
     porCat[k].n++;
   }
-  const filas = Object.entries(porCat).map(([k, v]) => ({ cat: k, ...v })).sort((a, b) => b.monto - a.monto);
-  const mayor = filas.length ? filas[0].monto : 1;
+  const todas = Object.entries(porCat).map(([cat, v]) => ({ cat, ...v })).sort((a, b) => b.monto - a.monto);
 
-  if (!total) {
-    return <div style={{ ...card, padding: 40, textAlign: 'center', color: '#6B6560' }}>Todavía no hay facturas para graficar.</div>;
+  // Los 5 más grandes se ven; el resto se junta en "Otros". Un pie con 9 pedazos no se lee.
+  const visibles = todas.slice(0, MAX_PEDAZOS - 1);
+  const cola = todas.slice(MAX_PEDAZOS - 1);
+  const pedazos = cola.length
+    ? [...visibles, { cat: '__otros', monto: cola.reduce((s, x) => s + x.monto, 0), n: cola.reduce((s, x) => s + x.n, 0) }]
+    : visibles;
+
+  if (!totalGasto) {
+    return (
+      <div style={{ ...card, padding: 40, textAlign: 'center', color: '#6B6560' }}>
+        No hay gastos registrados en {nombreMesCR()}.
+      </div>
+    );
   }
 
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+  // Dona en SVG: cada pedazo es un arco dibujado con stroke-dasharray sobre el mismo círculo.
+  const R = 62, GROSOR = 26, CIRC = 2 * Math.PI * R;
+  let acumulado = 0;
 
-      {/* Reparto mercadería vs gasto — una sola barra, que es parte de un todo */}
-      <div style={{ ...card, padding: '16px 18px' }}>
-        <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 2 }}>En qué se va la plata</div>
-        <div style={{ fontSize: 11.5, color: '#8A837C', marginBottom: 12 }}>
-          {base.length} facturas en colones · {fmt(total)} en total
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+      <div style={{ ...card, padding: '18px 20px' }}>
+        <div style={{ fontSize: 13, fontWeight: 700 }}>Gastos de {nombreMesCR()}</div>
+        <div style={{ fontSize: 11.5, color: '#8A837C', marginBottom: 4 }}>
+          Lo que NO es mercadería. {gastos.length} factura{gastos.length === 1 ? '' : 's'}.
         </div>
 
-        <div style={{ display: 'flex', height: 26, borderRadius: 6, overflow: 'hidden', gap: 2 }}>
+        <div style={{ display: 'flex', gap: 26, alignItems: 'center', flexWrap: 'wrap', marginTop: 12 }}>
+
+          <div style={{ position: 'relative', width: 168, height: 168, flexShrink: 0 }}>
+            <svg width="168" height="168" viewBox="0 0 168 168" role="img"
+              aria-label={`Gastos de ${nombreMesCR()} por tipo`}>
+              <circle cx="84" cy="84" r={R} fill="none" stroke="#F0EDE6" strokeWidth={GROSOR} />
+              {pedazos.map((p, i) => {
+                const frac = p.monto / totalGasto;
+                const largo = frac * CIRC;
+                // 2px de hueco entre pedazos: separa sin inventar espacio.
+                const dash = `${Math.max(largo - 2, 0.5)} ${CIRC - Math.max(largo - 2, 0.5)}`;
+                const offset = -acumulado * CIRC;
+                acumulado += frac;
+                return (
+                  <circle key={p.cat} cx="84" cy="84" r={R} fill="none"
+                    stroke={PIE[i % PIE.length]} strokeWidth={GROSOR}
+                    strokeDasharray={dash} strokeDashoffset={offset}
+                    transform="rotate(-90 84 84)">
+                    <title>{`${p.cat === '__otros' ? 'Otros' : (CATEGORIAS[p.cat] || p.cat)}: ${fmt(p.monto)} (${Math.round(frac * 100)}%)`}</title>
+                  </circle>
+                );
+              })}
+            </svg>
+            <div style={{
+              position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column',
+              alignItems: 'center', justifyContent: 'center', pointerEvents: 'none',
+            }}>
+              <div style={{ fontSize: 15, fontWeight: 700, lineHeight: 1.1 }}>{fmt(totalGasto)}</div>
+              <div style={{ fontSize: 10.5, color: '#8A837C' }}>en gastos</div>
+            </div>
+          </div>
+
+          {/* La leyenda lleva el monto: el dato nunca depende de pasar el mouse. */}
+          <div style={{ flex: 1, minWidth: 210, display: 'flex', flexDirection: 'column', gap: 7 }}>
+            {pedazos.map((p, i) => (
+              <div key={p.cat} style={{ display: 'flex', alignItems: 'center', gap: 9, fontSize: 12.5 }}>
+                <span style={{ width: 10, height: 10, borderRadius: 3, background: PIE[i % PIE.length], flexShrink: 0 }} />
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {p.cat === '__otros' ? `Otros (${cola.length} tipos)` : (CATEGORIAS[p.cat] || p.cat)}
+                </span>
+                <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{fmt(p.monto)}</span>
+                <span style={{ color: '#8A837C', width: 34, textAlign: 'right', flexShrink: 0 }}>
+                  {Math.round(p.monto / totalGasto * 100)}%
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Contexto: cuánto pesa el gasto contra la mercadería, en el mismo mes */}
+      <div style={{ ...card, padding: '16px 20px' }}>
+        <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>Contra la mercadería del mes</div>
+        <div style={{ display: 'flex', height: 22, borderRadius: 5, overflow: 'hidden', gap: 2 }}>
           <div style={{ width: `${(totalMerc / total) * 100}%`, background: AZUL }} title={`Mercadería: ${fmt(totalMerc)}`} />
           <div style={{ width: `${(totalGasto / total) * 100}%`, background: AMBAR }} title={`Gastos: ${fmt(totalGasto)}`} />
         </div>
-
-        <div style={{ display: 'flex', gap: 20, marginTop: 12, flexWrap: 'wrap' }}>
-          <Leyenda color={AZUL} nombre="📦 Mercadería" monto={fmt(totalMerc)} pct={Math.round(totalMerc / total * 100)} />
-          <Leyenda color={AMBAR} nombre="💸 Gastos y servicios" monto={fmt(totalGasto)} pct={Math.round(totalGasto / total * 100)} />
+        <div style={{ display: 'flex', gap: 22, marginTop: 11, flexWrap: 'wrap' }}>
+          <Leyenda color={AZUL} nombre="Mercadería" monto={fmt(totalMerc)} pct={Math.round(totalMerc / total * 100)} />
+          <Leyenda color={AMBAR} nombre="Gastos y servicios" monto={fmt(totalGasto)} pct={Math.round(totalGasto / total * 100)} />
         </div>
       </div>
 
-      {/* Los gastos, desglosados */}
-      <div style={{ ...card, padding: '16px 18px' }}>
-        <div style={{ fontSize: 12.5, fontWeight: 700 }}>Los gastos, por tipo</div>
-        <div style={{ fontSize: 11.5, color: '#8A837C', marginBottom: 14 }}>
-          Lo que NO es mercadería. La categoría sale del código CABYS de la factura.
-        </div>
-
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 11 }}>
-          {filas.map(r => (
-            <div key={r.cat} title={`${r.n} factura${r.n === 1 ? '' : 's'} · ${Math.round(r.monto / totalGasto * 100)}% de los gastos`}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 3, gap: 10 }}>
-                <span style={{ color: '#1A1714', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {CATEGORIAS[r.cat] || r.cat}
-                </span>
-                <span style={{ color: '#6B6560', whiteSpace: 'nowrap', flexShrink: 0 }}>
-                  {fmt(r.monto)} <span style={{ color: '#B5AFA8' }}>· {r.n}</span>
-                </span>
-              </div>
-              {/* barra fina, punta redondeada, anclada a la izquierda */}
-              <div style={{ background: '#F0EDE6', borderRadius: 4, height: 9 }}>
-                <div style={{
-                  width: `${Math.max((r.monto / mayor) * 100, 1.5)}%`,
-                  height: '100%', background: AMBAR, borderRadius: 4,
-                }} />
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <div style={{ marginTop: 16, paddingTop: 12, borderTop: '1px solid #EFEBE4', fontSize: 12, display: 'flex', justifyContent: 'space-between' }}>
-          <span style={{ color: '#6B6560' }}>Total de gastos</span>
-          <strong>{fmt(totalGasto)}</strong>
-        </div>
-      </div>
-
-      {/* Tabla: el mismo dato en números, para quien no lee barras */}
-      <div style={{ ...card, padding: '16px 18px' }}>
-        <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 10 }}>Los mismos números</div>
+      {/* Todos los tipos en números — incluidos los que se fueron a "Otros" */}
+      <div style={{ ...card, padding: '16px 20px' }}>
+        <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 10 }}>Todos los gastos del mes</div>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12.5, minWidth: 380 }}>
             <thead>
@@ -528,11 +600,11 @@ function GraficoGastos({ facturas }) {
                 <th style={{ padding: '4px 8px 8px 0' }}>Tipo de gasto</th>
                 <th style={{ padding: '4px 8px 8px', textAlign: 'right' }}>Facturas</th>
                 <th style={{ padding: '4px 8px 8px', textAlign: 'right' }}>Monto</th>
-                <th style={{ padding: '4px 0 8px 8px', textAlign: 'right' }}>% de gastos</th>
+                <th style={{ padding: '4px 0 8px 8px', textAlign: 'right' }}>%</th>
               </tr>
             </thead>
             <tbody>
-              {filas.map(r => (
+              {todas.map(r => (
                 <tr key={r.cat} style={{ borderTop: '1px solid #EFEBE4' }}>
                   <td style={{ padding: '6px 8px 6px 0' }}>{CATEGORIAS[r.cat] || r.cat}</td>
                   <td style={{ padding: '6px 8px', textAlign: 'right' }}>{r.n}</td>
@@ -540,6 +612,12 @@ function GraficoGastos({ facturas }) {
                   <td style={{ padding: '6px 0 6px 8px', textAlign: 'right', color: '#6B6560' }}>{Math.round(r.monto / totalGasto * 100)}%</td>
                 </tr>
               ))}
+              <tr style={{ borderTop: '2px solid #E2DDD4' }}>
+                <td style={{ padding: '8px 8px 0 0', fontWeight: 700 }}>Total</td>
+                <td style={{ padding: '8px 8px 0', textAlign: 'right' }}>{gastos.length}</td>
+                <td style={{ padding: '8px 8px 0', textAlign: 'right', fontWeight: 700 }}>{fmt(totalGasto)}</td>
+                <td />
+              </tr>
             </tbody>
           </table>
         </div>

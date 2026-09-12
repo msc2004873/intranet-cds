@@ -66,7 +66,33 @@ export async function GET(req) {
 
     const { data, error } = await query;
     if (error) throw error;
-    return Response.json(data || []);
+    const filas = data || [];
+
+    // 🚨 LAS NOTAS DE CRÉDITO RESTAN. Antes solo se guardaban y se mostraban, y el total
+    // "por pagar" salía inflado. Una nota de crédito es plata que el proveedor devuelve o
+    // descuenta: baja lo que se le debe por esa factura.
+    // El XML de la nota trae `corrige_clave` = la clave de la factura que corrige, así que
+    // se pueden emparejar solas, sin que nadie las ligue a mano.
+    const { data: notas } = await supabase
+      .from('facturas_proveedor')
+      .select('corrige_clave, total_comprobante')
+      .eq('tipo_documento', 'nota_credito')
+      .not('corrige_clave', 'is', null);
+
+    const restaPorClave = {};
+    for (const n of notas || []) {
+      if (!n.corrige_clave) continue;
+      restaPorClave[n.corrige_clave] = (restaPorClave[n.corrige_clave] || 0) + Number(n.total_comprobante || 0);
+    }
+
+    for (const f of filas) {
+      const resta = f.tipo_documento === 'factura' ? (restaPorClave[f.clave] || 0) : 0;
+      f.nota_credito_aplicada = resta;
+      // Lo que de verdad se debe. Nunca negativo: si la nota supera la factura, queda en 0.
+      f.saldo = Math.max(Number(f.total_comprobante || 0) - resta, 0);
+    }
+
+    return Response.json(filas);
   } catch (error) {
     return Response.json({ error: error.message }, { status: 500 });
   }
