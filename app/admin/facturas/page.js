@@ -116,6 +116,9 @@ const DIAS_URGENTE = 5;
 
 const card = { background: '#FFFFFF', border: '1.5px solid #E2DDD4', borderRadius: '14px' };
 
+// Sin tildes ni mayúsculas: buscar "nutricion" tiene que encontrar "Nutrición".
+const normal = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+
 export default function FacturasPage() {
   const router = useRouter();
   const [userRole, setUserRole] = useState('');
@@ -123,6 +126,11 @@ export default function FacturasPage() {
   const [facturas, setFacturas] = useState([]);
   const [cargando, setCargando] = useState(true);
   const [filtro, setFiltro] = useState(FILTRO_INICIAL);
+  // 🚨 EL BUSCADOR BUSCA EN TODAS LAS FACTURAS, no dentro del filtro activo.
+  // Nace de un susto real (2026-09-13): Mario buscó la 9097 de Thinko, no la vio en la
+  // bandeja que tenía abierta y creyó que el sistema la había perdido. Estaba guardada.
+  // Un buscador que solo mira la pestaña abierta miente por omisión.
+  const [busca, setBusca] = useState('');
   const [abierta, setAbierta] = useState(null);
   const [error, setError] = useState('');
   const [sinTabla, setSinTabla] = useState(false);
@@ -141,7 +149,7 @@ export default function FacturasPage() {
     if (user.rol !== 'admin') router.push('/');
   }, [router]);
 
-  useEffect(() => { if (userRole === 'admin') cargar(); }, [userRole, filtro]);
+  useEffect(() => { if (userRole === 'admin') cargar(); }, [userRole, filtro, busca]);
   useEffect(() => { if (userRole === 'admin') cargarResumen(); }, [userRole]);
 
   async function cargarResumen() {
@@ -174,7 +182,8 @@ export default function FacturasPage() {
         : filtro === 'grafico' ? 'vista=todas'
         : estados.includes(filtro) ? `estado=${filtro}`
         : `vista=${filtro}`;
-      const res = await fetch(`/api/facturas?${q}`);
+      // Con el buscador escrito se ignora el filtro y se traen TODAS.
+      const res = await fetch(`/api/facturas?${busca.trim() ? 'vista=todas' : q}`);
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setFacturas(Array.isArray(data) ? data : []);
@@ -235,7 +244,13 @@ export default function FacturasPage() {
   // 🚨 Una NOTA DE CRÉDITO no se paga: resta de lo que se debe. Meterla en "urgentes" con
   // un "venció hace 25 días" es mentira y hace correr a alguien por nada.
   const pendiente = f => f.estado !== 'pagada' && f.estado !== 'anulada' && f.tipo_documento === 'factura';
-  const ordenadas = facturas.slice().sort(porVencimiento);
+  // El buscador mira proveedor, número de factura y nombre de producto.
+  const q = normal(busca.trim());
+  const visibles = !q ? facturas : facturas.filter(f =>
+    normal(f.proveedor_nombre).includes(q) ||
+    String(f.consecutivo || '').includes(busca.trim()) ||
+    (f.facturas_lineas || []).some(l => normal(l.detalle).includes(q)));
+  const ordenadas = visibles.slice().sort(porVencimiento);
   const urgentes = ordenadas.filter(f => {
     const d = diasPara(f.fecha_vencimiento);
     return pendiente(f) && d !== null && d <= DIAS_URGENTE;
@@ -453,6 +468,32 @@ export default function FacturasPage() {
                       </div>
                     )}
 
+                    {/* ---------- corregir mercadería / gasto ----------
+                        El CABYS se equivoca con los códigos ambiguos (una placa de aluminio
+                        para mascota y un tornillo comparten prefijo). Acá se corrige, y la
+                        decisión queda guardada POR PROVEEDOR para las próximas facturas. */}
+                    {f.tipo_documento === 'factura' && (
+                      <div style={{ marginTop: 12, fontSize: 11.5, color: '#8A837C', display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                        <span>
+                          Está clasificada como <strong style={{ color: f.es_mercaderia ? '#2a78a5' : '#B5651D' }}>
+                            {f.es_mercaderia ? 'mercadería' : 'gasto'}</strong>
+                          {f.clasificacion_manual && ' (corregida a mano)'}
+                        </span>
+                        <button
+                          onClick={() => {
+                            const aMerc = !f.es_mercaderia;
+                            if (!confirm(`¿Marcar esta factura como ${aMerc ? 'MERCADERÍA' : 'GASTO'}?\n\nTambién se va a aplicar a las próximas facturas de ${f.proveedor_nombre}.`)) return;
+                            accionar(f.id, 'clasificar', { es_mercaderia: aMerc });
+                          }}
+                          style={{
+                            padding: '4px 10px', borderRadius: 7, cursor: 'pointer', fontSize: 11.5, fontWeight: 600,
+                            border: '1.5px solid #E2DDD4', background: '#FFFFFF', color: '#6B6560',
+                          }}>
+                          No — es {f.es_mercaderia ? 'un gasto' : 'mercadería'}
+                        </button>
+                      </div>
+                    )}
+
                     {/* ---------- el hilo: quién dijo qué, en orden ---------- */}
                     <Hilo eventos={f.facturas_eventos} />
                     <CajaTexto
@@ -494,8 +535,33 @@ export default function FacturasPage() {
             color={resumen?.problemas ? '#C0392B' : null} />
         </div>
 
+        {/* Buscador — mira TODAS las facturas, no solo el filtro abierto */}
+        <div style={{ display: 'flex', gap: 9, alignItems: 'center', marginBottom: 11 }}>
+          <input
+            type="text"
+            value={busca}
+            onChange={(e) => { setBusca(e.target.value); setAbierta(null); }}
+            placeholder="Buscar en todas: proveedor, número de factura o producto…"
+            style={{
+              flex: 1, padding: '9px 13px', border: '1.5px solid ' + (busca ? '#2a78a5' : '#E2DDD4'),
+              borderRadius: 10, fontSize: 13.5, background: '#FFFFFF',
+            }} />
+          {busca && (
+            <button onClick={() => setBusca('')}
+              style={{
+                padding: '8px 13px', borderRadius: 9, border: '1.5px solid #E2DDD4',
+                background: '#FFFFFF', color: '#6B6560', fontSize: 12.5, fontWeight: 600, cursor: 'pointer',
+              }}>Limpiar</button>
+          )}
+        </div>
+        {busca && (
+          <div style={{ fontSize: 12, color: '#2a78a5', marginBottom: 10 }}>
+            Buscando en todas las facturas — el filtro de abajo no aplica mientras busque.
+          </div>
+        )}
+
         {/* Filtros */}
-        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14, opacity: busca ? 0.45 : 1 }}>
           {FILTROS.map(f => (
             <button key={f.id} onClick={() => { setFiltro(f.id); setAbierta(null); }}
               style={{
@@ -526,7 +592,7 @@ export default function FacturasPage() {
 
         {cargando && <div style={{ padding: 34, textAlign: 'center', color: '#6B6560' }}>Cargando facturas…</div>}
 
-        {!cargando && !facturas.length && !error && !sinTabla && (
+        {!cargando && !visibles.length && !error && !sinTabla && (
           <div style={{ ...card, textAlign: 'center', padding: '42px 20px', color: '#6B6560' }}>
 
             <div style={{ fontWeight: 600, color: '#1A1714' }}>No hay facturas acá</div>

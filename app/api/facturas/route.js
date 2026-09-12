@@ -25,7 +25,7 @@ const CAMPOS = `id, clave, consecutivo, tipo_documento, proveedor_cedula, provee
   soltada_a_pago_por, fecha_soltada_a_pago,
   pagada_por, fecha_pago, referencia_pago,
   corrige_clave, corrige_razon, necesita_revision, motivo_revision, correo_asunto,
-  categoria, es_mercaderia, categoria_mixta,
+  categoria, es_mercaderia, categoria_mixta, clasificacion_manual,
   facturas_lineas(id, numero_linea, detalle, cantidad, unidad_medida,
                   precio_unitario, monto_total_linea, cantidad_recibida, tiene_error,
                   observacion, cabys, categoria),
@@ -35,8 +35,14 @@ const CAMPOS = `id, clave, consecutivo, tipo_documento, proveedor_cedula, provee
 const BANDEJAS = {
   // Recepción: mercadería que el robot bajó y que nadie ha contado todavía.
   recepcion: (q) => q.eq('estado', 'recibida').eq('es_mercaderia', true).eq('tipo_documento', 'factura'),
-  // Administración: ya la recibieron, faltan sus dos checks.
-  administracion: (q) => q.in('estado', ['mercaderia_recibida', 'en_inventario']),
+  // Administración: todo lo que espera una acción SUYA. Son dos cosas distintas y las dos
+  // van acá a propósito:
+  //   · mercadería que Recepción ya recibió → faltan sus dos checks;
+  //   · gastos todavía sin aprobar (`recibida` + no es mercadería) → un gasto no pasa por
+  //     Recepción, así que si no sale acá **no sale en ninguna bandeja**. Fue justo el hueco
+  //     por el que la factura 9097 de Thinko pareció no existir (2026-09-13).
+  administracion: (q) => q.or('estado.in.(mercaderia_recibida,en_inventario),and(estado.eq.recibida,es_mercaderia.eq.false)')
+                          .eq('tipo_documento', 'factura'),
   // Lo que se atascó con un proveedor. Es trabajo de otra naturaleza: va aparte.
   errores:   (q) => q.eq('estado', 'con_problema'),
   // Administración: lo que ya está listo para pagarse.
@@ -333,6 +339,36 @@ export async function PATCH(req) {
         if (!detalle) return Response.json({ error: 'El comentario está vacío.' }, { status: 400 });
         await anotar(id, 'comentario', quien, detalle);
         return Response.json({ ok: true });
+      }
+
+      // ---------------------------------------------------- corregir mercadería / gasto
+      // El CABYS se equivoca con los códigos ambiguos (una placa de aluminio y un tornillo
+      // comparten prefijo). Acá una persona lo corrige, y la decisión se guarda POR
+      // PROVEEDOR para que las facturas que mande después entren ya bien.
+      case 'clasificar': {
+        const aMercaderia = body.es_mercaderia !== false;
+        cambios.es_mercaderia = aMercaderia;
+        cambios.clasificacion_manual = true;
+        if (aMercaderia && f.categoria !== 'mercaderia') cambios.categoria = 'mercaderia';
+
+        const { data: dCla, error: eCla } = await conReintento(() => supabase
+          .from('facturas_proveedor').update(cambios).eq('id', id).select().single());
+        if (eCla) throw eCla;
+
+        // La memoria del robot: la próxima factura de este proveedor nace bien clasificada.
+        await conReintento(() => supabase.from('proveedores_clasificacion').upsert({
+          cedula: f.proveedor_cedula,
+          proveedor_nombre: f.proveedor_nombre,
+          es_mercaderia: aMercaderia,
+          categoria: aMercaderia ? 'mercaderia' : (f.categoria || null),
+          quien,
+          nota: detalle || null,
+          updated_at: new Date().toISOString(),
+        }, { onConflict: 'cedula' }));
+
+        await anotar(id, 'clasificada', quien,
+          `Marcada como ${aMercaderia ? 'mercadería' : 'gasto'} — se aplica a las próximas facturas de ${f.proveedor_nombre}`);
+        return Response.json(dCla);
       }
 
       // ---------------------------------------------------- gasto directo a pagos
