@@ -59,13 +59,25 @@ const NOTA_CREDITO = { corta: 'N. CRÉDITO', color: '#5B35B5', fondo: '#EDE9F6' 
 // 📐 COLUMNAS FIJAS (Mario, 2026-09-12: *"los días y los montos se ven desalineados, es un
 // despiche"*). condición · fecha · proveedor · N° factura · estado · días · monto.
 // En teléfono se esconden fecha, N° y estado (clase `solo-ancho`).
-const COLUMNAS = '74px 60px minmax(0,1fr) 84px 96px 40px 96px';
+const COLUMNAS = '78px 62px minmax(0,1fr) 58px 96px 50px 96px';
+// Estilo de los encabezados de columna que no filtran (Factura, Estado, Vence, Monto).
+const ENCAB = { fontSize: 10.5, fontWeight: 700, color: '#8A837C', textTransform: 'uppercase', letterSpacing: '0.4px', whiteSpace: 'nowrap' };
 const CSS_FILA = `.fila-fact{grid-template-columns:${COLUMNAS}}
 @media (max-width:640px){.fila-fact{grid-template-columns:74px minmax(0,1fr) 40px 88px}.fila-fact .solo-ancho{display:none}}`;
 
-// El número de factura COMPLETO, como lo usa la gente y el banco: 00100001010000038852 → 38852.
-// Antes eran los últimos 5 dígitos y Mario pidió el número entero.
-const numFactura = (f) => String(f.consecutivo || '').slice(-10).replace(/^0+/, '') || '—';
+// Número de factura: SIEMPRE los últimos 5 dígitos, del mismo ancho en todas las filas.
+// Historia: primero eran 5, Mario pidió el número completo, y al verlo dijo que como unos son
+// más largos que otros se ve desordenado: *"quiero que aparezcan cinco dígitos"* (2026-09-12).
+// El consecutivo completo sale al pasar el mouse y en el desplegable.
+const numFactura = (f) => String(f.consecutivo || '').slice(-5) || '—';
+
+// Mes en hora de Costa Rica («2026-09»). La emisión viene en UTC: una factura de las 7 pm del
+// día 31 ya es del mes siguiente en UTC y caería en el mes equivocado.
+const mesCR = (s) => s ? new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Costa_Rica', year: 'numeric', month: '2-digit' }).format(new Date(s)) : '';
+const nombreMes = (k) => {
+  const t = new Date(`${k}-15T12:00:00`).toLocaleDateString('es-CR', { month: 'long', year: 'numeric' });
+  return t.charAt(0).toUpperCase() + t.slice(1);
+};
 // «2026-10-01» → «1/10/26» sin pasar por Date (que lo leería en UTC y mostraría el día anterior).
 const diaCorto = (s) => { if (!s) return ''; const [a, m, d] = s.split('-'); return `${+d}/${+m}/${a.slice(2)}`; };
 const OTRA_CONDICION = { corta: 'OTRO', color: '#52514e', fondo: '#EEECE8' };
@@ -151,6 +163,11 @@ export default function FacturasPage() {
   const [sub, setSub] = useState('facturas');
   const [pagando, setPagando] = useState(null);   // id de la que se está pagando
   const [verHilo, setVerHilo] = useState(null);   // el historial va escondido: *"mucho texto"*
+  // Filtros de los encabezados de la tabla (Mario: *"filtrar en los encabezados, crédito,
+  // contado, por fecha, por proveedor"*). Se limpian al cambiar de pestaña.
+  const [fCond, setFCond] = useState('');
+  const [fMes, setFMes] = useState('');
+  const [fProv, setFProv] = useState('');
   const [refPago, setRefPago] = useState('');
   const [fechaPago, setFechaPago] = useState(hoyCR());
   const [error, setError] = useState('');
@@ -261,8 +278,7 @@ export default function FacturasPage() {
     if (!b.fecha_vencimiento) return -1;
     return a.fecha_vencimiento.localeCompare(b.fecha_vencimiento);
   };
-  // 🚨 Una NOTA DE CRÉDITO no se paga: resta de lo que se debe. Meterla en "urgentes" con
-  // un "venció hace 25 días" es mentira y hace correr a alguien por nada.
+  // 🚨 Una NOTA DE CRÉDITO no se paga: resta de lo que se debe. Nunca va a «Vencidas».
   const pendiente = f => f.estado !== 'pagada' && f.estado !== 'anulada' && f.tipo_documento === 'factura';
   // El buscador mira proveedor, número de factura y nombre de producto.
   const q = normal(busca.trim());
@@ -270,17 +286,48 @@ export default function FacturasPage() {
   const base = !q && filtro === 'pagos' && sub === 'facturas'
     ? facturas.filter(f => f.tipo_documento === 'factura')
     : facturas;
-  const visibles = !q ? base : facturas.filter(f =>
+  const buscadas = !q ? base : facturas.filter(f =>
     normal(f.proveedor_nombre).includes(q) ||
     String(f.consecutivo || '').includes(busca.trim()) ||
     (f.facturas_lineas || []).some(l => normal(l.detalle).includes(q)));
-  const ordenadas = visibles.slice().sort(porVencimiento);
-  const urgentes = ordenadas.filter(f => {
-    const d = diasPara(f.fecha_vencimiento);
-    return pendiente(f) && d !== null && d <= DIAS_URGENTE;
-  });
-  const resto = ordenadas.filter(f => !urgentes.includes(f));
-  const sumaUrgentes = urgentes.filter(f => f.moneda === 'CRC').reduce((s, f) => s + Number(f.saldo ?? f.total_comprobante ?? 0), 0);
+
+  // ---- filtros de los encabezados ----
+  const condDe = f => f.tipo_documento === 'nota_credito' ? 'nota' : (f.condicion_venta === '02' ? '02' : f.condicion_venta === '01' ? '01' : 'otro');
+  const opcionesMes = [...new Set(buscadas.map(f => mesCR(f.fecha_emision)).filter(Boolean))].sort().reverse();
+  const opcionesProv = [...new Set(buscadas.map(f => f.proveedor_nombre))].sort((a, b) => a.localeCompare(b, 'es'));
+  const visibles = buscadas.filter(f =>
+    (!fCond || condDe(f) === fCond) &&
+    (!fMes || mesCR(f.fecha_emision) === fMes) &&
+    (!fProv || f.proveedor_nombre === fProv));
+
+  // ---- 📅 AGRUPADO POR MES (Mario: *"la facturación se lleva por mes"*) ----
+  // En Centro de pagos el mes es CUÁNDO TOCA PAGAR (el vencimiento; contado = el mes en que
+  // llegó), para *"ver el futuro"*: lo de este mes, lo de octubre, lo de noviembre. Lo que ya
+  // se venció va arriba en su propio grupo. En las demás pestañas: el mes en que se emitió.
+  const porPago = filtro === 'pagos' && sub === 'facturas' && !q;
+  const mesGrupo = f => {
+    if (!porPago) return mesCR(f.fecha_emision);
+    if (pendiente(f) && f.fecha_vencimiento && diasPara(f.fecha_vencimiento) < 0) return 'vencidas';
+    return f.fecha_vencimiento ? f.fecha_vencimiento.slice(0, 7) : mesCR(f.fecha_emision);
+  };
+  const grupos = {};
+  for (const f of visibles) (grupos[mesGrupo(f)] ||= []).push(f);
+  const ordenGrupos = Object.keys(grupos).sort((a, b) => porPago
+    ? (a === 'vencidas' ? -1 : b === 'vencidas' ? 1 : a.localeCompare(b))   // lo que viene: del más cercano al más lejano
+    : b.localeCompare(a));                                                  // lo emitido: el mes más nuevo arriba
+  for (const k of ordenGrupos) {
+    grupos[k].sort(porPago ? porVencimiento : (a, b) => String(b.fecha_emision).localeCompare(String(a.fecha_emision)));
+  }
+  // Total del grupo: lo que se debe de las facturas (con notas ya restadas); si el grupo es
+  // solo de notas de crédito, la suma de las notas.
+  const totalGrupo = (l) => {
+    const crc = l.filter(f => f.moneda === 'CRC');
+    const facts = crc.filter(f => f.tipo_documento === 'factura');
+    return facts.length
+      ? facts.reduce((s, f) => s + Number(f.saldo ?? f.total_comprobante ?? 0), 0)
+      : crc.reduce((s, f) => s + Number(f.total_comprobante || 0), 0);
+  };
+  const hayFiltros = fCond || fMes || fProv;
 
   const fila = (f) => {
 
@@ -616,7 +663,7 @@ export default function FacturasPage() {
         {/* Filtros */}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14, opacity: busca ? 0.45 : 1 }}>
           {FILTROS.map(f => (
-            <button key={f.id} onClick={() => { setFiltro(f.id); setAbierta(null); }}
+            <button key={f.id} onClick={() => { setFiltro(f.id); setAbierta(null); setFCond(''); setFMes(''); setFProv(''); }}
               style={{
                 padding: '6px 12px', borderRadius: 18, cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
                 border: '1.5px solid ' + (filtro === f.id ? '#2a78a5' : '#E2DDD4'),
@@ -660,34 +707,58 @@ export default function FacturasPage() {
 
         {cargando && <div style={{ padding: 34, textAlign: 'center', color: '#6B6560' }}>Cargando facturas…</div>}
 
-        {!cargando && !visibles.length && !error && !sinTabla && (
+        {!cargando && !buscadas.length && !error && !sinTabla && filtro !== 'grafico' && (
           <div style={{ ...card, textAlign: 'center', padding: '42px 20px', color: '#6B6560' }}>
-
             <div style={{ fontWeight: 600, color: '#1A1714' }}>No hay facturas acá</div>
-            <div style={{ fontSize: 13, marginTop: 4 }}>Entran solas cuando llegan a facturacion@corraldelsol.com.</div>
           </div>
         )}
 
-        {/* Lista compacta — urgentes arriba */}
-        {filtro !== 'grafico' && (
+        {/* ---------- la tabla: encabezados que filtran + grupos por mes ----------
+            Reemplaza el bloque de «Vencen en 5 días» + «El resto»: ahora manda el mes. Lo urgente
+            sigue arriba porque dentro de cada mes se ordena por vencimiento y los días van en rojo. */}
+        {filtro !== 'grafico' && !cargando && buscadas.length > 0 && (
           <>
-            {urgentes.length > 0 && (
-              <>
-                <Titulo texto={`⚠️ Vencen en ${DIAS_URGENTE} días o menos`} color="#C0392B"
-                  pie={`${urgentes.length} factura${urgentes.length === 1 ? '' : 's'} · ${fmt(sumaUrgentes)}`} />
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 18 }}>
-                  {urgentes.map(fila)}
-                </div>
-              </>
+            <div className="fila-fact" style={{
+              display: 'grid', columnGap: 10, alignItems: 'center',
+              padding: '0 12px 5px', borderBottom: '1.5px solid #E2DDD4',
+            }}>
+              <FiltroEncabezado titulo="Condición" valor={fCond} onChange={setFCond}
+                opciones={[['01', 'Contado'], ['02', 'Crédito'], ['nota', 'N. crédito']]} />
+              <FiltroEncabezado className="solo-ancho" titulo="Fecha" valor={fMes} onChange={setFMes}
+                opciones={opcionesMes.map(m => [m, nombreMes(m)])} />
+              <FiltroEncabezado titulo="Proveedor" valor={fProv} onChange={setFProv}
+                opciones={opcionesProv.map(p => [p, p])} />
+              <span className="solo-ancho" style={ENCAB}>Factura</span>
+              <span className="solo-ancho" style={ENCAB}>Estado</span>
+              <span style={{ ...ENCAB, textAlign: 'right' }}>Vence</span>
+              <span style={{ ...ENCAB, textAlign: 'right' }}>Monto</span>
+            </div>
+
+            {hayFiltros && (
+              <button onClick={() => { setFCond(''); setFMes(''); setFProv(''); }}
+                style={{ background: 'none', border: 'none', padding: '6px 2px 0', color: '#2a78a5', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                ✕ Quitar filtros
+              </button>
             )}
-            {resto.length > 0 && (
-              <>
-                {urgentes.length > 0 && <Titulo texto="El resto" color="#6B6560" pie={`${resto.length}`} />}
+            {!visibles.length && (
+              <div style={{ padding: '22px 12px', color: '#6B6560', fontSize: 13 }}>Ninguna factura con esos filtros.</div>
+            )}
+
+            {ordenGrupos.map(k => (
+              <div key={k} style={{ marginBottom: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, margin: '12px 2px 6px' }}>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: k === 'vencidas' ? '#C0392B' : '#1A1714' }}>
+                    {k === 'vencidas' ? 'Vencidas' : nombreMes(k)}
+                  </span>
+                  <span style={{ fontSize: 11.5, color: '#9A948E' }}>
+                    {grupos[k].length} · {fmt(totalGrupo(grupos[k]))}
+                  </span>
+                </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {resto.map(fila)}
+                  {grupos[k].map(fila)}
                 </div>
-              </>
-            )}
+              </div>
+            ))}
           </>
         )}
 
@@ -904,6 +975,24 @@ function Tira({ titulo, valor, pie, color }) {
       <div style={{ fontSize: 20, fontWeight: 700, marginTop: 2, color: color || '#1A1714' }}>{valor}</div>
       <div style={{ fontSize: 11.5, color: '#8A837C' }}>{pie}</div>
     </div>
+  );
+}
+
+// Un encabezado de columna que además filtra: se ve como título, y al tocarlo abre la lista.
+// Cuando tiene un filtro puesto se pinta azul y muestra lo escogido (ej. «CRÉDITO»).
+function FiltroEncabezado({ titulo, valor, onChange, opciones, className }) {
+  const activo = !!valor;
+  return (
+    <select className={className} value={valor} onChange={(e) => onChange(e.target.value)}
+      title={`Filtrar por ${titulo.toLowerCase()}`}
+      style={{
+        width: '100%', minWidth: 0, padding: '2px 0', border: 'none', background: 'transparent',
+        fontSize: 10.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.4px',
+        color: activo ? '#1f63ad' : '#8A837C', cursor: 'pointer', textOverflow: 'ellipsis',
+      }}>
+      <option value="">{titulo}</option>
+      {opciones.map(([v, t]) => <option key={v} value={v}>{t}</option>)}
+    </select>
   );
 }
 
