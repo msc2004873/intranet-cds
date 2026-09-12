@@ -99,6 +99,11 @@ export default function FacturasPage() {
   const [abierta, setAbierta] = useState(null);
   const [error, setError] = useState('');
   const [sinTabla, setSinTabla] = useState(false);
+  // 🚨 El resumen de arriba se calcula SIEMPRE sobre todo lo pendiente, no sobre la lista
+  // filtrada. Antes salía en 0 y Mario lo cachó: contaba solo `estado = por_pagar`, y
+  // ninguna factura llega a ese estado hasta que alguien la mueve a mano por el ciclo.
+  // Lo que se debe es TODO lo que no está pagado ni anulado, vaya en el paso que vaya.
+  const [resumen, setResumen] = useState(null);
 
   useEffect(() => {
     const userData = localStorage.getItem('user');
@@ -110,6 +115,27 @@ export default function FacturasPage() {
   }, [router]);
 
   useEffect(() => { if (userRole === 'admin') cargar(); }, [userRole, filtro]);
+  useEffect(() => { if (userRole === 'admin') cargarResumen(); }, [userRole]);
+
+  async function cargarResumen() {
+    try {
+      const res = await fetch('/api/facturas?tramite=1&vista=todas');
+      const data = await res.json();
+      if (data.error || !Array.isArray(data)) return;
+      const facts = data.filter(f => f.tipo_documento === 'factura' && Number(f.saldo ?? f.total_comprobante ?? 0) > 0);
+      const crc = f => f.moneda === 'CRC';
+      const saldo = f => Number(f.saldo ?? f.total_comprobante ?? 0);
+      const urgentes = facts.filter(f => { const d = diasPara(f.fecha_vencimiento); return d !== null && d <= 7; });
+      setResumen({
+        cuenta: facts.length,
+        monto: facts.filter(crc).reduce((s, f) => s + saldo(f), 0),
+        urgentes: urgentes.length,
+        montoUrgentes: urgentes.filter(crc).reduce((s, f) => s + saldo(f), 0),
+        vencidas: facts.filter(f => { const d = diasPara(f.fecha_vencimiento); return d !== null && d < 0; }).length,
+        problemas: facts.filter(f => f.estado === 'con_problema').length,
+      });
+    } catch { /* el resumen es de adorno: si falla, la lista igual sirve */ }
+  }
 
   async function cargar() {
     try {
@@ -141,17 +167,14 @@ export default function FacturasPage() {
       const data = await res.json();
       if (data.error) { alert(data.error); return; }
       await cargar();
+      await cargarResumen();
     } catch (e) { alert('No se pudo: ' + e.message); }
   }
 
   if (!userRole) return <div style={{ padding: 40, textAlign: 'center' }}>Cargando...</div>;
   if (userRole !== 'admin') return null;
 
-  const porPagar = facturas.filter(f => f.estado === 'por_pagar');
-  const venceEsta = porPagar.filter(f => { const d = diasPara(f.fecha_vencimiento); return d !== null && d <= 7; });
-  const problemas = facturas.filter(f => f.estado === 'con_problema');
-  // Se suma el SALDO (ya con las notas de crédito restadas), no el monto bruto.
-  const sumaPorPagar = porPagar.filter(f => f.moneda === 'CRC').reduce((s, f) => s + Number(f.saldo ?? f.total_comprobante ?? 0), 0);
+
 
 
   // ---- orden: lo que vence primero va primero (lo pidió Mario) ----
@@ -358,11 +381,17 @@ export default function FacturasPage() {
 
         {/* Resumen — compacto, en una tira */}
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
-          <Tira titulo="Por pagar" valor={fmt(sumaPorPagar)} pie={`${porPagar.length} factura${porPagar.length === 1 ? '' : 's'}`} />
-          <Tira titulo="Vencen en 7 días" valor={venceEsta.length} pie={venceEsta.length ? 'revisar pronto' : 'nada urgente'}
-            color={venceEsta.length ? '#B5651D' : null} />
-          <Tira titulo="Con problema" valor={problemas.length} pie={problemas.length ? 'no se pueden pagar' : 'todo bien'}
-            color={problemas.length ? '#C0392B' : null} />
+          <Tira titulo="Se debe en total" valor={resumen ? fmt(resumen.monto) : '…'}
+            pie={resumen ? `${resumen.cuenta} factura${resumen.cuenta === 1 ? '' : 's'} sin pagar` : 'cargando'} />
+          <Tira titulo="Vencen en 7 días" valor={resumen ? resumen.urgentes : '…'}
+            pie={resumen ? (resumen.urgentes ? fmt(resumen.montoUrgentes) : 'nada urgente') : 'cargando'}
+            color={resumen?.urgentes ? '#B5651D' : null} />
+          <Tira titulo="Ya vencidas" valor={resumen ? resumen.vencidas : '…'}
+            pie={resumen?.vencidas ? 'pasadas de fecha' : 'ninguna'}
+            color={resumen?.vencidas ? '#C0392B' : null} />
+          <Tira titulo="Con problema" valor={resumen ? resumen.problemas : '…'}
+            pie={resumen?.problemas ? 'no se pueden pagar' : 'todo bien'}
+            color={resumen?.problemas ? '#C0392B' : null} />
         </div>
 
         {/* Filtros */}
