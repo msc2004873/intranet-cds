@@ -91,21 +91,23 @@ const CATEGORIAS = {
   sin_clasificar: 'Sin clasificar',
 };
 
-// 📥 LAS DOS PRIMERAS SON BANDEJAS DE TRABAJO, no filtros de consulta (FACTURAS.md §8).
+// 🚨 SEIS PESTAÑAS, NI UNA MÁS — Mario (2026-09-12): *"son demasiados filtros… necesito nada
+// más gráfico de gastos, de otra persona, por revisar, facturas con errores, centro de pagos
+// y pagadas"*. Se fueron «Todas», «Mercadería», «Gastos y servicios» y «En trámite de pago»
+// (el buscador ya busca en todas). Las notas de crédito son un SUB-filtro de Centro de pagos.
+// Y pagar se hace ACÁ: la página aparte `/admin/facturas/pagos` se borró (*"lo quiero todo en
+// el mismo lugar"*). 🚫 No volver a agregar pestañas; lo nuevo va adentro de una de estas.
+//
 // «Por revisar» = lo que Recepción ya recibió y espera los dos checks de Administración.
-// «Facturas con errores» = lo que se atascó con un proveedor. Va aparte a propósito: es
-// trabajo de otra naturaleza (hay que llamar al proveedor), no la misma cola más lenta.
+// «Facturas con errores» = lo que se atascó con un proveedor (hay que llamarlo).
+// «Centro de pagos» = todo lo que se debe, lo que vence primero arriba.
 const FILTROS = [
   { id: 'administracion', etiqueta: '📥 Por revisar' },
   { id: 'errores',    etiqueta: '🔴 Facturas con errores' },
-  { id: 'tramite',    etiqueta: 'En trámite de pago' },
-  { id: 'todas',      etiqueta: 'Todas' },
-  { id: 'mercaderia', etiqueta: 'Mercadería' },
-  { id: 'gastos',     etiqueta: 'Gastos y servicios' },
-  { id: 'notas',      etiqueta: 'Notas de crédito' },
+  { id: 'pagos',      etiqueta: '💸 Centro de pagos' },
   { id: 'pagada',     etiqueta: 'Pagadas' },
-  { id: 'ajenas',     etiqueta: 'De otra persona' },
   { id: 'grafico',    etiqueta: 'Gráfico de gastos' },
+  { id: 'ajenas',     etiqueta: 'De otra persona' },
 ];
 
 // Arranca en la bandeja de Administración: es el trabajo que le toca a quien entra acá.
@@ -132,6 +134,11 @@ export default function FacturasPage() {
   // Un buscador que solo mira la pestaña abierta miente por omisión.
   const [busca, setBusca] = useState('');
   const [abierta, setAbierta] = useState(null);
+  // Sub-filtro de Centro de pagos: las facturas que se deben, o las notas de crédito.
+  const [sub, setSub] = useState('facturas');
+  const [pagando, setPagando] = useState(null);   // id de la que se está pagando
+  const [refPago, setRefPago] = useState('');
+  const [fechaPago, setFechaPago] = useState(hoyCR());
   const [error, setError] = useState('');
   const [sinTabla, setSinTabla] = useState(false);
   // 🚨 El resumen de arriba se calcula SIEMPRE sobre todo lo pendiente, no sobre la lista
@@ -149,7 +156,7 @@ export default function FacturasPage() {
     if (user.rol !== 'admin') router.push('/');
   }, [router]);
 
-  useEffect(() => { if (userRole === 'admin') cargar(); }, [userRole, filtro, busca]);
+  useEffect(() => { if (userRole === 'admin') cargar(); }, [userRole, filtro, sub, busca]);
   useEffect(() => { if (userRole === 'admin') cargarResumen(); }, [userRole]);
 
   async function cargarResumen() {
@@ -175,13 +182,12 @@ export default function FacturasPage() {
   async function cargar() {
     try {
       setCargando(true); setError(''); setSinTabla(false);
-      const estados = ['por_pagar', 'pagada'];
-      const bandejas = ['administracion', 'errores', 'pagos', 'notas'];
-      const q = bandejas.includes(filtro) ? `bandeja=${filtro}`
-        : filtro === 'tramite' ? 'tramite=1&vista=todas'
+      const q = filtro === 'administracion' || filtro === 'errores' ? `bandeja=${filtro}`
+        // Centro de pagos = TODO lo que se debe, vaya en el paso que vaya (antes «En trámite»).
+        : filtro === 'pagos' ? (sub === 'notas' ? 'bandeja=notas' : 'tramite=1&vista=todas')
+        : filtro === 'pagada' ? 'estado=pagada'
         : filtro === 'grafico' ? 'vista=todas'
-        : estados.includes(filtro) ? `estado=${filtro}`
-        : `vista=${filtro}`;
+        : 'vista=ajenas';
       // Con el buscador escrito se ignora el filtro y se traen TODAS.
       const res = await fetch(`/api/facturas?${busca.trim() ? 'vista=todas' : q}`);
       const data = await res.json();
@@ -246,7 +252,11 @@ export default function FacturasPage() {
   const pendiente = f => f.estado !== 'pagada' && f.estado !== 'anulada' && f.tipo_documento === 'factura';
   // El buscador mira proveedor, número de factura y nombre de producto.
   const q = normal(busca.trim());
-  const visibles = !q ? facturas : facturas.filter(f =>
+  // En Centro de pagos → Facturas, las notas no van: no se pagan, restan (tienen su sub-filtro).
+  const base = !q && filtro === 'pagos' && sub === 'facturas'
+    ? facturas.filter(f => f.tipo_documento === 'factura')
+    : facturas;
+  const visibles = !q ? base : facturas.filter(f =>
     normal(f.proveedor_nombre).includes(q) ||
     String(f.consecutivo || '').includes(busca.trim()) ||
     (f.facturas_lineas || []).some(l => normal(l.detalle).includes(q)));
@@ -436,7 +446,7 @@ export default function FacturasPage() {
                         />
                         {f.estado === 'por_pagar' && (
                           <div style={{ fontSize: 12, color: '#B5651D', fontWeight: 600, paddingLeft: 2 }}>
-                            ✔ Los tres checks están puestos — la factura ya está en la pantalla de pagos.
+                            ✔ Los tres checks están puestos — la factura ya está en Centro de pagos.
                           </div>
                         )}
                       </div>
@@ -503,11 +513,43 @@ export default function FacturasPage() {
                       onEnviar={(txt) => accionar(f.id, 'comentario', { comentario: txt })}
                     />
 
-                    {f.estado === 'por_pagar' && (
-                      <div style={{ marginTop: 12 }}>
-                        <Boton onClick={() => router.push('/admin/facturas/pagos')} color="#B5651D">Ir a pagos →</Boton>
+                    {/* ---------- pagar ----------
+                        Vivía en /admin/facturas/pagos; Mario lo quiso en el mismo lugar. Solo sale
+                        cuando la factura ya pasó todos sus checks (estado por_pagar). */}
+                    {f.estado === 'por_pagar' && (pagando === f.id ? (
+                      <div style={{ marginTop: 14, padding: '12px 14px', background: '#F2F9F5', border: '1.5px solid #BFE0CD', borderRadius: 10 }}>
+                        <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>
+                          Pagar {fmt(f.saldo ?? f.total_comprobante, f.moneda)} a {f.proveedor_nombre}
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          <input
+                            type="text"
+                            value={refPago}
+                            onChange={(e) => setRefPago(e.target.value)}
+                            placeholder="Referencia o comprobante (opcional)"
+                            style={{ flex: 1, minWidth: 190, padding: '7px 10px', border: '1.5px solid #E2DDD4', borderRadius: 9, fontSize: 12.5 }} />
+                          <input
+                            type="date"
+                            value={fechaPago}
+                            onChange={(e) => setFechaPago(e.target.value)}
+                            style={{ padding: '7px 10px', border: '1.5px solid #E2DDD4', borderRadius: 9, fontSize: 12.5 }} />
+                        </div>
+                        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                          <Boton color="#1a7a4a" onClick={async () => {
+                            const ok = await accionar(f.id, 'pagar', { referencia_pago: refPago.trim() || null, fecha_pago: fechaPago });
+                            if (ok) { setPagando(null); setRefPago(''); }
+                          }}>Confirmar pago</Boton>
+                          <button onClick={() => { setPagando(null); setRefPago(''); }}
+                            style={{ background: '#FFFFFF', color: '#6B6560', border: '1.5px solid #E2DDD4', borderRadius: 9, padding: '7px 14px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
+                            Cancelar
+                          </button>
+                        </div>
                       </div>
-                    )}
+                    ) : (
+                      <div style={{ marginTop: 12 }}>
+                        <Boton onClick={() => { setPagando(f.id); setFechaPago(hoyCR()); }} color="#1a7a4a">Marcar como pagada</Boton>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>
@@ -572,6 +614,21 @@ export default function FacturasPage() {
               }}>{f.etiqueta}</button>
           ))}
         </div>
+
+        {/* Sub-filtro de Centro de pagos. Chiquito y solo ahí, para no volver a llenar la barra. */}
+        {filtro === 'pagos' && !busca && (
+          <div style={{ display: 'flex', gap: 6, marginTop: -6, marginBottom: 14 }}>
+            {[['facturas', 'Facturas'], ['notas', 'Notas de crédito']].map(([id, etiqueta]) => (
+              <button key={id} onClick={() => { setSub(id); setAbierta(null); }}
+                style={{
+                  padding: '3px 10px', borderRadius: 14, cursor: 'pointer', fontSize: 11.5, fontWeight: 600,
+                  border: '1.5px solid ' + (sub === id ? '#2a78a5' : '#E2DDD4'),
+                  background: sub === id ? '#E4EFFB' : '#FFFFFF',
+                  color: sub === id ? '#1f63ad' : '#6B6560',
+                }}>{etiqueta}</button>
+            ))}
+          </div>
+        )}
 
         {sinTabla && (
           <div style={{ ...card, textAlign: 'center', padding: '42px 24px' }}>
