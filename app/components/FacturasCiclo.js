@@ -1,7 +1,7 @@
 'use client';
 
 // Piezas compartidas del ciclo de facturas (FACTURAS.md §8).
-// Las usan la pantalla de Gerencia (/admin/facturas) y la de pagos (/admin/facturas/pagos).
+// Las usan la pantalla de Administración (/admin/facturas) y la de pagos (/admin/facturas/pagos).
 // Viven acá para que el hilo de comentarios se vea IGUAL en las dos: quien paga tiene que
 // leer exactamente lo mismo que escribió Recepción, sin traducciones por el camino.
 

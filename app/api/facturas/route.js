@@ -5,7 +5,7 @@ import supabase from '../../../lib/supabase-server.js';
 // El ciclo tal como lo dictó Mario está en ~/projectsm1/corral-del-sol/FACTURAS.md §8.
 //
 // 🚨 EL `estado` NO LO ESCOGE NADIE. Lo calcula este archivo a partir de los checks:
-//    Recepción marca → Gerencia marca QVet y marcado → cuando los dos están, pasa sola a
+//    Recepción marca → Administración marca QVet y marcado → cuando los dos están, pasa sola a
 //    pagos. Una pantalla NUNCA manda un estado; manda una ACCIÓN y acá se decide.
 //    (El PATCH viejo por `estado` sigue aceptándose por compatibilidad, ver más abajo.)
 
@@ -35,8 +35,8 @@ const CAMPOS = `id, clave, consecutivo, tipo_documento, proveedor_cedula, provee
 const BANDEJAS = {
   // Recepción: mercadería que el robot bajó y que nadie ha contado todavía.
   recepcion: (q) => q.eq('estado', 'recibida').eq('es_mercaderia', true).eq('tipo_documento', 'factura'),
-  // Gerencia: ya la recibieron, faltan sus dos checks.
-  gerencia:  (q) => q.in('estado', ['mercaderia_recibida', 'en_inventario']),
+  // Administración: ya la recibieron, faltan sus dos checks.
+  administracion: (q) => q.in('estado', ['mercaderia_recibida', 'en_inventario']),
   // Lo que se atascó con un proveedor. Es trabajo de otra naturaleza: va aparte.
   errores:   (q) => q.eq('estado', 'con_problema'),
   // Administración: lo que ya está listo para pagarse.
@@ -44,7 +44,7 @@ const BANDEJAS = {
 };
 
 // GET — lista de facturas con sus líneas y su bitácora.
-//   ?bandeja=recepcion|gerencia|errores|pagos   la cola de cada persona
+//   ?bandeja=recepcion|administracion|errores|pagos   la cola de cada persona
 //   ?estado=por_pagar                            filtra por estado
 //   ?vista=ajenas|mercaderia|gastos              a quién pertenece / qué tipo de gasto
 //   ?id=123                                      una sola, con líneas y bitácora
@@ -331,7 +331,7 @@ export async function PATCH(req) {
       case 'pagar': {
         if (f.estado === 'con_problema') {
           return Response.json({
-            error: 'Esta factura tiene un problema sin resolver. No se puede pagar hasta que Gerencia lo cierre.',
+            error: 'Esta factura tiene un problema sin resolver. No se puede pagar hasta que Administración lo cierre.',
           }, { status: 409 });
         }
         if (f.estado === 'pagada') {
@@ -354,7 +354,7 @@ export async function PATCH(req) {
     }
 
     cambios.estado = estadoSegunChecks(checks);
-    // Cuando los dos checks de Gerencia quedan puestos, la factura pasa SOLA a pagos.
+    // Cuando los dos checks de Administración quedan puestos, la factura pasa SOLA a pagos.
     // Nadie aprieta un botón de "pasar a pago": es justo el botón que se olvida.
     if (cambios.estado === 'por_pagar' && !f.fecha_soltada_a_pago) {
       cambios.soltada_a_pago_por = quien;
@@ -381,7 +381,7 @@ export async function PATCH(req) {
 }
 
 // ---- compatibilidad con el PATCH viejo (mandaba `estado` a mano) ----
-// No se usa desde las pantallas nuevas. Se conserva porque la pantalla de Gerencia vieja
+// No se usa desde las pantallas nuevas. Se conserva porque la pantalla de Administración vieja
 // todavía puede estar abierta en el navegador de alguien cuando se despliegue.
 async function patchPorEstado(id, actual, body) {
   const { estado, quien, detalle, lineas_recibidas, referencia_pago, fecha_pago } = body;
@@ -390,7 +390,7 @@ async function patchPorEstado(id, actual, body) {
   }
   if (actual.estado === 'con_problema' && ['por_pagar', 'pagada'].includes(estado)) {
     return Response.json({
-      error: 'Esta factura tiene un problema sin resolver. No se puede pasar a pago hasta que Gerencia lo cierre.',
+      error: 'Esta factura tiene un problema sin resolver. No se puede pasar a pago hasta que Administración lo cierre.',
     }, { status: 409 });
   }
 

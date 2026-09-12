@@ -92,11 +92,11 @@ const CATEGORIAS = {
 };
 
 // 📥 LAS DOS PRIMERAS SON BANDEJAS DE TRABAJO, no filtros de consulta (FACTURAS.md §8).
-// «Por revisar» = lo que Recepción ya recibió y espera los dos checks de Gerencia.
+// «Por revisar» = lo que Recepción ya recibió y espera los dos checks de Administración.
 // «Facturas con errores» = lo que se atascó con un proveedor. Va aparte a propósito: es
 // trabajo de otra naturaleza (hay que llamar al proveedor), no la misma cola más lenta.
 const FILTROS = [
-  { id: 'gerencia',   etiqueta: '📥 Por revisar' },
+  { id: 'administracion', etiqueta: '📥 Por revisar' },
   { id: 'errores',    etiqueta: '🔴 Facturas con errores' },
   { id: 'tramite',    etiqueta: 'En trámite de pago' },
   { id: 'todas',      etiqueta: 'Todas' },
@@ -107,8 +107,8 @@ const FILTROS = [
   { id: 'grafico',    etiqueta: 'Gráfico de gastos' },
 ];
 
-// Arranca en la bandeja de Gerencia: es el trabajo que le toca a quien entra acá.
-const FILTRO_INICIAL = 'gerencia';
+// Arranca en la bandeja de Administración: es el trabajo que le toca a quien entra acá.
+const FILTRO_INICIAL = 'administracion';
 
 // Vence en 5 días o menos → sube arriba del todo. Lo pidió Mario.
 const DIAS_URGENTE = 5;
@@ -167,7 +167,7 @@ export default function FacturasPage() {
     try {
       setCargando(true); setError(''); setSinTabla(false);
       const estados = ['por_pagar', 'pagada'];
-      const bandejas = ['gerencia', 'errores', 'pagos'];
+      const bandejas = ['administracion', 'errores', 'pagos'];
       const q = bandejas.includes(filtro) ? `bandeja=${filtro}`
         : filtro === 'tramite' ? 'tramite=1&vista=todas'
         : filtro === 'grafico' ? 'vista=todas'
@@ -201,7 +201,7 @@ export default function FacturasPage() {
 
   // El ciclo nuevo: acá NO se manda un estado. Se manda la acción (marcar QVet, marcar
   // producto, resolver, comentar) y el servidor decide en qué paso queda la factura.
-  // Cuando los dos checks de Gerencia están puestos, la factura pasa SOLA a pagos.
+  // Cuando los dos checks de Administración están puestos, la factura pasa SOLA a pagos.
   async function accionar(id, accion, extra = {}) {
     try {
       const res = await fetch(`/api/facturas?id=${id}`, {
@@ -384,7 +384,7 @@ export default function FacturasPage() {
                     </div>
 
                     {/* ---------- LOS CHECKS DEL CICLO ---------- */}
-                    {/* Gerencia no "mueve estados": marca sus dos checks. Cuando los dos están,
+                    {/* Administración no "mueve estados": marca sus dos checks. Cuando los dos están,
                         la factura pasa sola a pagos. Ese es el botón que antes se olvidaba. */}
                     {f.es_mercaderia ? (
                       <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 7 }}>

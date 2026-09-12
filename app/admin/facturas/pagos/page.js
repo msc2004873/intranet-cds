@@ -4,7 +4,7 @@
 //
 // 🎯 LO QUE ESTA PANTALLA ARREGLA: hoy quien paga lo hace a ciegas. Acá, antes de pagar, ve
 // **todo el recorrido de la factura**: quién recibió la mercadería, qué producto vino mal,
-// qué escribió Recepción, cómo lo cerró Gerencia. Ese historial es la razón de la pantalla,
+// qué escribió Recepción, cómo lo cerró Administración. Ese historial es la razón de la pantalla,
 // no un adorno: por eso va ABIERTO y no escondido tras otro click.
 //
 // 🚨 Lo que llega acá ya pasó los tres checks. Una factura con un producto malo NO aparece:
@@ -144,7 +144,7 @@ export default function PagosPage() {
             <div style={{ fontSize: 32, marginBottom: 8 }}>💸</div>
             <div style={{ fontWeight: 600, color: '#1A1714' }}>No hay nada listo para pagar</div>
             <div style={{ fontSize: 13, marginTop: 4, lineHeight: 1.6 }}>
-              Una factura llega acá cuando Recepción la recibió y Gerencia marcó QVet y el marcado.<br />
+              Una factura llega acá cuando Recepción la recibió y Administración marcó QVet y el marcado.<br />
               Lo que está a medio camino se ve en <a href="/admin/facturas" style={{ color: '#2a78a5' }}>Facturas</a>.
             </div>
           </div>
@@ -280,7 +280,7 @@ export default function PagosPage() {
         </div>
 
         <div style={{ marginTop: 22, fontSize: 11.5, color: '#9A948E', textAlign: 'center', lineHeight: 1.7 }}>
-          Acá solo aparecen las facturas que ya pasaron recepción y los checks de Gerencia.<br />
+          Acá solo aparecen las facturas que ya pasaron recepción y los checks de Administración.<br />
           Lo que está trancado con un proveedor se ve en <a href="/admin/facturas" style={{ color: '#2a78a5' }}>Facturas → Facturas con errores</a>.
         </div>
       </div>
