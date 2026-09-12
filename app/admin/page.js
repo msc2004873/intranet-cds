@@ -380,8 +380,27 @@ export default function AdminPage() {
               <span style={{ fontSize: '26px' }}>🧾</span>
             </div>
             <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Facturas</div>
-            <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Facturas de proveedores: mercadería, crédito y pago</div>
-            <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#FBF0E4', color: '#B5651D' }}>Proveedores</span>
+            <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Revisá lo recibido, marcá QVet y el marcado</div>
+            <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#FBF0E4', color: '#B5651D' }}>Gerencia</span>
+          </a>
+
+          {/* Pagos va aparte de Facturas a propósito: es el trabajo de otra persona
+              (Administración), no otra pestaña del mismo tablero. Ver FACTURAS.md §8. */}
+          <a href="/admin/facturas/pagos" style={buttonStyle} onMouseEnter={buttonHoverEnter} onMouseLeave={buttonHoverLeave}>
+            <div style={{
+              width: '56px',
+              height: '56px',
+              background: '#E8F3EC',
+              borderRadius: '50%',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+            }}>
+              <span style={{ fontSize: '26px' }}>💸</span>
+            </div>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Pagos a proveedores</div>
+            <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Lo que está listo para pagar, ordenado por vencimiento</div>
+            <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#E8F3EC', color: '#1a7a4a' }}>Administración</span>
           </a>
         </div>
       </div>

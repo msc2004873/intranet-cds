@@ -13,6 +13,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Header from '../../components/Header';
+import { Check, Hilo, CajaTexto } from '../../components/FacturasCiclo';
 
 // Regla 2 del CLAUDE.md: colones con espacio y redondeados; dólares con coma y 2 decimales.
 const fmt = (n, moneda = 'CRC') => moneda === 'USD'
@@ -90,19 +91,24 @@ const CATEGORIAS = {
   sin_clasificar: 'Sin clasificar',
 };
 
+// 📥 LAS DOS PRIMERAS SON BANDEJAS DE TRABAJO, no filtros de consulta (FACTURAS.md §8).
+// «Por revisar» = lo que Recepción ya recibió y espera los dos checks de Gerencia.
+// «Facturas con errores» = lo que se atascó con un proveedor. Va aparte a propósito: es
+// trabajo de otra naturaleza (hay que llamar al proveedor), no la misma cola más lenta.
 const FILTROS = [
+  { id: 'gerencia',   etiqueta: '📥 Por revisar' },
+  { id: 'errores',    etiqueta: '🔴 Facturas con errores' },
   { id: 'tramite',    etiqueta: 'En trámite de pago' },
   { id: 'todas',      etiqueta: 'Todas' },
   { id: 'mercaderia', etiqueta: 'Mercadería' },
   { id: 'gastos',     etiqueta: 'Gastos y servicios' },
-  { id: 'con_problema', etiqueta: 'Con problema' },
   { id: 'pagada',     etiqueta: 'Pagadas' },
   { id: 'ajenas',     etiqueta: 'De otra persona' },
   { id: 'grafico',    etiqueta: 'Gráfico de gastos' },
 ];
 
-// Arranca en "en trámite de pago": es lo que alguien necesita ver al entrar.
-const FILTRO_INICIAL = 'tramite';
+// Arranca en la bandeja de Gerencia: es el trabajo que le toca a quien entra acá.
+const FILTRO_INICIAL = 'gerencia';
 
 // Vence en 5 días o menos → sube arriba del todo. Lo pidió Mario.
 const DIAS_URGENTE = 5;
@@ -160,8 +166,10 @@ export default function FacturasPage() {
   async function cargar() {
     try {
       setCargando(true); setError(''); setSinTabla(false);
-      const estados = ['por_pagar', 'con_problema', 'pagada'];
-      const q = filtro === 'tramite' ? 'tramite=1&vista=todas'
+      const estados = ['por_pagar', 'pagada'];
+      const bandejas = ['gerencia', 'errores', 'pagos'];
+      const q = bandejas.includes(filtro) ? `bandeja=${filtro}`
+        : filtro === 'tramite' ? 'tramite=1&vista=todas'
         : filtro === 'grafico' ? 'vista=todas'
         : estados.includes(filtro) ? `estado=${filtro}`
         : `vista=${filtro}`;
@@ -189,6 +197,24 @@ export default function FacturasPage() {
       await cargar();
       await cargarResumen();
     } catch (e) { alert('No se pudo: ' + e.message); }
+  }
+
+  // El ciclo nuevo: acá NO se manda un estado. Se manda la acción (marcar QVet, marcar
+  // producto, resolver, comentar) y el servidor decide en qué paso queda la factura.
+  // Cuando los dos checks de Gerencia están puestos, la factura pasa SOLA a pagos.
+  async function accionar(id, accion, extra = {}) {
+    try {
+      const res = await fetch(`/api/facturas?id=${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ accion, quien: usuario, ...extra }),
+      });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return false; }
+      await cargar();
+      await cargarResumen();
+      return true;
+    } catch (e) { alert('No se pudo: ' + e.message); return false; }
   }
 
   if (!userRole) return <div style={{ padding: 40, textAlign: 'center' }}>Cargando...</div>;
@@ -322,10 +348,15 @@ export default function FacturasPage() {
                           {lineas.map(l => {
                             const falta = l.cantidad_recibida != null && Number(l.cantidad_recibida) < Number(l.cantidad);
                             return (
-                              <tr key={l.id} style={{ borderTop: '1px solid #EFEBE4' }}>
+                              <tr key={l.id} style={{ borderTop: '1px solid #EFEBE4', background: l.tiene_error ? '#FDF4F3' : undefined }}>
                                 <td style={{ padding: '6px 8px 6px 0' }}>
+                                  {l.tiene_error && <span style={{ marginRight: 5 }}>⚠</span>}
                                   {l.detalle}
                                   {falta && <span style={{ color: '#C0392B', fontWeight: 600, marginLeft: 6 }}>llegaron {Number(l.cantidad_recibida)}</span>}
+                                  {/* Lo que Recepción escribió de ESTE producto. Es lo que se le reclama al proveedor. */}
+                                  {l.tiene_error && l.observacion && (
+                                    <div style={{ color: '#C0392B', fontSize: 11.5, marginTop: 2 }}>«{l.observacion}»</div>
+                                  )}
                                 </td>
                                 <td style={{ padding: '6px 8px', textAlign: 'right', whiteSpace: 'nowrap' }}>
                                   {Number(l.cantidad).toLocaleString('es-CR')} {l.unidad_medida || ''}
@@ -352,38 +383,79 @@ export default function FacturasPage() {
                       {f.pagada_por && <><br />Pagada por {f.pagada_por} el {fechaLarga(f.fecha_pago)}</>}
                     </div>
 
-                    <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 12 }}>
-                      {f.estado === 'recibida' && f.es_mercaderia && (
-                        <>
-                          <Boton onClick={() => mover(f.id, 'mercaderia_recibida')} color="#1a7a4a">Llegó completa</Boton>
-                          <Boton onClick={() => {
-                            const d = prompt('¿Qué pasó con este pedido?');
-                            if (d) mover(f.id, 'con_problema', { detalle: d });
-                          }} color="#C0392B">Llegó con problema</Boton>
-                        </>
-                      )}
-                      {/* Un gasto (luz, leasing, gasolina) no pasa por recibir mercadería: va directo a pago. */}
-                      {f.estado === 'recibida' && !f.es_mercaderia && (
-                        <Boton onClick={() => mover(f.id, 'por_pagar')} color="#B5651D">Pasar a pago</Boton>
-                      )}
-                      {f.estado === 'mercaderia_recibida' && (
-                        <Boton onClick={() => mover(f.id, 'en_inventario')} color="#5B35B5">Ya está en QVet</Boton>
-                      )}
-                      {f.estado === 'con_problema' && (
-                        <Boton onClick={() => mover(f.id, 'mercaderia_recibida', { detalle: 'Problema resuelto con el proveedor' })} color="#1a7a4a">
-                          ✅ Se resolvió con el proveedor
-                        </Boton>
-                      )}
-                      {f.estado === 'en_inventario' && (
-                        <Boton onClick={() => mover(f.id, 'por_pagar')} color="#B5651D">Pasar a pago</Boton>
-                      )}
-                      {f.estado === 'por_pagar' && (
-                        <Boton onClick={() => {
-                          const ref = prompt('Número de comprobante o referencia del pago (opcional):');
-                          if (ref !== null) mover(f.id, 'pagada', { referencia_pago: ref || null });
-                        }} color="#1a7a4a">Marcar como pagada</Boton>
-                      )}
-                    </div>
+                    {/* ---------- LOS CHECKS DEL CICLO ---------- */}
+                    {/* Gerencia no "mueve estados": marca sus dos checks. Cuando los dos están,
+                        la factura pasa sola a pagos. Ese es el botón que antes se olvidaba. */}
+                    {f.es_mercaderia ? (
+                      <div style={{ marginTop: 14, display: 'flex', flexDirection: 'column', gap: 7 }}>
+                        <Check
+                          hecho={!!f.fecha_recepcion}
+                          titulo="Recibida por Recepción"
+                          pie={f.fecha_recepcion ? `${f.recibida_por} · ${fechaLarga(f.fecha_recepcion)}` : 'Todavía nadie ha contado la mercadería'}
+                          bloqueado
+                        />
+                        <Check
+                          hecho={!!f.fecha_qvet}
+                          titulo="Subida en QVet"
+                          pie={f.fecha_qvet ? `${f.en_qvet_por} · ${fechaLarga(f.fecha_qvet)}` : 'Marcalo cuando el inventario esté actualizado'}
+                          bloqueado={!f.fecha_recepcion || f.estado === 'con_problema'}
+                          onToggle={() => accionar(f.id, 'qvet', { valor: !f.fecha_qvet })}
+                        />
+                        <Check
+                          hecho={!!f.etiquetas_impresas}
+                          titulo="Marcado"
+                          pie={f.fecha_marcado ? `${f.marcado_por} · ${fechaLarga(f.fecha_marcado)}` : 'Marcalo cuando el producto esté etiquetado'}
+                          bloqueado={!f.fecha_recepcion || f.estado === 'con_problema'}
+                          onToggle={() => accionar(f.id, 'marcado', { valor: !f.etiquetas_impresas })}
+                        />
+                        {f.estado === 'por_pagar' && (
+                          <div style={{ fontSize: 12, color: '#B5651D', fontWeight: 600, paddingLeft: 2 }}>
+                            ✔ Los tres checks están puestos — la factura ya está en la pantalla de pagos.
+                          </div>
+                        )}
+                      </div>
+                    ) : (
+                      // Un gasto (luz, leasing, gasolina) no se recibe ni entra a QVet: solo se paga.
+                      f.estado !== 'pagada' && f.estado !== 'por_pagar' && (
+                        <div style={{ marginTop: 14 }}>
+                          <div style={{ fontSize: 12, color: '#8A837C', marginBottom: 7 }}>
+                            Esto es un gasto, no mercadería: no pasa por recepción ni por QVet.
+                          </div>
+                          <Boton onClick={() => accionar(f.id, 'a_pago')} color="#B5651D">Aprobar para pago</Boton>
+                        </div>
+                      )
+                    )}
+
+                    {/* ---------- resolver un error con el proveedor ---------- */}
+                    {f.estado === 'con_problema' && (
+                      <div style={{ marginTop: 14, padding: '12px 14px', background: '#FDF4F3', border: '1.5px solid #E8B4AE', borderRadius: 10 }}>
+                        <div style={{ fontSize: 12.5, fontWeight: 700, color: '#C0392B' }}>Cerrar el problema con el proveedor</div>
+                        <div style={{ fontSize: 11.5, color: '#8A837C', marginTop: 2, marginBottom: 8 }}>
+                          Escribí cómo se resolvió. Administración lo va a leer antes de pagar.
+                        </div>
+                        <CajaTexto
+                          placeholder="Mandaron el producto que faltaba el 15/9…"
+                          boton="Se resolvió"
+                          color="#1a7a4a"
+                          onEnviar={(txt) => accionar(f.id, 'resolver', { comentario: txt })}
+                        />
+                      </div>
+                    )}
+
+                    {/* ---------- el hilo: quién dijo qué, en orden ---------- */}
+                    <Hilo eventos={f.facturas_eventos} />
+                    <CajaTexto
+                      placeholder="Escribir un comentario…"
+                      boton="Comentar"
+                      color="#2a78a5"
+                      onEnviar={(txt) => accionar(f.id, 'comentario', { comentario: txt })}
+                    />
+
+                    {f.estado === 'por_pagar' && (
+                      <div style={{ marginTop: 12 }}>
+                        <Boton onClick={() => router.push('/admin/facturas/pagos')} color="#B5651D">Ir a pagos →</Boton>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

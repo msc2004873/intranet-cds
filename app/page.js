@@ -281,6 +281,17 @@ export default function Home() {
             <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Contá las denominaciones en cualquier momento</div>
             <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#FBF6E9', color: '#8B6914' }}>Conteo</span>
           </a>
+
+          {/* Recepción de mercadería. Va en el dash principal a propósito: lo usa quien esté
+              libre cuando llega el camión, no un admin. Ver FACTURAS.md §8. */}
+          <a href="/facturas" style={buttonStyle} onMouseEnter={buttonHoverEnter} onMouseLeave={buttonHoverLeave}>
+            <div style={{ width: '56px', height: '56px', background: '#FBF0E4', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <span style={{ fontSize: '26px' }}>📦</span>
+            </div>
+            <div style={{ fontSize: '15px', fontWeight: '600', color: '#1A1714', letterSpacing: '-0.2px' }}>Recepción de facturas</div>
+            <div style={{ fontSize: '12px', color: '#6B6560', lineHeight: 1.5 }}>Contá la mercadería que llegó y marcá lo que venga mal</div>
+            <span style={{ fontSize: '10px', fontWeight: '700', textTransform: 'uppercase', letterSpacing: '0.8px', padding: '3px 10px', borderRadius: '20px', marginTop: '2px', background: '#FBF0E4', color: '#B5651D' }}>Recepción</span>
+          </a>
         </div>
 
         {/* Tabla de logs */}
