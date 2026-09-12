@@ -47,6 +47,12 @@ export async function GET(req) {
     const estado = searchParams.get('estado');
     if (estado && ESTADOS.includes(estado)) query = query.eq('estado', estado);
 
+    // "En trámite de pago" = todo lo que todavía se debe, sin importar en qué paso va.
+    // Lo pidió Mario: quiere ver junto lo que falta por pagar, no paso por paso.
+    if (searchParams.get('tramite') === '1') {
+      query = query.in('estado', ['recibida', 'mercaderia_recibida', 'con_problema', 'en_inventario', 'por_pagar']);
+    }
+
     // `vista` separa por a quién pertenece la factura y por si es mercadería o gasto.
     // Lo pidió Mario: la mercadería pasa por recibir producto; el gasto solo se paga.
     const vista = searchParams.get('vista');
