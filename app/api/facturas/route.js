@@ -469,7 +469,7 @@ export async function POST(req) {
 
     const { data: docs, error: eDocs } = await conReintento(() => supabase
       .from('facturas_proveedor')
-      .select('id, clave, consecutivo, tipo_documento, proveedor_cedula, proveedor_nombre, moneda, total_comprobante, estado')
+      .select('id, clave, consecutivo, tipo_documento, proveedor_cedula, proveedor_nombre, moneda, total_comprobante, estado, corrige_clave')
       .in('id', [...ids, ...idsNotas]));
     if (eDocs) throw eDocs;
 
@@ -503,6 +503,18 @@ export async function POST(req) {
     if (eCal) throw eCal;
     if ((calzan || []).some(n => idsNotas.includes(n.id))) {
       return Response.json({ error: 'Una de las notas ya le resta a una factura; no se puede restar dos veces.' }, { status: 400 });
+    }
+    // Y una nota «suelta» tiene que serlo de verdad: si su factura está en la base (aunque no
+    // esté en este pago), ya le resta a esa y no se puede usar otra vez acá.
+    const clavesSueltas = sueltas.map(n => n.corrige_clave).filter(Boolean);
+    if (clavesSueltas.length) {
+      const { data: yaCalzan, error: eYa } = await conReintento(() => supabase
+        .from('facturas_proveedor').select('consecutivo')
+        .eq('tipo_documento', 'factura').in('clave', clavesSueltas));
+      if (eYa) throw eYa;
+      if ((yaCalzan || []).length) {
+        return Response.json({ error: `Esa nota ya le resta a la factura ${String(yaCalzan[0].consecutivo).slice(-5)}.` }, { status: 400 });
+      }
     }
 
     const restaPorClave = {};

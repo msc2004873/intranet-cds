@@ -167,10 +167,10 @@ export default function FacturasPage() {
   // `sel` guarda la foto de cada factura escogida (id → fila) para que la selección no se
   // pierda al cambiar de pestaña o buscar. Un pago = un proveedor y una moneda.
   const [sel, setSel] = useState({});
-  // Las notas de crédito SUELTAS de ese proveedor (su factura no está en la base). Las que sí
-  // calzan con una factura ya vienen restadas en su saldo. `notasFuera` = las que se desmarcaron.
-  const [notasProv, setNotasProv] = useState([]);
-  const [notasFuera, setNotasFuera] = useState([]);
+  // Las notas de crédito SUELTAS (su factura no está en la base) que se decidió restar en este
+  // pago. Se aplican A MANO, marcándolas: Mario las buscó para *"aplicar"*, no para quitarlas.
+  // Las que sí calzan con una factura ya vienen restadas en su saldo.
+  const [notasDentro, setNotasDentro] = useState([]);
   const [verHilo, setVerHilo] = useState(null);   // el historial va escondido: *"mucho texto"*
   // Filtros de los encabezados de la tabla (Mario: *"filtrar en los encabezados, crédito,
   // contado, por fecha, por proveedor"*). Se limpian al cambiar de pestaña.
@@ -198,24 +198,14 @@ export default function FacturasPage() {
   // seleccionar el proveedor que filtre para que se vea solo lo de ese proveedor y poder
   // seleccionar varios fácilmente"*). Se trae TODO lo que se le debe, sin importar la pestaña.
   const cedulaSel = Object.values(sel)[0]?.proveedor_cedula || '';
-  useEffect(() => { if (userRole === 'admin') cargar(); }, [userRole, filtro, sub, busca, !!cedulaSel]);
+  // ⚡ Marcar NO vuelve a consultar: el ☐ solo existe en Centro de pagos, y esa lista ya trae todo
+  // lo que se debe (notas incluidas). La primera versión recargaba al marcar y Mario lo notó:
+  // *"tarda demasiado cargando cuando le doy al filtro"*.
+  useEffect(() => { if (userRole === 'admin') cargar(); }, [userRole, filtro, sub, busca]);
   useEffect(() => { if (userRole === 'admin') cargarResumen(); }, [userRole]);
 
-  // Al escoger la primera factura de un proveedor se traen sus notas de crédito sueltas.
-  useEffect(() => {
-    setNotasFuera([]);
-    if (!cedulaSel) { setNotasProv([]); return; }
-    let vivo = true;
-    fetch('/api/facturas?bandeja=notas')
-      .then(r => r.json())
-      .then(d => {
-        if (!vivo || !Array.isArray(d)) return;
-        setNotasProv(d.filter(n => n.proveedor_cedula === cedulaSel
-          && !['pagada', 'anulada'].includes(n.estado) && !n.corrige_encontrada));
-      })
-      .catch(() => { /* sin notas igual se puede pagar */ });
-    return () => { vivo = false; };
-  }, [cedulaSel]);
+  // Otro proveedor = otras notas: las que se habían aplicado se sueltan.
+  useEffect(() => { setNotasDentro([]); }, [cedulaSel]);
 
   function alternar(f) {
     setSel(s => {
@@ -275,8 +265,7 @@ export default function FacturasPage() {
         : filtro === 'grafico' ? 'vista=todas'
         : 'vista=ajenas';
       // Con el buscador escrito se ignora el filtro y se traen TODAS.
-      // Con un pago armándose, todo lo que se debe (después se deja solo ese proveedor).
-      const res = await fetch(`/api/facturas?${cedulaSel ? 'tramite=1&vista=todas' : busca.trim() ? 'vista=todas' : q}`);
+      const res = await fetch(`/api/facturas?${busca.trim() ? 'vista=todas' : q}`);
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setFacturas(Array.isArray(data) ? data : []);
@@ -390,6 +379,11 @@ export default function FacturasPage() {
   const elegidas = Object.values(sel).map(s => facturas.find(x => x.id === s.id) || s)
     .sort(porVencimiento);
   const provSel = elegidas[0] || null;
+  // Notas de crédito del proveedor escogido, sacadas de la misma lista (el GET ya dice si calzan
+  // con una factura). Sin otra consulta. Salen como sección propia debajo de sus facturas.
+  const notasDelProv = cedulaSel ? facturas.filter(f => f.tipo_documento === 'nota_credito'
+    && f.proveedor_cedula === cedulaSel && !['pagada', 'anulada'].includes(f.estado)) : [];
+  const notasSueltas = notasDelProv.filter(n => !n.corrige_encontrada && n.moneda === provSel?.moneda);
   // Total del grupo: lo que se debe de las facturas (con notas ya restadas); si el grupo es
   // solo de notas de crédito, la suma de las notas.
   const totalGrupo = (l) => {
@@ -412,19 +406,32 @@ export default function FacturasPage() {
             const abierto = abierta === f.id;
             // ☐ del pago: solo facturas que se deben. Con una ya escogida, solo las del mismo
             // proveedor y moneda (un pago = una transferencia a una persona).
-            const pagable = f.tipo_documento === 'factura' && f.es_de_corral_del_sol && !['pagada', 'anulada'].includes(f.estado);
-            const marcada = !!sel[f.id];
-            const otroProv = provSel && (provSel.proveedor_cedula !== f.proveedor_cedula || provSel.moneda !== f.moneda);
+            // 🚫 El ☐ SOLO en Centro de pagos. Mario: *"¿por qué el filtro también está en Por
+            // revisar? no tiene sentido"*. Por revisar es de checks, no de pagar.
+            const enPagos = filtro === 'pagos' && sub === 'facturas';
+            const esNota = f.tipo_documento === 'nota_credito';
+            const suelta = esNota && notasSueltas.some(n => n.id === f.id);
+            const pagable = enPagos && f.es_de_corral_del_sol && !['pagada', 'anulada'].includes(f.estado)
+              && (f.tipo_documento === 'factura' || suelta);
+            const marcada = esNota ? notasDentro.includes(f.id) : !!sel[f.id];
+            const otroProv = !esNota && provSel && (provSel.proveedor_cedula !== f.proveedor_cedula || provSel.moneda !== f.moneda);
             const puede = pagable && f.estado !== 'con_problema' && !otroProv;
             const porQueNo = f.estado === 'con_problema' ? 'Tiene un producto con error sin resolver'
-              : otroProv ? `El pago que está armando es a ${provSel.proveedor_nombre}` : 'Agregar al pago';
-            const estNombre = f.tipo_documento === 'nota_credito' && f.estado === 'pagada' ? 'Aplicada' : est.nom;
+              : otroProv ? `El pago que está armando es a ${provSel.proveedor_nombre}`
+              : esNota ? 'Restar esta nota en el pago' : 'Agregar al pago';
+            const alternarFila = () => esNota
+              ? setNotasDentro(l => l.includes(f.id) ? l.filter(x => x !== f.id) : [...l, f.id])
+              : alternar(f);
+            // Una nota que ya calza con una factura no se marca: ya le resta sola. Se dice a cuál.
+            const corregida = esNota && f.corrige_encontrada ? facturas.find(x => x.clave === f.corrige_clave) : null;
+            const colorMarca = esNota ? '#5B35B5' : '#2a78a5';
+            const estNombre = esNota && f.estado === 'pagada' ? 'Aplicada' : est.nom;
 
             return (
               <div key={f.id} style={{
                 ...card, overflow: 'hidden',
-                borderColor: marcada ? '#2a78a5' : vencida ? '#E8B4AE' : '#E2DDD4',
-                background: marcada ? '#F4F9FE' : card.background,
+                borderColor: marcada ? colorMarca : vencida ? '#E8B4AE' : '#E2DDD4',
+                background: marcada ? (esNota ? '#F6F3FC' : '#F4F9FE') : card.background,
               }}>
 
                 {/* ---------- UNA SOLA LÍNEA, EN COLUMNAS FIJAS ----------
@@ -439,14 +446,14 @@ export default function FacturasPage() {
                     role={pagable ? 'checkbox' : undefined}
                     aria-checked={pagable ? marcada : undefined}
                     title={pagable ? (marcada ? 'Quitar del pago' : porQueNo) : undefined}
-                    onClick={(e) => { e.stopPropagation(); if (marcada || puede) alternar(f); }}
+                    onClick={(e) => { e.stopPropagation(); if (marcada || puede) alternarFila(); }}
                     style={{
                       width: 16, height: 16, borderRadius: 4, boxSizing: 'border-box',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: 10, fontWeight: 800, color: '#FFFFFF',
                       visibility: pagable ? 'visible' : 'hidden',
-                      background: marcada ? '#2a78a5' : '#FFFFFF',
-                      border: '1.5px solid ' + (marcada ? '#2a78a5' : '#C9C3BA'),
+                      background: marcada ? colorMarca : '#FFFFFF',
+                      border: '1.5px solid ' + (marcada ? colorMarca : esNota ? '#B9A8E0' : '#C9C3BA'),
                       opacity: marcada || puede ? 1 : 0.35,
                       cursor: marcada || puede ? 'pointer' : 'not-allowed',
                     }}>{marcada ? '✓' : ''}</span>
@@ -474,7 +481,9 @@ export default function FacturasPage() {
                     fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                     color: est.mostrar ? est.color : '#9A948E',
                   }}>
-                    {est.mostrar ? estNombre : (f.tipo_documento === 'factura' && !f.es_mercaderia ? 'Gasto' : '')}
+                    {esNota && f.corrige_encontrada && f.estado !== 'pagada'
+                      ? <span style={{ color: '#5B35B5' }}>{corregida ? `Resta a ··${numFactura(corregida)}` : 'Ya restada'}</span>
+                      : est.mostrar ? estNombre : (f.tipo_documento === 'factura' && !f.es_mercaderia ? 'Gasto' : '')}
                   </span>
 
                   <span style={{
@@ -488,8 +497,8 @@ export default function FacturasPage() {
                   </span>
 
                   <span style={{ fontWeight: 700, fontSize: 13, textAlign: 'right', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>
-                    {/* Si una nota de crédito le rebajó, manda el SALDO. */}
-                    {fmt(f.nota_credito_aplicada > 0 ? f.saldo : f.total_comprobante, f.moneda)}
+                    {/* Si una nota de crédito le rebajó, manda el SALDO. Una nota resta: va con «−». */}
+                    {esNota ? '−' : ''}{fmt(f.nota_credito_aplicada > 0 ? f.saldo : f.total_comprobante, f.moneda)}
                   </span>
                 </div>
 
@@ -745,7 +754,7 @@ export default function FacturasPage() {
         {filtro === 'pagos' && !busca && (
           <div style={{ display: 'flex', gap: 6, marginTop: -6, marginBottom: 14 }}>
             {[['facturas', 'Facturas'], ['notas', 'Notas de crédito']].map(([id, etiqueta]) => (
-              <button key={id} onClick={() => { setSub(id); setAbierta(null); }}
+              <button key={id} onClick={() => { setSub(id); setAbierta(null); setSel({}); }}
                 style={{
                   padding: '3px 10px', borderRadius: 14, cursor: 'pointer', fontSize: 11.5, fontWeight: 600,
                   border: '1.5px solid ' + (sub === id ? '#2a78a5' : '#E2DDD4'),
@@ -854,6 +863,18 @@ export default function FacturasPage() {
                 </div>
               );
             })}
+
+            {/* Las notas de crédito del proveedor escogido, en su sección morada. Las sueltas se
+                marcan para restarlas; las que ya calzan dicen a qué factura le restan. */}
+            {cedulaSel && notasDelProv.length > 0 && (
+              <div style={{ marginBottom: 10 }}>
+                <Seccion titulo="Notas de crédito" color="#5B35B5" unidad="nota" n={notasDelProv.length}
+                  total={'−' + fmt(notasDelProv.filter(n => n.moneda === 'CRC').reduce((s, n) => s + Number(n.total_comprobante || 0), 0))} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 10 }}>
+                  {notasDelProv.map(fila)}
+                </div>
+              </div>
+            )}
           </>
         )}
 
@@ -862,9 +883,9 @@ export default function FacturasPage() {
         {provSel && (
           <BarraPago
             elegidas={elegidas}
-            notas={notasProv.filter(n => n.moneda === provSel.moneda)}
-            fuera={notasFuera}
-            onNota={(id) => setNotasFuera(l => l.includes(id) ? l.filter(x => x !== id) : [...l, id])}
+            notas={notasSueltas}
+            dentro={notasDentro}
+            onNota={(id) => setNotasDentro(l => l.includes(id) ? l.filter(x => x !== id) : [...l, id])}
             onQuitar={() => setSel({})}
             onConfirmar={pagarCombinado}
           />
@@ -1082,7 +1103,7 @@ function Leyenda({ color, nombre, monto, pct }) {
 // justo lo que después lee el robot de pagos para reconocer la transferencia.
 const numBanco = (d) => String(parseInt(String(d.consecutivo || '').slice(-10), 10) || '');
 
-function BarraPago({ elegidas, notas, fuera, onNota, onQuitar, onConfirmar }) {
+function BarraPago({ elegidas, notas, dentro, onNota, onQuitar, onConfirmar }) {
   const [referencia, setReferencia] = useState('');
   const [fecha, setFecha] = useState(hoyCR());
   const [enviando, setEnviando] = useState(false);
@@ -1090,7 +1111,7 @@ function BarraPago({ elegidas, notas, fuera, onNota, onQuitar, onConfirmar }) {
 
   const moneda = elegidas[0].moneda;
   const saldo = f => Number(f.saldo ?? f.total_comprobante ?? 0);
-  const restan = notas.filter(n => !fuera.includes(n.id));
+  const restan = notas.filter(n => dentro.includes(n.id));
   const total = elegidas.reduce((s, f) => s + saldo(f), 0)
               - restan.reduce((s, n) => s + Number(n.total_comprobante || 0), 0);
   const sinCiclo = elegidas.filter(f => f.estado !== 'por_pagar').length;
@@ -1146,9 +1167,14 @@ function BarraPago({ elegidas, notas, fuera, onNota, onQuitar, onConfirmar }) {
                 <span style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{fmt(saldo(f), moneda)}</span>
               </div>
             ))}
-            {/* Notas de crédito sueltas del proveedor: restan por defecto, se pueden desmarcar. */}
+            {/* Notas de crédito sueltas del proveedor: se marcan para aplicarlas. */}
+            {notas.length > 0 && (
+              <div style={{ fontSize: 10.5, color: '#5B35B5', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px', margin: '7px 0 1px' }}>
+                Notas de crédito para aplicar
+              </div>
+            )}
             {notas.map(nc => {
-              const resta = !fuera.includes(nc.id);
+              const resta = dentro.includes(nc.id);
               const razon = nc.corrige_razon && nc.corrige_razon !== '-' ? nc.corrige_razon : 'nota de crédito';
               return (
                 <label key={nc.id} style={{ ...fila, color: '#5B35B5', cursor: 'pointer', opacity: resta ? 1 : 0.55 }}>
@@ -1195,7 +1221,7 @@ function BarraPago({ elegidas, notas, fuera, onNota, onQuitar, onConfirmar }) {
 }
 
 // Encabezado grande de sección (CONTADO / CRÉDITO), con el color de su pastilla y una raya gruesa.
-function Seccion({ titulo, color, n, total, arriba }) {
+function Seccion({ titulo, color, n, total, arriba, unidad = 'factura' }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap',
@@ -1203,7 +1229,7 @@ function Seccion({ titulo, color, n, total, arriba }) {
     }}>
       <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase', color }}>{titulo}</span>
       <span style={{ fontSize: 13, color: '#6B6560', fontVariantNumeric: 'tabular-nums' }}>
-        {n} factura{n === 1 ? '' : 's'} · {total}
+        {n} {unidad}{n === 1 ? '' : 's'} · {total}
       </span>
     </div>
   );
