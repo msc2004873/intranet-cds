@@ -440,6 +440,122 @@ export async function PATCH(req) {
   }
 }
 
+// POST — PAGO COMBINADO. Mario (2026-09-13): *"al darle a un checkbox cambia la vara y se hace
+// una suma/resta de todo lo que el proveedor tiene… se pueden seleccionar otras facturas para
+// hacer un pago combinado"*. Es lo que ya hace el banco con «fact 8080 8081 nc330».
+// body: { accion: 'pagar_combinado', quien, ids: [facturas], notas: [notas sueltas],
+//         referencia_pago, fecha_pago, total_esperado }
+//
+// Reglas (se validan acá, no en la pantalla):
+//   · un pago combinado es de UN solo proveedor y una sola moneda (una transferencia);
+//   · ninguna factura con problema abierto, pagada o anulada;
+//   · las notas que se mandan son las SUELTAS (su factura no está en la base): las que sí
+//     calzan con una factura ya vienen restadas en su saldo y se marcan aplicadas solas;
+//   · el total que calcula el servidor tiene que ser el mismo que vio la persona. Si alguien
+//     movió algo en medio (llegó una nota nueva), se para en vez de pagar otro monto.
+// Una nota de crédito usada queda en estado `pagada` = «aplicada»: su plata ya se descontó.
+export async function POST(req) {
+  try {
+    const body = await req.json();
+    const { accion, quien } = body;
+    if (accion !== 'pagar_combinado') {
+      return Response.json({ error: 'Acción desconocida: ' + accion }, { status: 400 });
+    }
+    if (!quien) return Response.json({ error: 'Falta quién hace el pago' }, { status: 400 });
+
+    const ids = [...new Set((body.ids || []).map(Number))].filter(Number.isInteger);
+    const idsNotas = [...new Set((body.notas || []).map(Number))].filter(Number.isInteger);
+    if (!ids.length) return Response.json({ error: 'No hay facturas seleccionadas.' }, { status: 400 });
+
+    const { data: docs, error: eDocs } = await conReintento(() => supabase
+      .from('facturas_proveedor')
+      .select('id, clave, consecutivo, tipo_documento, proveedor_cedula, proveedor_nombre, moneda, total_comprobante, estado')
+      .in('id', [...ids, ...idsNotas]));
+    if (eDocs) throw eDocs;
+
+    const facts = (docs || []).filter(d => ids.includes(d.id));
+    const sueltas = (docs || []).filter(d => idsNotas.includes(d.id));
+    if (facts.length !== ids.length || sueltas.length !== idsNotas.length) {
+      return Response.json({ error: 'Alguna de las facturas ya no existe. Recargue la página.' }, { status: 409 });
+    }
+    const todos = [...facts, ...sueltas];
+    if (facts.some(d => d.tipo_documento !== 'factura') || sueltas.some(d => d.tipo_documento !== 'nota_credito')) {
+      return Response.json({ error: 'Se mezclaron facturas y notas de crédito.' }, { status: 400 });
+    }
+    if (new Set(todos.map(d => d.proveedor_cedula)).size > 1) {
+      return Response.json({ error: 'Un pago combinado es de un solo proveedor.' }, { status: 400 });
+    }
+    if (new Set(todos.map(d => d.moneda)).size > 1) {
+      return Response.json({ error: 'No se pueden mezclar colones y dólares en un mismo pago.' }, { status: 400 });
+    }
+    const trancada = todos.find(d => ['con_problema', 'pagada', 'anulada'].includes(d.estado));
+    if (trancada) {
+      const por = { con_problema: 'tiene un problema sin resolver', pagada: 'ya está pagada o aplicada', anulada: 'está anulada' };
+      return Response.json({ error: `La ${trancada.tipo_documento === 'factura' ? 'factura' : 'nota'} ${String(trancada.consecutivo).slice(-5)} ${por[trancada.estado]}.` }, { status: 409 });
+    }
+
+    // Las notas que calzan con alguna de estas facturas (misma cuenta que hace el GET).
+    const { data: calzan, error: eCal } = await conReintento(() => supabase
+      .from('facturas_proveedor')
+      .select('id, clave, corrige_clave, total_comprobante, estado')
+      .eq('tipo_documento', 'nota_credito')
+      .in('corrige_clave', facts.map(f => f.clave)));
+    if (eCal) throw eCal;
+    if ((calzan || []).some(n => idsNotas.includes(n.id))) {
+      return Response.json({ error: 'Una de las notas ya le resta a una factura; no se puede restar dos veces.' }, { status: 400 });
+    }
+
+    const restaPorClave = {};
+    for (const n of calzan || []) restaPorClave[n.corrige_clave] = (restaPorClave[n.corrige_clave] || 0) + Number(n.total_comprobante || 0);
+    const sumaFacturas = facts.reduce((s, f) => s + Math.max(Number(f.total_comprobante || 0) - (restaPorClave[f.clave] || 0), 0), 0);
+    const sumaSueltas = sueltas.reduce((s, n) => s + Number(n.total_comprobante || 0), 0);
+    const total = sumaFacturas - sumaSueltas;
+    if (total < 0) {
+      return Response.json({ error: 'Las notas de crédito suman más que las facturas. Quite alguna nota.' }, { status: 400 });
+    }
+    if (body.total_esperado != null && Math.abs(Number(body.total_esperado) - total) > 0.5) {
+      return Response.json({ error: 'El total cambió mientras se preparaba el pago. Recargue la página y revíselo.' }, { status: 409 });
+    }
+
+    const ahora = new Date().toISOString();
+    const fecha_pago = body.fecha_pago || ahora.slice(0, 10);
+    const referencia_pago = body.referencia_pago || null;
+    const aplicar = [...(calzan || []).filter(n => n.estado !== 'pagada' && n.estado !== 'anulada').map(n => n.id), ...idsNotas];
+    const pago = { estado: 'pagada', pagada_por: quien, fecha_pago, referencia_pago, updated_at: ahora };
+
+    // Un solo UPDATE para todas las facturas: o se marcan todas o ninguna. El filtro de estado
+    // repetido acá cierra la puerta a que otra persona la haya pagado un segundo antes.
+    const { data: pagadas, error: ePag } = await conReintento(() => supabase
+      .from('facturas_proveedor').update(pago)
+      .in('id', ids).not('estado', 'in', '(con_problema,pagada,anulada)')
+      .select('id'));
+    if (ePag) throw ePag;
+    if ((pagadas || []).length !== ids.length) {
+      // Alguien pagó una en medio. Las notas NO se aplican: el total ya no es el que se vio.
+      return Response.json({ error: `Solo se pudieron marcar ${(pagadas || []).length} de ${ids.length}: otra persona movió alguna en ese momento. Recargue y revise antes de seguir.` }, { status: 409 });
+    }
+    if (aplicar.length) {
+      const { error: eApl } = await conReintento(() => supabase
+        .from('facturas_proveedor').update(pago).in('id', aplicar).select('id'));
+      if (eApl) throw eApl;
+    }
+
+    const nums = facts.map(f => String(f.consecutivo).slice(-5)).join(', ');
+    const resumen = `Pago combinado de ${facts.length} factura${facts.length === 1 ? '' : 's'}`
+      + (aplicar.length ? ` menos ${aplicar.length} nota${aplicar.length === 1 ? '' : 's'} de crédito` : '')
+      + ` · total ${Math.round(total).toLocaleString('es-CR')}`
+      + (referencia_pago ? ` · ref. ${referencia_pago}` : '');
+    for (const f of facts) {
+      await anotar(f.id, 'pagada', quien, facts.length > 1 || aplicar.length ? `${resumen} (facturas ${nums})` : (referencia_pago ? `Pagada · ref. ${referencia_pago}` : 'Pagada'));
+    }
+    for (const nid of aplicar) await anotar(nid, 'nota_aplicada', quien, `${resumen} (facturas ${nums})`);
+
+    return Response.json({ ok: true, pagadas: (pagadas || []).length, notas_aplicadas: aplicar.length, total });
+  } catch (error) {
+    return Response.json({ error: error.message }, { status: 500 });
+  }
+}
+
 // ---- compatibilidad con el PATCH viejo (mandaba `estado` a mano) ----
 // No se usa desde las pantallas nuevas. Se conserva porque la pantalla de Administración vieja
 // todavía puede estar abierta en el navegador de alguien cuando se despliegue.

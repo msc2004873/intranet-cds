@@ -57,13 +57,14 @@ const CONDICION = {
 const NOTA_CREDITO = { corta: 'N. CRÉDITO', color: '#5B35B5', fondo: '#EDE9F6' };
 
 // 📐 COLUMNAS FIJAS (Mario, 2026-09-12: *"los días y los montos se ven desalineados, es un
-// despiche"*). condición · fecha · proveedor · N° factura · estado · días · monto.
-// En teléfono se esconden fecha, N° y estado (clase `solo-ancho`).
-const COLUMNAS = '78px 62px minmax(0,1fr) 58px 96px 50px 96px';
+// despiche"*). ☐ · condición · fecha · proveedor · N° factura · estado · días · monto.
+// El ☐ de la izquierda es para armar un pago (2026-09-13). En teléfono se esconden fecha, N°
+// y estado (clase `solo-ancho`).
+const COLUMNAS = '18px 78px 62px minmax(0,1fr) 58px 96px 50px 96px';
 // Estilo de los encabezados de columna que no filtran (Factura, Estado, Vence, Monto).
 const ENCAB = { fontSize: 10.5, fontWeight: 700, color: '#8A837C', textTransform: 'uppercase', letterSpacing: '0.4px', whiteSpace: 'nowrap' };
 const CSS_FILA = `.fila-fact{grid-template-columns:${COLUMNAS}}
-@media (max-width:640px){.fila-fact{grid-template-columns:74px minmax(0,1fr) 40px 88px}.fila-fact .solo-ancho{display:none}}`;
+@media (max-width:640px){.fila-fact{grid-template-columns:18px 74px minmax(0,1fr) 40px 88px}.fila-fact .solo-ancho{display:none}}`;
 
 // Número de factura: SIEMPRE los últimos 5 dígitos, del mismo ancho en todas las filas.
 // Historia: primero eran 5, Mario pidió el número completo, y al verlo dijo que como unos son
@@ -161,15 +162,21 @@ export default function FacturasPage() {
   const [abierta, setAbierta] = useState(null);
   // Sub-filtro de Centro de pagos: las facturas que se deben, o las notas de crédito.
   const [sub, setSub] = useState('facturas');
-  const [pagando, setPagando] = useState(null);   // id de la que se está pagando
+  // 💸 PAGO COMBINADO (Mario, 2026-09-13): *"al darle a un checkbox a la izquierda cambia la
+  // vara y se hace una suma/resta de todo lo que el proveedor tiene y aparece ahí un total"*.
+  // `sel` guarda la foto de cada factura escogida (id → fila) para que la selección no se
+  // pierda al cambiar de pestaña o buscar. Un pago = un proveedor y una moneda.
+  const [sel, setSel] = useState({});
+  // Las notas de crédito SUELTAS de ese proveedor (su factura no está en la base). Las que sí
+  // calzan con una factura ya vienen restadas en su saldo. `notasFuera` = las que se desmarcaron.
+  const [notasProv, setNotasProv] = useState([]);
+  const [notasFuera, setNotasFuera] = useState([]);
   const [verHilo, setVerHilo] = useState(null);   // el historial va escondido: *"mucho texto"*
   // Filtros de los encabezados de la tabla (Mario: *"filtrar en los encabezados, crédito,
   // contado, por fecha, por proveedor"*). Se limpian al cambiar de pestaña.
   const [fCond, setFCond] = useState('');
   const [fMes, setFMes] = useState('');
   const [fProv, setFProv] = useState('');
-  const [refPago, setRefPago] = useState('');
-  const [fechaPago, setFechaPago] = useState(hoyCR());
   const [error, setError] = useState('');
   const [sinTabla, setSinTabla] = useState(false);
   // 🚨 El resumen de arriba se calcula SIEMPRE sobre todo lo pendiente, no sobre la lista
@@ -189,6 +196,51 @@ export default function FacturasPage() {
 
   useEffect(() => { if (userRole === 'admin') cargar(); }, [userRole, filtro, sub, busca]);
   useEffect(() => { if (userRole === 'admin') cargarResumen(); }, [userRole]);
+
+  // Al escoger la primera factura de un proveedor se traen sus notas de crédito sueltas.
+  const cedulaSel = Object.values(sel)[0]?.proveedor_cedula || '';
+  useEffect(() => {
+    setNotasFuera([]);
+    if (!cedulaSel) { setNotasProv([]); return; }
+    let vivo = true;
+    fetch('/api/facturas?bandeja=notas')
+      .then(r => r.json())
+      .then(d => {
+        if (!vivo || !Array.isArray(d)) return;
+        setNotasProv(d.filter(n => n.proveedor_cedula === cedulaSel
+          && !['pagada', 'anulada'].includes(n.estado) && !n.corrige_encontrada));
+      })
+      .catch(() => { /* sin notas igual se puede pagar */ });
+    return () => { vivo = false; };
+  }, [cedulaSel]);
+
+  function alternar(f) {
+    setSel(s => {
+      const n = { ...s };
+      if (n[f.id]) delete n[f.id]; else n[f.id] = f;
+      return n;
+    });
+  }
+
+  async function pagarCombinado({ referencia, fecha, total, notas }) {
+    try {
+      const res = await fetch('/api/facturas', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          accion: 'pagar_combinado', quien: usuario,
+          ids: Object.keys(sel).map(Number), notas,
+          referencia_pago: referencia || null, fecha_pago: fecha, total_esperado: total,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) { alert(data.error); return false; }
+      setSel({}); setAbierta(null);
+      await cargar();
+      await cargarResumen();
+      return true;
+    } catch (e) { alert('No se pudo: ' + e.message); return false; }
+  }
 
   async function cargarResumen() {
     try {
@@ -305,19 +357,32 @@ export default function FacturasPage() {
   // llegó), para *"ver el futuro"*: lo de este mes, lo de octubre, lo de noviembre. Lo que ya
   // se venció va arriba en su propio grupo. En las demás pestañas: el mes en que se emitió.
   const porPago = filtro === 'pagos' && sub === 'facturas' && !q;
+  // 💵 CONTADO VA PRIMERO (Mario, 2026-09-13): *"primero las facturas de contado y después las
+  // de crédito como aparecen ahorita, en orden de vencimiento"*. El contado se debe desde el
+  // día que llegó, así que va en su propio grupo arriba, la más vieja primero.
   const mesGrupo = f => {
     if (!porPago) return mesCR(f.fecha_emision);
+    if (f.tipo_documento === 'factura' && f.condicion_venta === '01') return 'contado';
     if (pendiente(f) && f.fecha_vencimiento && diasPara(f.fecha_vencimiento) < 0) return 'vencidas';
     return f.fecha_vencimiento ? f.fecha_vencimiento.slice(0, 7) : mesCR(f.fecha_emision);
   };
   const grupos = {};
   for (const f of visibles) (grupos[mesGrupo(f)] ||= []).push(f);
+  const PRIMEROS = ['contado', 'vencidas'];
   const ordenGrupos = Object.keys(grupos).sort((a, b) => porPago
-    ? (a === 'vencidas' ? -1 : b === 'vencidas' ? 1 : a.localeCompare(b))   // lo que viene: del más cercano al más lejano
-    : b.localeCompare(a));                                                  // lo emitido: el mes más nuevo arriba
+    ? ((PRIMEROS.indexOf(a) + 1 || 9) - (PRIMEROS.indexOf(b) + 1 || 9)) || a.localeCompare(b)   // contado, vencidas, y lo que viene del más cercano al más lejano
+    : b.localeCompare(a));                                                                    // lo emitido: el mes más nuevo arriba
   for (const k of ordenGrupos) {
-    grupos[k].sort(porPago ? porVencimiento : (a, b) => String(b.fecha_emision).localeCompare(String(a.fecha_emision)));
+    grupos[k].sort(k === 'contado'
+      ? (a, b) => String(a.fecha_emision).localeCompare(String(b.fecha_emision))
+      : porPago ? porVencimiento : (a, b) => String(b.fecha_emision).localeCompare(String(a.fecha_emision)));
   }
+  const tituloGrupo = k => k === 'contado' ? 'Contado' : k === 'vencidas' ? 'Vencidas' : nombreMes(k);
+
+  // La selección del pago, con los datos frescos si la factura está en la lista cargada.
+  const elegidas = Object.values(sel).map(s => facturas.find(x => x.id === s.id) || s)
+    .sort(porVencimiento);
+  const provSel = elegidas[0] || null;
   // Total del grupo: lo que se debe de las facturas (con notas ya restadas); si el grupo es
   // solo de notas de crédito, la suma de las notas.
   const totalGrupo = (l) => {
@@ -338,9 +403,22 @@ export default function FacturasPage() {
             const pronto = dias !== null && dias >= 0 && dias <= 7 && f.estado !== 'pagada';
             const lineas = (f.facturas_lineas || []).slice().sort((a, b) => (a.numero_linea || 0) - (b.numero_linea || 0));
             const abierto = abierta === f.id;
+            // ☐ del pago: solo facturas que se deben. Con una ya escogida, solo las del mismo
+            // proveedor y moneda (un pago = una transferencia a una persona).
+            const pagable = f.tipo_documento === 'factura' && f.es_de_corral_del_sol && !['pagada', 'anulada'].includes(f.estado);
+            const marcada = !!sel[f.id];
+            const otroProv = provSel && (provSel.proveedor_cedula !== f.proveedor_cedula || provSel.moneda !== f.moneda);
+            const puede = pagable && f.estado !== 'con_problema' && !otroProv;
+            const porQueNo = f.estado === 'con_problema' ? 'Tiene un producto con error sin resolver'
+              : otroProv ? `El pago que está armando es a ${provSel.proveedor_nombre}` : 'Agregar al pago';
+            const estNombre = f.tipo_documento === 'nota_credito' && f.estado === 'pagada' ? 'Aplicada' : est.nom;
 
             return (
-              <div key={f.id} style={{ ...card, borderColor: vencida ? '#E8B4AE' : '#E2DDD4', overflow: 'hidden' }}>
+              <div key={f.id} style={{
+                ...card, overflow: 'hidden',
+                borderColor: marcada ? '#2a78a5' : vencida ? '#E8B4AE' : '#E2DDD4',
+                background: marcada ? '#F4F9FE' : card.background,
+              }}>
 
                 {/* ---------- UNA SOLA LÍNEA, EN COLUMNAS FIJAS ----------
                     Mario pidió la fila de una línea DOS VECES y después que se viera alineada.
@@ -349,6 +427,22 @@ export default function FacturasPage() {
                     en el desplegable. */}
                 <div className="fila-fact" onClick={() => setAbierta(abierto ? null : f.id)}
                   style={{ padding: '7px 12px', cursor: 'pointer', display: 'grid', alignItems: 'center', columnGap: 10 }}>
+
+                  <span
+                    role={pagable ? 'checkbox' : undefined}
+                    aria-checked={pagable ? marcada : undefined}
+                    title={pagable ? (marcada ? 'Quitar del pago' : porQueNo) : undefined}
+                    onClick={(e) => { e.stopPropagation(); if (marcada || puede) alternar(f); }}
+                    style={{
+                      width: 16, height: 16, borderRadius: 4, boxSizing: 'border-box',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 10, fontWeight: 800, color: '#FFFFFF',
+                      visibility: pagable ? 'visible' : 'hidden',
+                      background: marcada ? '#2a78a5' : '#FFFFFF',
+                      border: '1.5px solid ' + (marcada ? '#2a78a5' : '#C9C3BA'),
+                      opacity: marcada || puede ? 1 : 0.35,
+                      cursor: marcada || puede ? 'pointer' : 'not-allowed',
+                    }}>{marcada ? '✓' : ''}</span>
 
                   <span style={{
                     justifySelf: 'start', fontSize: 9, fontWeight: 800, letterSpacing: '0.4px', padding: '2px 6px',
@@ -373,7 +467,7 @@ export default function FacturasPage() {
                     fontSize: 11, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
                     color: est.mostrar ? est.color : '#9A948E',
                   }}>
-                    {est.mostrar ? est.nom : (f.tipo_documento === 'factura' && !f.es_mercaderia ? 'Gasto' : '')}
+                    {est.mostrar ? estNombre : (f.tipo_documento === 'factura' && !f.es_mercaderia ? 'Gasto' : '')}
                   </span>
 
                   <span style={{
@@ -417,7 +511,7 @@ export default function FacturasPage() {
                         {f.corrige_razon && <div style={{ color: '#5B35B5' }}>Corrige: «{f.corrige_razon}»</div>}
                         {/* Una nota cuya factura no está en la base no le resta a nadie:
                             hay que poder verlo, si no se pierde plata en silencio. */}
-                        {f.tipo_documento === 'nota_credito' && f.corrige_encontrada === false && (
+                        {f.tipo_documento === 'nota_credito' && f.corrige_encontrada === false && f.estado !== 'pagada' && (
                           <div style={{ color: '#C0392B' }}>
                             ⚠ La factura que corrige no está en el sistema — esta nota no le está restando a nada.
                           </div>
@@ -571,42 +665,9 @@ export default function FacturasPage() {
                     </div>
 
                     {/* ---------- pagar ----------
-                        Vivía en /admin/facturas/pagos; Mario lo quiso en el mismo lugar. Solo sale
-                        cuando la factura ya pasó todos sus checks (estado por_pagar). */}
-                    {f.estado === 'por_pagar' && (pagando === f.id ? (
-                      <div style={{ marginTop: 14, padding: '12px 14px', background: '#F2F9F5', border: '1.5px solid #BFE0CD', borderRadius: 10 }}>
-                        <div style={{ fontSize: 12.5, fontWeight: 700, marginBottom: 8 }}>
-                          Pagar {fmt(f.saldo ?? f.total_comprobante, f.moneda)} a {f.proveedor_nombre}
-                        </div>
-                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                          <input
-                            type="text"
-                            value={refPago}
-                            onChange={(e) => setRefPago(e.target.value)}
-                            placeholder="Referencia o comprobante (opcional)"
-                            style={{ flex: 1, minWidth: 190, padding: '7px 10px', border: '1.5px solid #E2DDD4', borderRadius: 9, fontSize: 12.5 }} />
-                          <input
-                            type="date"
-                            value={fechaPago}
-                            onChange={(e) => setFechaPago(e.target.value)}
-                            style={{ padding: '7px 10px', border: '1.5px solid #E2DDD4', borderRadius: 9, fontSize: 12.5 }} />
-                        </div>
-                        <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                          <Boton color="#1a7a4a" onClick={async () => {
-                            const ok = await accionar(f.id, 'pagar', { referencia_pago: refPago.trim() || null, fecha_pago: fechaPago });
-                            if (ok) { setPagando(null); setRefPago(''); }
-                          }}>Confirmar pago</Boton>
-                          <button onClick={() => { setPagando(null); setRefPago(''); }}
-                            style={{ background: '#FFFFFF', color: '#6B6560', border: '1.5px solid #E2DDD4', borderRadius: 9, padding: '7px 14px', fontSize: 12.5, fontWeight: 600, cursor: 'pointer' }}>
-                            Cancelar
-                          </button>
-                        </div>
-                      </div>
-                    ) : (
-                      <div style={{ marginTop: 12 }}>
-                        <Boton onClick={() => { setPagando(f.id); setFechaPago(hoyCR()); }} color="#1a7a4a">Marcar como pagada</Boton>
-                      </div>
-                    ))}
+                        Ya no hay botón de pagar adentro de cada factura: se paga con el ☐ de la
+                        izquierda y la barra de abajo (2026-09-13). Dos formas de pagar lo mismo
+                        era una forma de confundirse; una factura sola es un pago de una. */}
                   </div>
                 )}
               </div>
@@ -722,6 +783,7 @@ export default function FacturasPage() {
               display: 'grid', columnGap: 10, alignItems: 'center',
               padding: '0 12px 5px', borderBottom: '1.5px solid #E2DDD4',
             }}>
+              <span />
               <FiltroEncabezado titulo="Condición" valor={fCond} onChange={setFCond}
                 opciones={[['01', 'Contado'], ['02', 'Crédito'], ['nota', 'N. crédito']]} />
               <FiltroEncabezado className="solo-ancho" titulo="Fecha" valor={fMes} onChange={setFMes}
@@ -747,8 +809,8 @@ export default function FacturasPage() {
             {ordenGrupos.map(k => (
               <div key={k} style={{ marginBottom: 10 }}>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, margin: '12px 2px 6px' }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: k === 'vencidas' ? '#C0392B' : '#1A1714' }}>
-                    {k === 'vencidas' ? 'Vencidas' : nombreMes(k)}
+                  <span style={{ fontSize: 13, fontWeight: 700, color: k === 'vencidas' ? '#C0392B' : k === 'contado' ? '#1f63ad' : '#1A1714' }}>
+                    {tituloGrupo(k)}
                   </span>
                   <span style={{ fontSize: 11.5, color: '#9A948E' }}>
                     {grupos[k].length} · {fmt(totalGrupo(grupos[k]))}
@@ -763,6 +825,17 @@ export default function FacturasPage() {
         )}
 
         {filtro === 'grafico' && !cargando && <GraficoGastos facturas={facturas} />}
+
+        {provSel && (
+          <BarraPago
+            elegidas={elegidas}
+            notas={notasProv.filter(n => n.moneda === provSel.moneda)}
+            fuera={notasFuera}
+            onNota={(id) => setNotasFuera(l => l.includes(id) ? l.filter(x => x !== id) : [...l, id])}
+            onQuitar={() => setSel({})}
+            onConfirmar={pagarCombinado}
+          />
+        )}
 
       </div>
     </div>
@@ -963,6 +1036,126 @@ function Leyenda({ color, nombre, monto, pct }) {
       <div>
         <div style={{ fontSize: 12, color: '#1A1714' }}>{nombre}</div>
         <div style={{ fontSize: 12.5, fontWeight: 700 }}>{monto} <span style={{ color: '#8A837C', fontWeight: 400 }}>· {pct}%</span></div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------- barra del pago combinado
+//
+// Aparece abajo, pegada a la pantalla, apenas se marca un ☐. Hace la cuenta que hoy se hace a
+// mano antes de transferir: facturas (con sus notas ya restadas) − notas sueltas = total.
+// Y arma el concepto como lo escribe la clínica en el banco («fact 8080 8081 nc 330»), que es
+// justo lo que después lee el robot de pagos para reconocer la transferencia.
+const numBanco = (d) => String(parseInt(String(d.consecutivo || '').slice(-10), 10) || '');
+
+function BarraPago({ elegidas, notas, fuera, onNota, onQuitar, onConfirmar }) {
+  const [referencia, setReferencia] = useState('');
+  const [fecha, setFecha] = useState(hoyCR());
+  const [enviando, setEnviando] = useState(false);
+  const [verDetalle, setVerDetalle] = useState(true);
+
+  const moneda = elegidas[0].moneda;
+  const saldo = f => Number(f.saldo ?? f.total_comprobante ?? 0);
+  const restan = notas.filter(n => !fuera.includes(n.id));
+  const total = elegidas.reduce((s, f) => s + saldo(f), 0)
+              - restan.reduce((s, n) => s + Number(n.total_comprobante || 0), 0);
+  const sinCiclo = elegidas.filter(f => f.estado !== 'por_pagar').length;
+  const concepto = 'fact ' + elegidas.map(numBanco).join(' ')
+    + (restan.length ? ' nc ' + restan.map(numBanco).join(' ') : '');
+  const n = elegidas.length;
+
+  async function confirmar() {
+    if (enviando || total < 0) return;
+    setEnviando(true);
+    try {
+      const ok = await onConfirmar({ referencia: referencia.trim(), fecha, total, notas: restan.map(x => x.id) });
+      if (ok) setReferencia('');
+    } finally { setEnviando(false); }
+  }
+
+  const fila = { display: 'flex', alignItems: 'center', gap: 8, padding: '3px 0' };
+  const mono = { fontFamily: "'DM Mono', monospace", fontSize: 12, whiteSpace: 'nowrap' };
+
+  return (
+    <div style={{ position: 'sticky', bottom: 12, zIndex: 20, marginTop: 16 }}>
+      <div style={{ ...card, borderColor: '#2a78a5', boxShadow: '0 8px 26px rgba(26,23,20,0.16)', padding: '11px 14px' }}>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ flex: '1 1 200px', minWidth: 0 }}>
+            <div style={{ fontSize: 10.5, color: '#8A837C', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Pago a</div>
+            <div style={{ fontWeight: 700, fontSize: 13.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}
+              title={elegidas[0].proveedor_nombre}>{elegidas[0].proveedor_nombre}</div>
+          </div>
+          <button onClick={() => setVerDetalle(!verDetalle)}
+            style={{ background: 'none', border: 'none', padding: 0, color: '#2a78a5', fontSize: 12, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+            {n} factura{n === 1 ? '' : 's'}{restan.length ? ` − ${restan.length} nota${restan.length === 1 ? '' : 's'}` : ''} {verDetalle ? '▴' : '▾'}
+          </button>
+          <div style={{ fontSize: 20, fontWeight: 700, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', color: total < 0 ? '#C0392B' : '#1A1714' }}>
+            {total < 0 ? '−' : ''}{fmt(Math.abs(total), moneda)}
+          </div>
+          <button onClick={onQuitar} title="Quitar la selección"
+            style={{ background: 'none', border: '1.5px solid #E2DDD4', borderRadius: 8, padding: '3px 9px', color: '#6B6560', fontSize: 12, cursor: 'pointer' }}>✕</button>
+        </div>
+
+        {verDetalle && (
+          <div style={{ marginTop: 9, paddingTop: 7, borderTop: '1px solid #EFEBE4', fontSize: 12.5, maxHeight: '34vh', overflowY: 'auto' }}>
+            {elegidas.map(f => (
+              <div key={f.id} style={fila}>
+                <span style={{ ...mono, color: '#6B6560' }}>··{numFactura(f)}</span>
+                <span style={{ flex: 1, minWidth: 0, color: '#8A837C', fontSize: 11.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {f.condicion_venta === '01' ? 'contado' : f.fecha_vencimiento ? `vence ${diaCorto(f.fecha_vencimiento)}` : ''}
+                  {f.estado !== 'por_pagar' && ' · sin terminar el ciclo'}
+                </span>
+                {f.nota_credito_aplicada > 0 && (
+                  <span style={{ color: '#5B35B5', fontSize: 11.5, whiteSpace: 'nowrap' }}>ya con NC −{fmt(f.nota_credito_aplicada, moneda)}</span>
+                )}
+                <span style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{fmt(saldo(f), moneda)}</span>
+              </div>
+            ))}
+            {/* Notas de crédito sueltas del proveedor: restan por defecto, se pueden desmarcar. */}
+            {notas.map(nc => {
+              const resta = !fuera.includes(nc.id);
+              const razon = nc.corrige_razon && nc.corrige_razon !== '-' ? nc.corrige_razon : 'nota de crédito';
+              return (
+                <label key={nc.id} style={{ ...fila, color: '#5B35B5', cursor: 'pointer', opacity: resta ? 1 : 0.55 }}>
+                  <input type="checkbox" checked={resta} onChange={() => onNota(nc.id)} style={{ accentColor: '#5B35B5', margin: 0 }} />
+                  <span style={mono}>NC ··{numFactura(nc)}</span>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 11.5, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{razon}</span>
+                  <span style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', textDecoration: resta ? 'none' : 'line-through' }}>
+                    −{fmt(nc.total_comprobante, moneda)}
+                  </span>
+                </label>
+              );
+            })}
+            <div style={{ fontSize: 11.5, color: '#8A837C', marginTop: 5 }}>
+              Concepto para el banco: <span style={{ ...mono, color: '#1A1714', userSelect: 'all' }}>{concepto}</span>
+            </div>
+            {sinCiclo > 0 && (
+              <div style={{ fontSize: 11.5, color: '#8a4d12', marginTop: 3 }}>
+                {sinCiclo === n ? (n === 1 ? 'Esta factura todavía no termina' : 'Ninguna de estas termina') : `${sinCiclo} de estas todavía no terminan`} el ciclo (Recepción / QVet).
+              </div>
+            )}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 10 }}>
+          <input type="text" value={referencia} onChange={(e) => setReferencia(e.target.value)}
+            placeholder="Referencia del banco (opcional)"
+            style={{ flex: '1 1 170px', minWidth: 0, padding: '7px 10px', border: '1.5px solid #E2DDD4', borderRadius: 9, fontSize: 12.5 }} />
+          <input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)}
+            style={{ padding: '7px 10px', border: '1.5px solid #E2DDD4', borderRadius: 9, fontSize: 12.5 }} />
+          <button onClick={confirmar} disabled={enviando || total < 0}
+            style={{
+              background: enviando || total < 0 ? '#C9C4BC' : '#1a7a4a', color: '#FFFFFF', border: 'none', borderRadius: 9,
+              padding: '7px 14px', fontSize: 12.5, fontWeight: 700, cursor: enviando || total < 0 ? 'default' : 'pointer', whiteSpace: 'nowrap',
+            }}>
+            {enviando ? 'Pagando…' : `Confirmar pago ${fmt(Math.max(total, 0), moneda)}`}
+          </button>
+        </div>
+        {total < 0 && (
+          <div style={{ fontSize: 11.5, color: '#C0392B', marginTop: 5 }}>Las notas suman más que las facturas: desmarque alguna nota.</div>
+        )}
       </div>
     </div>
   );

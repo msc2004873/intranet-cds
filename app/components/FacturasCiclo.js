@@ -70,6 +70,7 @@ const EVENTOS = {
   a_pago:           { icono: '💸', texto: 'Aprobó el gasto para pago' },
   por_pagar:        { icono: '💸', texto: 'Pasó a pago' },
   pagada:           { icono: '💰', texto: 'Pagó la factura', color: '#1a7a4a' },
+  nota_aplicada:    { icono: '➖', texto: 'Restó la nota de crédito en un pago', color: '#5B35B5' },
   anulada:          { icono: '🚫', texto: 'Anuló la factura' },
 };
 
