@@ -194,11 +194,14 @@ export default function FacturasPage() {
     if (user.rol !== 'admin') router.push('/');
   }, [router]);
 
-  useEffect(() => { if (userRole === 'admin') cargar(); }, [userRole, filtro, sub, busca]);
+  // 🎯 AL MARCAR UNA FACTURA LA LISTA SE QUEDA SOLO CON ESE PROVEEDOR (Mario, 2026-09-13: *"al
+  // seleccionar el proveedor que filtre para que se vea solo lo de ese proveedor y poder
+  // seleccionar varios fácilmente"*). Se trae TODO lo que se le debe, sin importar la pestaña.
+  const cedulaSel = Object.values(sel)[0]?.proveedor_cedula || '';
+  useEffect(() => { if (userRole === 'admin') cargar(); }, [userRole, filtro, sub, busca, !!cedulaSel]);
   useEffect(() => { if (userRole === 'admin') cargarResumen(); }, [userRole]);
 
   // Al escoger la primera factura de un proveedor se traen sus notas de crédito sueltas.
-  const cedulaSel = Object.values(sel)[0]?.proveedor_cedula || '';
   useEffect(() => {
     setNotasFuera([]);
     if (!cedulaSel) { setNotasProv([]); return; }
@@ -272,7 +275,8 @@ export default function FacturasPage() {
         : filtro === 'grafico' ? 'vista=todas'
         : 'vista=ajenas';
       // Con el buscador escrito se ignora el filtro y se traen TODAS.
-      const res = await fetch(`/api/facturas?${busca.trim() ? 'vista=todas' : q}`);
+      // Con un pago armándose, todo lo que se debe (después se deja solo ese proveedor).
+      const res = await fetch(`/api/facturas?${cedulaSel ? 'tramite=1&vista=todas' : busca.trim() ? 'vista=todas' : q}`);
       const data = await res.json();
       if (data.error) throw new Error(data.error);
       setFacturas(Array.isArray(data) ? data : []);
@@ -347,16 +351,19 @@ export default function FacturasPage() {
   const condDe = f => f.tipo_documento === 'nota_credito' ? 'nota' : (f.condicion_venta === '02' ? '02' : f.condicion_venta === '01' ? '01' : 'otro');
   const opcionesMes = [...new Set(buscadas.map(f => mesCR(f.fecha_emision)).filter(Boolean))].sort().reverse();
   const opcionesProv = [...new Set(buscadas.map(f => f.proveedor_nombre))].sort((a, b) => a.localeCompare(b, 'es'));
-  const visibles = buscadas.filter(f =>
-    (!fCond || condDe(f) === fCond) &&
-    (!fMes || mesCR(f.fecha_emision) === fMes) &&
-    (!fProv || f.proveedor_nombre === fProv));
+  const visibles = cedulaSel
+    ? facturas.filter(f => f.proveedor_cedula === cedulaSel && f.tipo_documento === 'factura'
+        && !['pagada', 'anulada'].includes(f.estado))
+    : buscadas.filter(f =>
+        (!fCond || condDe(f) === fCond) &&
+        (!fMes || mesCR(f.fecha_emision) === fMes) &&
+        (!fProv || f.proveedor_nombre === fProv));
 
   // ---- 📅 AGRUPADO POR MES (Mario: *"la facturación se lleva por mes"*) ----
   // En Centro de pagos el mes es CUÁNDO TOCA PAGAR (el vencimiento; contado = el mes en que
   // llegó), para *"ver el futuro"*: lo de este mes, lo de octubre, lo de noviembre. Lo que ya
   // se venció va arriba en su propio grupo. En las demás pestañas: el mes en que se emitió.
-  const porPago = filtro === 'pagos' && sub === 'facturas' && !q;
+  const porPago = (filtro === 'pagos' && sub === 'facturas' && !q) || !!cedulaSel;
   // 💵 CONTADO VA PRIMERO (Mario, 2026-09-13): *"primero las facturas de contado y después las
   // de crédito como aparecen ahorita, en orden de vencimiento"*. El contado se debe desde el
   // día que llegó, así que va en su propio grupo arriba, la más vieja primero.
@@ -701,7 +708,7 @@ export default function FacturasPage() {
           <input
             type="text"
             value={busca}
-            onChange={(e) => { setBusca(e.target.value); setAbierta(null); }}
+            onChange={(e) => { setBusca(e.target.value); setAbierta(null); setSel({}); }}
             placeholder="Buscar en todas: proveedor, número de factura o producto…"
             style={{
               flex: 1, padding: '9px 13px', border: '1.5px solid ' + (busca ? '#2a78a5' : '#E2DDD4'),
@@ -724,7 +731,7 @@ export default function FacturasPage() {
         {/* Filtros */}
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14, opacity: busca ? 0.45 : 1 }}>
           {FILTROS.map(f => (
-            <button key={f.id} onClick={() => { setFiltro(f.id); setAbierta(null); setFCond(''); setFMes(''); setFProv(''); }}
+            <button key={f.id} onClick={() => { setFiltro(f.id); setAbierta(null); setFCond(''); setFMes(''); setFProv(''); setSel({}); }}
               style={{
                 padding: '6px 12px', borderRadius: 18, cursor: 'pointer', fontSize: 12.5, fontWeight: 600,
                 border: '1.5px solid ' + (filtro === f.id ? '#2a78a5' : '#E2DDD4'),
@@ -796,7 +803,18 @@ export default function FacturasPage() {
               <span style={{ ...ENCAB, textAlign: 'right' }}>Monto</span>
             </div>
 
-            {hayFiltros && (
+            {cedulaSel && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '8px 2px 0', fontSize: 12.5 }}>
+                <span style={{ color: '#1f63ad', fontWeight: 600 }}>
+                  Solo {Object.values(sel)[0]?.proveedor_nombre} · {visibles.length} sin pagar
+                </span>
+                <button onClick={() => setSel({})}
+                  style={{ background: 'none', border: 'none', padding: 0, color: '#2a78a5', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                  ✕ Ver todas
+                </button>
+              </div>
+            )}
+            {hayFiltros && !cedulaSel && (
               <button onClick={() => { setFCond(''); setFMes(''); setFProv(''); }}
                 style={{ background: 'none', border: 'none', padding: '6px 2px 0', color: '#2a78a5', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
                 ✕ Quitar filtros
@@ -806,21 +824,36 @@ export default function FacturasPage() {
               <div style={{ padding: '22px 12px', color: '#6B6560', fontSize: 13 }}>Ninguna factura con esos filtros.</div>
             )}
 
-            {ordenGrupos.map(k => (
-              <div key={k} style={{ marginBottom: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, margin: '12px 2px 6px' }}>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: k === 'vencidas' ? '#C0392B' : k === 'contado' ? '#1f63ad' : '#1A1714' }}>
-                    {tituloGrupo(k)}
-                  </span>
-                  <span style={{ fontSize: 11.5, color: '#9A948E' }}>
-                    {grupos[k].length} · {fmt(totalGrupo(grupos[k]))}
-                  </span>
+            {ordenGrupos.map((k, i) => {
+              // 🔠 CONTADO y CRÉDITO en grande, bien separados (Mario, 2026-09-13: *"que diga
+              // bien grande crédito donde empieza crédito y contado donde es contado, con buena
+              // separación"*). Adentro de crédito siguen los meses en chiquito.
+              const empiezaCredito = porPago && k !== 'contado' && (i === 0 || ordenGrupos[i - 1] === 'contado');
+              const credito = ordenGrupos.filter(x => x !== 'contado').flatMap(x => grupos[x]);
+              return (
+                <div key={k} style={{ marginBottom: 10 }}>
+                  {porPago && k === 'contado' && (
+                    <Seccion titulo="Contado" color="#1f63ad" arriba n={grupos[k].length} total={fmt(totalGrupo(grupos[k]))} />
+                  )}
+                  {empiezaCredito && (
+                    <Seccion titulo="Crédito" color="#8a4d12" arriba={i === 0} n={credito.length} total={fmt(totalGrupo(credito))} />
+                  )}
+                  {!(porPago && k === 'contado') && (
+                    <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, margin: '12px 2px 6px' }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: k === 'vencidas' ? '#C0392B' : '#1A1714' }}>
+                        {tituloGrupo(k)}
+                      </span>
+                      <span style={{ fontSize: 11.5, color: '#9A948E' }}>
+                        {grupos[k].length} · {fmt(totalGrupo(grupos[k]))}
+                      </span>
+                    </div>
+                  )}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: porPago && k === 'contado' ? 10 : 0 }}>
+                    {grupos[k].map(fila)}
+                  </div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {grupos[k].map(fila)}
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </>
         )}
 
@@ -1157,6 +1190,21 @@ function BarraPago({ elegidas, notas, fuera, onNota, onQuitar, onConfirmar }) {
           <div style={{ fontSize: 11.5, color: '#C0392B', marginTop: 5 }}>Las notas suman más que las facturas: desmarque alguna nota.</div>
         )}
       </div>
+    </div>
+  );
+}
+
+// Encabezado grande de sección (CONTADO / CRÉDITO), con el color de su pastilla y una raya gruesa.
+function Seccion({ titulo, color, n, total, arriba }) {
+  return (
+    <div style={{
+      display: 'flex', alignItems: 'baseline', gap: 12, flexWrap: 'wrap',
+      margin: arriba ? '16px 0 2px' : '38px 0 2px', padding: '0 2px 7px', borderBottom: `3px solid ${color}`,
+    }}>
+      <span style={{ fontSize: 22, fontWeight: 800, letterSpacing: '1.5px', textTransform: 'uppercase', color }}>{titulo}</span>
+      <span style={{ fontSize: 13, color: '#6B6560', fontVariantNumeric: 'tabular-nums' }}>
+        {n} factura{n === 1 ? '' : 's'} · {total}
+      </span>
     </div>
   );
 }
