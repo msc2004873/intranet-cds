@@ -328,8 +328,13 @@ export default function RevisionClinicaPage() {
                   {cierresPendientes.map((cierre, i) => (
                     <div key={cierre.id} style={{ padding: '16px 20px', borderBottom: i < cierresPendientes.length - 1 ? '1px solid #E2DDD4' : 'none' }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
-                        <div style={{ fontSize: '16px', fontWeight: '700', color: '#1A1714', flex: 1 }}>
-                          {cierre.cajera || 'Sin datos'}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '16px', fontWeight: '700', color: '#1A1714' }}>
+                            {cierre.cajera || 'Sin datos'}
+                          </div>
+                          {cierre.observaciones && (
+                            <div style={{ fontSize: '13px', fontWeight: '700', color: '#B9770E', marginTop: '4px', whiteSpace: 'pre-wrap' }}>💬 {cierre.observaciones}</div>
+                          )}
                         </div>
                         <div style={{ fontSize: '12px', color: '#9C9590', whiteSpace: 'nowrap' }}>
                           {cierre.fecha_hora ? new Date(cierre.fecha_hora).toLocaleDateString('es-CR') + ' — ' + new Date(cierre.fecha_hora).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }) : 'Fecha inválida'}
@@ -384,8 +389,13 @@ export default function RevisionClinicaPage() {
                   {cierresRevisados.map((cierre, i) => (
                     <div key={cierre.id} style={{ padding: '16px 20px', borderBottom: i < cierresRevisados.length - 1 ? '1px solid #E2DDD4' : 'none', opacity: 0.6 }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '16px' }}>
-                        <div style={{ fontSize: '16px', fontWeight: '700', color: '#1A1714', flex: 1 }}>
-                          {cierre.cajera || 'Sin datos'}
+                        <div style={{ flex: 1 }}>
+                          <div style={{ fontSize: '16px', fontWeight: '700', color: '#1A1714' }}>
+                            {cierre.cajera || 'Sin datos'}
+                          </div>
+                          {cierre.observaciones && (
+                            <div style={{ fontSize: '13px', fontWeight: '700', color: '#B9770E', marginTop: '4px', whiteSpace: 'pre-wrap' }}>💬 {cierre.observaciones}</div>
+                          )}
                         </div>
                         <div style={{ fontSize: '12px', color: '#9C9590', whiteSpace: 'nowrap' }}>
                           {cierre.fecha_hora ? new Date(cierre.fecha_hora).toLocaleDateString('es-CR') + ' — ' + new Date(cierre.fecha_hora).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' }) : 'Fecha inválida'}
@@ -435,6 +445,9 @@ export default function RevisionClinicaPage() {
                       <div><span style={{ fontWeight: '600' }}>Cajera:</span> {revisionAVer.cierre.cajera}</div>
                       <div><span style={{ fontWeight: '600' }}>Caja:</span> {revisionAVer.cierre.caja}</div>
                       <div style={{ gridColumn: '1/-1' }}><span style={{ fontWeight: '600' }}>Fecha:</span> {new Date(revisionAVer.cierre.fecha_hora).toLocaleDateString('es-CR')} {new Date(revisionAVer.cierre.fecha_hora).toLocaleTimeString('es-CR', { hour: '2-digit', minute: '2-digit' })}</div>
+                      {revisionAVer.cierre.observaciones && (
+                        <div style={{ gridColumn: '1/-1', fontWeight: '700', whiteSpace: 'pre-wrap' }}>💬 {revisionAVer.cierre.observaciones}</div>
+                      )}
                     </div>
                   </div>
 

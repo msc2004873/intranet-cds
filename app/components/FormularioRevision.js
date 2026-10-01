@@ -221,6 +221,14 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
 
       <div style={{ flex: 1, maxWidth: '720px', margin: '0 auto', padding: '24px 16px', width: '100%', overflowY: 'auto' }}>
 
+        {/* Comentario que dejó la cajera al cerrar */}
+        {cierre?.observaciones && (
+          <div style={{ background: '#FFF3CD', border: '1.5px solid #F39C12', borderRadius: '12px', marginBottom: '16px', padding: '16px 20px' }}>
+            <div style={{ fontSize: '11px', fontWeight: '600', color: '#6B6560', textTransform: 'uppercase', marginBottom: '6px' }}>💬 Comentario de la cajera</div>
+            <div style={{ fontSize: '15px', fontWeight: '700', color: '#1A1714', whiteSpace: 'pre-wrap' }}>{cierre.observaciones}</div>
+          </div>
+        )}
+
         {/* Info de Revisión */}
         <div style={{ background: '#fff', border: '1px solid #E2DDD4', borderRadius: '12px', marginBottom: '16px', overflow: 'hidden' }}>
           <div style={{ padding: '16px 20px', borderBottom: '1px solid #E2DDD4', display: 'flex', alignItems: 'center', gap: '10px', background: '#F0EDE6' }}>
