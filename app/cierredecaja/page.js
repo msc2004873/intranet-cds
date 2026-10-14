@@ -16,6 +16,21 @@ const FilaResumen = ({ label, valor, color = '#1A1714' }) => (
   </div>
 );
 
+// Si un movimiento se registró otro día (p. ej. un SINPE que entró después del
+// cierre de ayer), devuelve "13/10" para avisarlo en la lista; si es de hoy, null.
+// created_at viene sin zona pero es UTC.
+const diaPrevio = (createdAt) => {
+  if (!createdAt) return null;
+  const s = String(createdAt);
+  const d = new Date(/(Z|[+-]\d\d:?\d\d)$/.test(s) ? s : s + 'Z');
+  if (isNaN(d)) return null;
+  const parts = new Intl.DateTimeFormat('es-CR', {
+    timeZone: 'America/Costa_Rica', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).formatToParts(d);
+  const p = t => parts.find(x => x.type === t).value;
+  return `${p('year')}-${p('month')}-${p('day')}` === getFechaCostaRica() ? null : `${p('day')}/${p('month')}`;
+};
+
 const getFechaCostaRica = () => {
   const formatter = new Intl.DateTimeFormat('es-CR', {
     timeZone: 'America/Costa_Rica',
@@ -168,7 +183,7 @@ export default function CajeraPage() {
   async function loadSinpeDelDia() {
     try {
       const hoy = getFechaCostaRica();
-      const cajaParam = caja ? `&caja=${encodeURIComponent(caja)}` : '';
+      const cajaParam = caja ? `&caja=${encodeURIComponent(caja)}&pendientes=1` : '';
       const data = await apiGet(`/api/movimientos?tipo=SINPE&fecha=${hoy}${cajaParam}`);
       if (Array.isArray(data)) {
         const items = data.map((m, i) => ({
@@ -176,7 +191,8 @@ export default function CajeraPage() {
           monto: m.monto || 0,
           referencia: m.referencia || 'N/A',
           archivo_url: m.archivo_url || null,
-          moneda: m.moneda || 'colones'
+          moneda: m.moneda || 'colones',
+          created_at: m.created_at || null
         }));
         if (items.length > 0) {
           setSinpeList(items);
@@ -211,7 +227,7 @@ export default function CajeraPage() {
   async function loadDepositosDelDia() {
     try {
       const hoy = getFechaCostaRica();
-      const cajaParam = caja ? `&caja=${encodeURIComponent(caja)}` : '';
+      const cajaParam = caja ? `&caja=${encodeURIComponent(caja)}&pendientes=1` : '';
       const data = await apiGet(`/api/movimientos?tipo=TRANSFERENCIA&fecha=${hoy}${cajaParam}`);
       if (Array.isArray(data)) {
         const items = data.map((m, i) => ({
@@ -220,7 +236,8 @@ export default function CajeraPage() {
           descripcion: m.referencia || '',
           monto: m.monto || 0,
           archivo_url: m.archivo_url || null,
-          moneda: m.moneda || 'colones'
+          moneda: m.moneda || 'colones',
+          created_at: m.created_at || null
         }));
         if (items.length > 0) {
           setDepositoList(items);
@@ -236,7 +253,7 @@ export default function CajeraPage() {
   async function loadSalidasDelDia() {
     try {
       const hoy = getFechaCostaRica();
-      const cajaParam = caja ? `&caja=${encodeURIComponent(caja)}` : '';
+      const cajaParam = caja ? `&caja=${encodeURIComponent(caja)}&pendientes=1` : '';
       const data = await apiGet(`/api/movimientos?tipo=SALIDA&fecha=${hoy}${cajaParam}`);
       if (Array.isArray(data)) {
         const items = data.map((m, i) => ({
@@ -244,7 +261,8 @@ export default function CajeraPage() {
           descripcion: m.referencia || '',
           monto: m.monto || 0,
           archivo_url: m.archivo_url || null,
-          moneda: m.moneda || 'colones'
+          moneda: m.moneda || 'colones',
+          created_at: m.created_at || null
         }));
         if (items.length > 0) {
           setSalidaList(items);
@@ -818,7 +836,7 @@ export default function CajeraPage() {
             <div style={{ padding: '20px' }}>
               {sinpeList.map((item) => (
                 <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: '#F7F5F0', borderRadius: '6px', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '13px', color: '#6B6560' }}>Ref: {item.referencia}</span>
+                  <span style={{ fontSize: '13px', color: '#6B6560' }}>Ref: {item.referencia}{diaPrevio(item.created_at) && <span style={{ marginLeft: '8px', fontSize: '11px', fontWeight: '600', color: '#B9770E', background: '#FEF5E7', borderRadius: '4px', padding: '2px 6px' }}>del {diaPrevio(item.created_at)}, después del cierre</span>}</span>
                   <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '600', color: '#2a78a5' }}>{fmt(item.monto)}</span>
                 </div>
               ))}
@@ -838,7 +856,7 @@ export default function CajeraPage() {
             <div style={{ padding: '20px' }}>
               {depositoList.map((item) => (
                 <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: '#F7F5F0', borderRadius: '6px', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '13px', color: '#6B6560' }}>{item.nombre || 'Transferencia'}</span>
+                  <span style={{ fontSize: '13px', color: '#6B6560' }}>{item.nombre || 'Transferencia'}{diaPrevio(item.created_at) && <span style={{ marginLeft: '8px', fontSize: '11px', fontWeight: '600', color: '#B9770E', background: '#FEF5E7', borderRadius: '4px', padding: '2px 6px' }}>del {diaPrevio(item.created_at)}, después del cierre</span>}</span>
                   <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '600', color: '#2a78a5' }}>{fmt(item.monto)}</span>
                 </div>
               ))}
@@ -858,7 +876,7 @@ export default function CajeraPage() {
             <div style={{ padding: '20px' }}>
               {salidaList.map((item) => (
                 <div key={item.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 12px', background: '#FDEDEC', borderRadius: '6px', marginBottom: '8px' }}>
-                  <span style={{ fontSize: '13px', color: '#6B6560' }}>{item.descripcion || 'Salida'}</span>
+                  <span style={{ fontSize: '13px', color: '#6B6560' }}>{item.descripcion || 'Salida'}{diaPrevio(item.created_at) && <span style={{ marginLeft: '8px', fontSize: '11px', fontWeight: '600', color: '#B9770E', background: '#FEF5E7', borderRadius: '4px', padding: '2px 6px' }}>del {diaPrevio(item.created_at)}, después del cierre</span>}</span>
                   <span style={{ fontFamily: "'DM Mono', monospace", fontSize: '13px', fontWeight: '600', color: '#C0392B' }}>-{fmt(item.monto)}</span>
                 </div>
               ))}

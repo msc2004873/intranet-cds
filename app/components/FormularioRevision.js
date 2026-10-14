@@ -80,26 +80,15 @@ export default function FormularioRevision({ cierre, periodo, onVolver, onGuarda
         ? (typeof cierre.salidas_json === 'string' ? JSON.parse(cierre.salidas_json) : cierre.salidas_json)
         : [];
 
-      // Luego cargar desde movimientos para capturar lo que llegó después del cierre
-      if (cierre?.fecha_hora) {
-        // Convertir fecha_hora UTC a fecha CR (UTC-6)
-        const fechaObj = new Date(cierre.fecha_hora);
-        const crFormatter = new Intl.DateTimeFormat('en-US', {
-          timeZone: 'America/Costa_Rica',
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit'
-        });
-        const crDate = crFormatter.format(fechaObj);
-        const [m, d, y] = crDate.split('/');
-        const fecha = `${y}-${m}-${d}`;
-        const cajaParam = cierre.caja ? `&caja=${encodeURIComponent(cierre.caja)}` : '';
-
+      // Luego cargar desde movimientos lo que le toca a ESTE cierre: lo registrado
+      // entre el cierre anterior de la caja y este. Lo que entró después de cerrar
+      // pertenece al cierre siguiente (misma regla que /cierredecaja).
+      if (cierre?.id && cierre?.fecha_hora) {
         try {
           const [sinpeRes, transfRes, salidaRes] = await Promise.all([
-            fetch(`/api/movimientos?tipo=SINPE&fecha=${fecha}${cajaParam}`),
-            fetch(`/api/movimientos?tipo=TRANSFERENCIA&fecha=${fecha}${cajaParam}`),
-            fetch(`/api/movimientos?tipo=SALIDA&fecha=${fecha}${cajaParam}`)
+            fetch(`/api/movimientos?tipo=SINPE&cierre_id=${cierre.id}`),
+            fetch(`/api/movimientos?tipo=TRANSFERENCIA&cierre_id=${cierre.id}`),
+            fetch(`/api/movimientos?tipo=SALIDA&cierre_id=${cierre.id}`)
           ]);
 
           const sinpesApi = await sinpeRes.json();

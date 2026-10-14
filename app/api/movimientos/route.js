@@ -5,12 +5,36 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
+// Inicio del día CR en UTC (DD 06:00Z). Respaldo cuando una caja no tiene cierre anterior.
+function inicioDiaCR(fecha) {
+  const [y, m, d] = fecha.split('-').map(n => parseInt(n));
+  return new Date(Date.UTC(y, m - 1, d, 6, 0, 0)).toISOString();
+}
+
+function fechaCR(instante) {
+  const [m, d, y] = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'America/Costa_Rica', year: 'numeric', month: '2-digit', day: '2-digit'
+  }).format(new Date(instante)).split('/');
+  return `${y}-${m}-${d}`;
+}
+
+// Último cierre de la caja antes de `antesDe` (o el último de todos si no se da).
+async function cierreAnterior(caja, antesDe) {
+  let q = supabase.from('cierre_caja').select('id, fecha_hora').eq('caja', caja);
+  if (antesDe) q = q.lt('fecha_hora', antesDe);
+  const { data, error } = await q.order('fecha_hora', { ascending: false }).limit(1);
+  if (error) throw error;
+  return data?.[0] || null;
+}
+
 export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
     const tipo = searchParams.get('tipo');
     const fecha = searchParams.get('fecha');
     const caja = searchParams.get('caja');
+    const pendientes = searchParams.get('pendientes');
+    const cierreId = searchParams.get('cierre_id');
 
     let query = supabase.from('movimientos').select('*');
 
@@ -18,7 +42,33 @@ export async function GET(req) {
       query = query.eq('tipo', tipo);
     }
 
-    if (fecha) {
+    // Un movimiento pertenece al PRIMER cierre de su caja hecho después de
+    // registrarlo. Si la cajera registra un SINPE cuando ya cerró, va al cierre
+    // siguiente (no se pierde ni se cuenta dos veces). created_at no tiene zona
+    // pero es UTC; fecha_hora sí la trae: se comparan como ISO en UTC.
+    if (cierreId) {
+      // Revisión de un cierre: lo registrado entre el cierre anterior de esa caja y este.
+      const { data: cierres, error: errCierre } = await supabase
+        .from('cierre_caja').select('id, caja, fecha_hora').eq('id', cierreId).limit(1);
+      if (errCierre) throw errCierre;
+      const cierre = cierres?.[0];
+      if (!cierre) return Response.json({ error: 'Cierre no encontrado' }, { status: 404 });
+      const anterior = await cierreAnterior(cierre.caja, cierre.fecha_hora);
+      const desde = anterior
+        ? new Date(anterior.fecha_hora).toISOString()
+        : inicioDiaCR(fechaCR(cierre.fecha_hora));
+      query = query
+        .eq('caja', cierre.caja)
+        .gt('created_at', desde)
+        .lte('created_at', new Date(cierre.fecha_hora).toISOString());
+    } else if (pendientes && caja) {
+      // Formulario de cierre: todo lo de esta caja registrado después de su último cierre.
+      const anterior = await cierreAnterior(caja);
+      const desde = anterior
+        ? new Date(anterior.fecha_hora).toISOString()
+        : inicioDiaCR(fecha || fechaCR(Date.now()));
+      query = query.gt('created_at', desde);
+    } else if (fecha) {
       // Convertir fecha CR (UTC-6) a rango UTC para buscar en created_at
       // Ej: 2026-05-29 en CR = 2026-05-29T06:00:00Z a 2026-05-30T06:00:00Z en UTC
       const fechaObj = new Date(`${fecha}T00:00:00`);
