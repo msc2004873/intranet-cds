@@ -38,7 +38,26 @@ export async function GET(req) {
     finDate.setUTCDate(finDate.getUTCDate() + 1);
     const crDayEnd = finDate.toISOString();
 
-    // Get ALL audit rows with related closure info
+    // Filtrar EN LA BASE: cierres del período → sus revisiones → sus filas de auditoría.
+    // Antes se traían TODAS las filas de auditoría y se filtraba abajo, pero Supabase
+    // entrega máximo 1000 filas por consulta y corta el resto sin avisar: al pasar de
+    // 1000 (el 27/10/2026 iban 965) empezaban a faltar días enteros en la auditoría.
+    const { data: cierresPeriodo, error: errorCierres } = await supabase
+      .from('cierre_caja')
+      .select('id')
+      .gte('fecha_hora', crDayStart)
+      .lte('fecha_hora', crDayEnd);
+    if (errorCierres) throw errorCierres;
+    if (!cierresPeriodo?.length) return Response.json([]);
+
+    const { data: revisionesPeriodo, error: errorRevisiones } = await supabase
+      .from('revision_caja')
+      .select('id')
+      .in('cierre_caja_id', cierresPeriodo.map(c => c.id));
+    if (errorRevisiones) throw errorRevisiones;
+    if (!revisionesPeriodo?.length) return Response.json([]);
+
+    // Audit rows of the period's reviews, with related closure info
     const { data, error } = await supabase
       .from('revision_auditoria')
       .select(`
@@ -57,11 +76,12 @@ export async function GET(req) {
             dolares_total
           )
         )
-      `);
+      `)
+      .in('revision_caja_id', revisionesPeriodo.map(r => r.id));
 
     if (error) throw error;
 
-    // Filter by closure date in client (Supabase doesn't support nested filters well)
+    // Filter by closure date (ya viene filtrado de la base; se deja como red de seguridad)
     const filtered = data.filter(row => {
       const fechaCierre = new Date(row.revision_caja?.cierre_caja?.fecha_hora);
       return fechaCierre >= new Date(crDayStart) && fechaCierre <= new Date(crDayEnd);

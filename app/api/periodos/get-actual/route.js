@@ -64,8 +64,12 @@ export async function GET(request) {
     const fechaInicio = new Date(anoNum, mesNum - 1, inicio).toISOString().split('T')[0];
     const fechaFin = new Date(anoNum, mesNum - 1, fin).toISOString().split('T')[0];
 
-    // Guardar en BD el TC actual del período (solo si es primer día y NO existe)
-    if (esPrimerDia) {
+    // Guardar en BD el TC actual del período si todavía NO existe — cualquier día del
+    // período, no solo el primero. Antes era solo el primer día: si caía domingo nadie
+    // abría la intranet y el período quedaba sin TC (pasó el 11/10/2026: el período
+    // 11–15 de octubre nunca se guardó y cada día usó el TC de Hacienda de ese día).
+    // Una vez guardado sigue BLOQUEADO: nunca se actualiza.
+    {
       try {
         const { data: existe } = await supabase
           .from('periodos_tipo_cambio')

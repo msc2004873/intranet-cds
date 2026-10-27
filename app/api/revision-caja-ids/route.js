@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { traerTodas } from '../../../lib/traerTodas.js';
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL,
@@ -7,11 +8,12 @@ const supabase = createClient(
 
 export async function GET(req) {
   try {
-    const { data, error } = await supabase
+    // Por páginas: pasando de 1000 revisiones, las que quedaran afuera harían que sus
+    // cierres volvieran a salir como pendientes.
+    const data = await traerTodas(() => supabase
       .from('revision_caja')
-      .select('cierre_caja_id');
-
-    if (error) throw error;
+      .select('cierre_caja_id')
+      .order('id', { ascending: true }));
 
     return Response.json(data || []);
   } catch (error) {

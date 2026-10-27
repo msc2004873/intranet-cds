@@ -1,4 +1,5 @@
 import supabase from '../../../lib/supabase-server.js';
+import { traerTodas } from '../../../lib/traerTodas.js';
 
 // Ingresos del mes agrupados en los 6 períodos de 5 días, tomados del LISTADO DE QVET.
 //
@@ -37,14 +38,13 @@ export async function GET(req) {
     }
 
     // qvet_data se guarda repetido en cada revisión del período (el array completo del
-    // Excel). Se traen todas y se deduplica por caja+fecha más abajo.
-    const { data, error } = await supabase
+    // Excel). Se traen todas (por páginas: Supabase corta en 1000 filas sin avisar) y se
+    // deduplica por caja+fecha más abajo.
+    const data = await traerTodas(() => supabase
       .from('revision_caja')
       .select('id, qvet_data')
       .not('qvet_data', 'is', null)
-      .order('id', { ascending: true });
-
-    if (error) throw error;
+      .order('id', { ascending: true }));
 
     // Las fechas de QVet ya vienen como fecha CR 'YYYY-MM-DD', sin hora: no hay que
     // convertir nada de UTC.
