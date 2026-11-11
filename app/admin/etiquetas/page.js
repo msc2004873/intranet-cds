@@ -464,7 +464,6 @@ export default function EtiquetasPage() {
   const totalEtiquetas = lista.reduce((s, p) => s + Math.max(0, p.cantidad || 0), 0);
   const productosConEtiquetas = lista.filter(p => p.cantidad > 0).length;
   const sinCodigo = lista.filter(p => p.cantidad > 0 && p.sinCodigo).length;
-  const conExistencias = lista.filter(p => p.existencias !== null && p.existencias !== undefined).length;
   const enLista = new Map(lista.map(p => [p.key, p.cantidad]));
 
   const f = filtroLista.trim().toLowerCase();
@@ -593,18 +592,6 @@ export default function EtiquetasPage() {
     setLista([]);
     setEditando(null);
     setFiltroLista('');
-  }
-
-  function igualarAExistencias() {
-    if (!conExistencias) return;
-    if (!window.confirm(
-      `¿Poner en cada producto tantas etiquetas como hay en QVet?\n\n` +
-      `Usa la copia de QVet de anoche. Los que dicen 0 (o menos) quedan en 0 y no se imprimen.` +
-      (conExistencias < lista.length ? `\nLos ${lista.length - conExistencias} que vinieron de una factura no cambian.` : '')
-    )) return;
-    setLista(prev => prev.map(p => (
-      p.existencias === null || p.existencias === undefined ? p : { ...p, cantidad: Math.max(0, Math.round(p.existencias)) }
-    )));
   }
 
   function iniciarEdicion(p) {
@@ -858,11 +845,6 @@ export default function EtiquetasPage() {
                   {lista.length > 8 && (
                     <input type="text" value={filtroLista} onChange={(e) => setFiltroLista(e.target.value)}
                       placeholder="Filtrar la lista…" style={{ ...inp, width: '180px', padding: '7px 10px' }} />
-                  )}
-                  {conExistencias > 0 && (
-                    <button style={btnSec} onClick={igualarAExistencias} title="Cada producto con tantas etiquetas como hay en QVet">
-                      = Lo que hay en QVet
-                    </button>
                   )}
                   <button style={{ ...btnSec, color: '#C0392B' }} onClick={vaciar}>Vaciar</button>
                 </div>
